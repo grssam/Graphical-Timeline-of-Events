@@ -10,7 +10,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 var EXPORTED_SYMBOLS = ["ProducerManager"];
 
 /**
- * The Producer Manager (or maybe Dat Sink)
+ * The Producer Manager (or maybe Data Sink)
  */
 let ProducerManager = {
   _producers: ["NetworkProducer"],
@@ -69,7 +69,7 @@ let ProducerManager = {
       return;
     }
     this[aProducer].destroy();
-    delete this._enabledProducers[aProducer);
+    this._enabledProducers.slice(this._enabledProducers.indexOf(aProducer), 1);
   },
 
   /**
@@ -115,8 +115,8 @@ let ProducerManager = {
           this._enabledProducers.push(producer);
 
           // Initializing the producer with the sendMessage function as first
-          // argument. This message will be used by the producer to send any
-          // activity recorded by it.
+          // argument. This message will be used by the corresponding producer
+          // to send any activity recorded by it.
           this[producer].init(this.sendMessage,
                               aMessage.enabledProducers[producer]);
         }
