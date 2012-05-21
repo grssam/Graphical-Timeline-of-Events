@@ -37,14 +37,23 @@ let ProducerManager = {
   startProducer: function PM_startProducer(aProducer, aFeatures) {
     if (typeof aProducer != "string" ||
         this._enabledProducers.indexOf(aProducer) != -1) {
+      // Either aProducer is not a string, or the producer has already started.
       return;
     }
-    Cu.import("chrome://graphical-timeline/content/producers/" +
-      aProducer + ".jsm", this);
-    if (aFeatures == null)
-      aFeatures = [];
-    this._enabledProducers.push(aProducer);
-    this[aProducer].init(this.sendMessage, aFeatures);
+    if (this._producers.indexOf(aProducer) != -1) {
+      // try importing the producer and return if file not available.
+      try {
+        Cu.import("chrome://graphical-timeline/content/producers/" +
+          aProducer + ".jsm", this);
+      }
+      catch (ex) {
+        return;
+      }
+      if (aFeatures == null)
+        aFeatures = [];
+      this._enabledProducers.push(aProducer);
+      this[aProducer].init(this.sendMessage, aFeatures);
+    }
   },
 
   /**
@@ -56,6 +65,7 @@ let ProducerManager = {
   stopProducer: function PM_stopProducer(aProducer) {
     if (typeof aProducer != "string" ||
         this._enabledProducers.indexOf(aProducer) == -1) {
+      // Either aProducer is not a string, or the producer is already stopped.
       return;
     }
     this[aProducer].destroy();
@@ -90,21 +100,38 @@ let ProducerManager = {
    *        }
    */
   init: function PM_init(aMessage) {
+    // enable the required producers if aMessage not null.
     if (aMessage) {
       for (let producer in this._producers) {
         if (aMessage.enabledProducers[producer]) {
-          Cu.import("chrome://graphical-timeline/content/producers/" +
-                    producer + ".jsm", this);
+          // try importing the producer and return if file not available.
+          try {
+            Cu.import("chrome://graphical-timeline/content/producers/" +
+                      producer + ".jsm", this);
+          }
+          catch (ex) {
+            continue;
+          }
           this._enabledProducers.push(producer);
+
+          // Initializing the producer with the sendMessage function as first
+          // argument. This message will be used by the producer to send any
+          // activity recorded by it.
           this[producer].init(this.sendMessage,
                               aMessage.enabledProducers[producer]);
         }
       }
     }
+    // enable all known producers with all features if aMessage null.
     else {
       for (let producer in this._producers) {
-        Cu.import("chrome://graphical-timeline/content/producers/" +
-                  producer + ".jsm", this);
+        try {
+          Cu.import("chrome://graphical-timeline/content/producers/" +
+                    producer + ".jsm", this);
+        }
+        catch (ex) {
+          continue;
+        }
         this._enabledProducers.push(producer);
         this[producer].init(this.sendMessage);
       }
