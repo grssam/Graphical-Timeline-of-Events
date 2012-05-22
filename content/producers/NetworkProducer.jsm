@@ -7,33 +7,13 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource:///modules/NetworkHelper.jsm");
+Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
 
 var EXPORTED_SYMBOLS = ["NetworkProducer"];
 
 XPCOMUtils.defineLazyServiceGetter(this, "activityDistributor",
                                    "@mozilla.org/network/http-activity-distributor;1",
                                    "nsIHttpActivityDistributor");
-
-XPCOMUtils.defineLazyServiceGetter(this, "mimeService",
-                                   "@mozilla.org/mime;1",
-                                   "nsIMIMEService");
-
-XPCOMUtils.defineLazyGetter(this, "NetUtil", function () {
-  var obj = {};
-  Cu.import("resource://gre/modules/NetUtil.jsm", obj);
-  return obj.NetUtil;
-});
-
-// The lowest HTTP response code (inclusive) that is considered an error.
-const MIN_HTTP_ERROR_CODE = 400;
-// The highest HTTP response code (exclusive) that is considered an error.
-const MAX_HTTP_ERROR_CODE = 600;
-
-// HTTP status codes.
-const HTTP_MOVED_PERMANENTLY = 301;
-const HTTP_FOUND = 302;
-const HTTP_SEE_OTHER = 303;
-const HTTP_TEMPORARY_REDIRECT = 307;
 
 // The maximum uint32 value.
 const PR_UINT32_MAX = 4294967295;
@@ -252,52 +232,6 @@ NetworkResponseListener.prototype =
 };
 
 /**
- * A WebProgressListener that listens for location changes. This progress
- * listener is used to track file loads. When a file:// URI is loaded
- * a "WebConsole:FileActivity" message is sent to the remote Web Console
- * instance. The message JSON holds only one property: uri (the file URI).
- *
- * @constructor
- */
-function ConsoleProgressListener() { }
-
-ConsoleProgressListener.prototype = {
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIWebProgressListener,
-                                         Ci.nsISupportsWeakReference]),
-
-  onStateChange: function CPL_onStateChange(aProgress, aRequest, aState,
-                                            aStatus)
-  {
-    if (!(aState & Ci.nsIWebProgressListener.STATE_START)) {
-      return;
-    }
-
-    let uri = null;
-    if (aRequest instanceof Ci.imgIRequest) {
-      let imgIRequest = aRequest.QueryInterface(Ci.imgIRequest);
-      uri = imgIRequest.URI;
-    }
-    else if (aRequest instanceof Ci.nsIChannel) {
-      let nsIChannel = aRequest.QueryInterface(Ci.nsIChannel);
-      uri = nsIChannel.URI;
-    }
-
-    if (!uri || !uri.schemeIs("file") && !uri.schemeIs("ftp")) {
-      return;
-    }
-
-    NetworkProducer.sendMessage("Producers:FileActivityProducer", {uri: uri.spec});
-  },
-
-  onLocationChange: function() {},
-  onStatusChange: function() {},
-  onProgressChange: function() {},
-  onSecurityChange: function() {},
-};
-
-// The Network Producer //
-
-/**
  * The network producer uses the nsIHttpActivityDistributor to monitor network
  * requests. The nsIObserverService is also used for monitoring
  * http-on-examine-response notifications. All network request information is
@@ -340,31 +274,10 @@ let NetworkProducer = {
   get sequenceId() "NetworkProducer-" + (++this._sequence),
 
   /**
-   * Method derived from the producer Manager at the initialization of
-   * Network Producer via init method.
-   */
-  sendMessage: function {},
-
-  /**
    * The network producer initializer.
-   *
-   * @param function aSendMessage
-   *        The method to send the HAR object to remote graph/data sink
-   *        asynchronously. This argument cannot be null as it is used by
-   *        the Producer to send the captured events.
-   * @param object aMessage
-   *        Initialization object sent by the Data Sink instance. This object
-   *        can hold one property: monitorFileActivity - a boolean that tells if
-   *        monitoring of file:// requests should be enabled as well or not.
    */
-  init: function NP_init(aSendMessage, aMessage)
+  startProducer: function NP_startProducer()
   {
-    if (aSendMessage == null || typeof aSendMessage != "function") {
-      return;
-    }
-
-    this.sendMessage = aSendMessage;
-
     this.responsePipeSegmentSize = Services.prefs
                                    .getIntPref("network.buffer.cache.size");
 
@@ -376,13 +289,6 @@ let NetworkProducer = {
     Services.obs.addObserver(this.httpResponseExaminer,
                              "http-on-examine-response", false);
 
-    /* // Monitor file:// activity as well.
-    if (aMessage && aMessage.monitorFileActivity) {
-      let webProgress = docShell.QueryInterface(Ci.nsIWebProgress);
-      this.progressListener = new ConsoleProgressListener();
-      webProgress.addProgressListener(this.progressListener,
-        Ci.nsIWebProgress.NOTIFY_STATE_ALL);
-    } */
   },
 
   /**
@@ -713,8 +619,8 @@ let NetworkProducer = {
   },
 
   /**
-   * Send an HTTP activity object to the graph/data sink using the sendMessage
-   * function assigned to this producer via the producer manager.
+   * Add an HTTP activity object to the data sink to send it to the
+   * remote graph.
    * A WebConsole:NetworkActivity message is sent. The message holds two
    * properties:
    *   - meta - the |aHttpActivity.meta| object.
@@ -741,7 +647,7 @@ let NetworkProducer = {
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {}
 
-    this.sendMessage("Producers:NetworkProducer", {
+    DataSink.addEvent("Producers:NetworkProducer", {
       tabId: tabId,
       meta: aHttpActivity.meta,
       log: aHttpActivity.log,
@@ -749,8 +655,7 @@ let NetworkProducer = {
   },
 
   /**
-   * Handler for ACTIVITY_SUBTYPE_REQUEST_BODY_SENT. The request body is logged
-   * here.
+   * Handler for ACTIVITY_SUBTYPE_REQUEST_BODY_SENT.
    *
    * @private
    * @param object aHttpActivity
@@ -758,27 +663,12 @@ let NetworkProducer = {
    */
   _onRequestBodySent: function NM__onRequestBodySent(aHttpActivity)
   {
-    if (aHttpActivity.meta.discardRequestBody) {
-      return;
-    }
-
     let request = aHttpActivity.log.entries[0].request;
 
-    let sentBody = NetworkHelper.
-    readPostTextFromRequest(aHttpActivity.channel,
-    aHttpActivity.charset);
+    let sentBody = NetworkHelper
+      .readPostTextFromRequest(aHttpActivity.channel,
+                               aHttpActivity.charset);
 
-    if (!sentBody && request.url == Manager.window.location.href) {
-      // If the request URL is the same as the current page URL, then
-      // we can try to get the posted text from the page directly.
-      // This check is necessary as otherwise the
-      // NetworkHelper.readPostTextFromPage()
-      // function is called for image requests as well but these
-      // are not web pages and as such don't store the posted text
-      // in the cache of the webpage.
-      sentBody = NetworkHelper.readPostTextFromPage(docShell,
-                                                    aHttpActivity.charset);
-    }
     if (!sentBody) {
       return;
     }
@@ -925,7 +815,7 @@ let NetworkProducer = {
   /**
    * Stops the Network Producer.
    */
-  destroy: function NP_destroy()
+  stopProducer: function NP_stopProducer()
   {
     Services.obs.removeObserver(this.httpResponseExaminer,
                                 "http-on-examine-response");
@@ -942,3 +832,6 @@ let NetworkProducer = {
     delete this.openResponses;
   },
 };
+
+// Register this producer to Data Sink
+DataSink.addProducer(NetworkProducer);
