@@ -49,10 +49,10 @@ NetworkResponseListener.prototype =
                            Ci.nsIRequestObserver, Ci.nsISupports]),
 
   /**
-  * This NetworkResponseListener tracks the NetworkProducer.openResponses object
-  * to find the associated uncached headers.
-  * @private
-  */
+   * This NetworkResponseListener tracks the NetworkProducer.openResponses object
+   * to find the associated uncached headers.
+   * @private
+   */
   _foundOpenResponse: false,
 
   /**
@@ -238,6 +238,11 @@ NetworkResponseListener.prototype =
  * routed to the remote Web Console.
  */
 let NetworkProducer = {
+  /**
+   * This will be used by the DataSink to identify the producer.
+   */
+  name: "NetworkProducer",
+
   httpTransactionCodes: {
     0x5001: "REQUEST_HEADER",
     0x5002: "REQUEST_BODY_SENT",
@@ -276,7 +281,7 @@ let NetworkProducer = {
   /**
    * The network producer initializer.
    */
-  startProducer: function NP_startProducer()
+  init: function NP_init()
   {
     this.responsePipeSegmentSize = Services.prefs
                                    .getIntPref("network.buffer.cache.size");
@@ -834,4 +839,4 @@ let NetworkProducer = {
 };
 
 // Register this producer to Data Sink
-DataSink.addProducer(NetworkProducer);
+DataSink.registerProducer(NetworkProducer);
