@@ -18,7 +18,7 @@ XPCOMUtils.defineLazyServiceGetter(this, "activityDistributor",
 // The maximum uint32 value.
 const PR_UINT32_MAX = 4294967295;
 
-// The pref prefix for network producer filters
+// The pref prefix for network producer filters.
 const PREFS_PREFIX = "devtools.graphical_timeline.producers.network.";
 
 /**
@@ -236,14 +236,14 @@ NetworkResponseListener.prototype =
  * requests. The nsIObserverService is also used for monitoring
  * http-on-examine-response notifications. All network request information is
  * routed to the remote Web Console.
+ *
+ * @param [object] aWindowList
+ *        List of content windows for which NetworkProducer will listen for
+ *        network activity.
  */
-let NetworkProducer = {
-  /**
-   * This will be used by the DataSink to identify the producer.
-   */
-  name: "NetworkProducer",
+function NetworkProducer(aWindowList) {
 
-  httpTransactionCodes: {
+  this.httpTransactionCodes = {
     0x5001: "REQUEST_HEADER",
     0x5002: "REQUEST_BODY_SENT",
     0x5003: "RESPONSE_START",
@@ -258,21 +258,31 @@ let NetworkProducer = {
     0x804b0005: "STATUS_SENDING_TO",
     0x804b000a: "STATUS_WAITING_FOR",
     0x804b0006: "STATUS_RECEIVING_FROM"
-  },
+  };
 
-  harCreator: {
+  this.harCreator = {
     name: Services.appinfo.name + " - Graphical Timeline",
     version: Services.appinfo.version,
-  },
+  };
 
   // Network response bodies are piped through a buffer of the given size (in
   // bytes).
-  responsePipeSegmentSize: null,
+  this.responsePipeSegmentSize = null;
 
-  openRequests: null,
-  openResponses: null,
-  progressListener: null,
+  this.openRequests = null;
+  this.openResponses = null;
+  this.progressListener = null;
 
+  /**
+   * List of content windows that this producer is listening to.
+   */
+  this.listeningWindows = aWindowList;
+
+  this.init();
+}
+
+NetworkProducer.prototype =
+{
   /**
    * Getter for a unique ID for the Network Producer.
    */
@@ -288,12 +298,41 @@ let NetworkProducer = {
 
     this.openRequests = {};
     this.openResponses = {};
+    this.listeningWindows = aWindowList;
 
     activityDistributor.addObserver(this);
 
     Services.obs.addObserver(this.httpResponseExaminer,
                              "http-on-examine-response", false);
 
+  },
+
+  /**
+   * Starts listening to network activity for the given content windows.
+   *
+   * @param [object] aWindowList
+   *        List of content windows for which NetworkProducer will start
+   *        listening for network activity.
+   */
+  addWindows: function NP_addWindows(aWindowList)
+  {
+    for (let window in aWindowList) {
+      this.listeningWindows.push(window);
+    }
+  },
+
+  /**
+   * Stops listening to network activity for the given windows.
+   *
+   * @param [object] aWindowList
+   *        List of content windows for which NetworkProducer will stop
+   *        listening for network activity.
+   */
+  removeWindows: function NP_removeWindows(aWindowList)
+  {
+    for (let window in aWindowList) {
+      this.listeningWindows.slice(this.listeningWindows.indexOf(window), 1);
+    }
   },
 
   /**
@@ -468,7 +507,7 @@ let NetworkProducer = {
   {
     // Try to get the source window of the request.
     let win = NetworkHelper.getWindowForRequest(aChannel);
-    if (!win) {
+    if (!win || this.listeningWindows.indexOf(win) == -1) {
       return;
     }
 
@@ -668,6 +707,10 @@ let NetworkProducer = {
    */
   _onRequestBodySent: function NM__onRequestBodySent(aHttpActivity)
   {
+    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
+      return;
+    }
+
     let request = aHttpActivity.log.entries[0].request;
 
     let sentBody = NetworkHelper
@@ -713,6 +756,10 @@ let NetworkProducer = {
     // that is not trivial to do in an accurate manner. Hence, we save the
     // response headers in this.httpResponseExaminer().
 
+    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
+      return;
+    }
+
     let response = aHttpActivity.log.entries[0].response;
 
     let headers = aExtraStringData.split(/\r\n|\n|\r/);
@@ -738,6 +785,9 @@ let NetworkProducer = {
    */
   _onTransactionClose: function NP__onTransactionClose(aHttpActivity)
   {
+    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
+      return;
+    }
     this._setupHarTimings(aHttpActivity);
     this.sendActivity(aHttpActivity);
     delete this.openRequests[aHttpActivity.id];
@@ -835,8 +885,9 @@ let NetworkProducer = {
 
     delete this.openRequests;
     delete this.openResponses;
+    delete this.listeningWindows;
   },
 };
 
 // Register this producer to Data Sink
-DataSink.registerProducer(NetworkProducer);
+DataSink.registerProducer(NetworkProducer, "NetworkProducer");
