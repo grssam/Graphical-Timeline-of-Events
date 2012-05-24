@@ -22,11 +22,36 @@ const UIEventMessageType = {
 };
 
 /**
+ * List of message types that the UI can listen for.
+ */
+const UIEventMessageType = {
+  NEW_DATA: 0, // There is new data in the data store.
+};
+
+const NORMALIZED_EVENT_TYPE = {
+  POINT_EVENT: 0, // An instantaneous event like a mouse click.
+  CONTINUOUS_EVENT_START: 1, // Start of a process like reloading of a page.
+  CONTINUOUS_EVENT_MID: 2, // End of a earlier started process.
+  CONTINUOUS_EVENT_END: 3, // End of a earlier started process.
+  REPEATING_EVENT_START: 4, // Start of a repeating event like a timer.
+  REPEATING_EVENT_MID: 5, // An entity of a repeating event which is neither
+                          // start nor end.
+  REPEATING_EVENT_STOP: 6, // End of a repeating event.
+};
+
+/**
  * The Data Sink
  */
 let DataSink = {
   _registeredProducers: {},
   _enabledProducers: {},
+  _sequenceId: 0,
+
+  NormalizedEventType = NORMALIZED_EVENT_TYPE,
+
+  get sequenceId() (++this._sequenceId),
+
+  _chromeWindowForGraph: null,
 
   /**
    * The Data Sink initialization code.
@@ -76,6 +101,13 @@ let DataSink = {
         this.startProducer(contentWindow, producer);
       }
     }
+
+    this._chromeWindowForGraph =
+      contentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                   .getInterface(Ci.nsIWebNavigation)
+                   .QueryInterface(Ci.nsIDocShell)
+                   .chromeEventHandler
+                   .ownerDocument.defaultView;
   },
 
   /**
@@ -135,20 +167,54 @@ let DataSink = {
                                      DataSink._remoteListner, true);
   },
 
-  sendMessage: function DS_sendMessage() {
+  /**
+   * Fires an event to let the Graph UI know about data changes.
+   *
+   * @param int aMessageType
+   *        One of DataSinkEventMessageType
+   * @param object aMessageData
+   *        Data concerned with the event.
+   */
+  sendMessage: function DS_sendMessage(aMessageType, aMessageData) {
+    let detail = {
+                   "detail":
+                     {
+                       "messageData": aMessageData,
+                       "messageType": aMessageType,
+                     },
+                 };
+    let customEvent = new CustomEvent("GraphicalTimeline:DataSinkEvent", detail)
+    this._chromeWindowForGraph.dispatchEvent(customEvent);
   },
 
   /**
    * Each producer calls this method to add a newly captured event/activity.
    * This function converts the data into a normalized form.
    *
-   * @param string aEventName
-   *        Name of the event in the format ProducerName:EventName.
+   * @param string aProducerName
+   *        Name of the producer from which the event is coming.
+   *        Example: NetworkProducer
    * @param object aEventData
-   *        List of enabled features. All features will be enabled if null.
+   *        The event object. Contain the following properties:
+   *        - type - one of the NORMALIZED_EVENT_TYPE
+   *        - groupID (optional) - same for multiple events associated with the
+   *          same continuous process for continuous and repeating events.
+   *        - name - a name related with the event to show up on the UI.
+   *        - time - time of the event occurance.
+   *        - details (optional) - other details about the event.
    */
-  addEvent: function DS_addEvent(aEventName, aEventData) {
+  addEvent: function DS_addEvent(aProducerName, aEventData) {
+    if (!(aProducerName in this._enabledProducers)) {
+      return;
+    }
 
+    let normalizedData = aEventData;
+    normalizedData.id = this.sequenceId;
+
+    // Adding the normalized data to the data store object.
+
+    // Informing the Graph UI about the new data.
+    this.sendMessage(DataSinkEventMessageType.NEW_DATA);
   },
 
   /**
@@ -181,7 +247,7 @@ let DataSink = {
       if (aFeatures == null)
         aFeatures = [];
       this._enabledProducers[aProducerName] =
-        new this._registeredProducers[aProducerName](aContentWindow, aFeatures);
+        new this._registeredProducers[aProducerName]([aContentWindow], aFeatures);
     }
   },
 

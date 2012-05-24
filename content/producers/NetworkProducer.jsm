@@ -265,6 +265,8 @@ function NetworkProducer(aWindowList) {
     version: Services.appinfo.version,
   };
 
+  this._sequence = 0;
+
   // Network response bodies are piped through a buffer of the given size (in
   // bytes).
   this.responsePipeSegmentSize = null;
@@ -485,6 +487,11 @@ NetworkProducer.prototype =
       case activityDistributor.ACTIVITY_SUBTYPE_TRANSACTION_CLOSE:
         this._onTransactionClose(httpActivity);
         break;
+      // Directly fire an event for the rest of the http sub types.
+      case activityDistributor.ACTIVITY_SUBTYPE_RESPONSE_START:
+      case activityDistributor.ACTIVITY_SUBTYPE_RESPONSE_COMPLETE:
+        this.sendActivity(httpActivity);
+        break;
       default:
         break;
     }
@@ -691,10 +698,32 @@ NetworkProducer.prototype =
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {}
 
+    let currentStage =
+      aHttpActivity.meta.stages[aHttpActivity.meta.stages.length - 1];
+
+    let time = aHttpActivity.timings[currentStage].first;
+
+    let eventType = null;
+    if (currentStage == "REQUEST_HEADER") {
+      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_START;
+    }
+    else if (currentStage == "TRANSACTION_CLOSE") {
+      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_END;
+    }
+    else {
+      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID;
+    }
+
     DataSink.addEvent("Producers:NetworkProducer", {
-      tabId: tabId,
-      meta: aHttpActivity.meta,
-      log: aHttpActivity.log,
+      type: eventType,
+      name: currentStage,
+      groupID: aHttpActivity.id,
+      time: time,
+      details: {
+        tabID: tabID,
+        meta: aHttpActivity.meta,
+        log: aHttpActivity.log,
+      }
     });
   },
 
