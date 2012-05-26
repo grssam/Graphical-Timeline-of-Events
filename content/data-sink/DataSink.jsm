@@ -63,6 +63,8 @@ let DataSink = {
    *        - enabledProducers - (required) list of objects representing the
    *        enabled producers. Each object can have property |features|
    *        representing the enabled features of the producer.
+   *        - databaseName - (optional) this is a custom name chosen by the
+   *        user. A default name would be used if not provided.
    *
    *        Example message:
    *        {
@@ -77,6 +79,7 @@ let DataSink = {
    *            {
    *            },
    *          },
+   *          databaseName: "new_DB",
    *        }
    */
   init: function DS_init(aMessage) {
@@ -108,6 +111,10 @@ let DataSink = {
                    .QueryInterface(Ci.nsIDocShell)
                    .chromeEventHandler
                    .ownerDocument.defaultView;
+
+    // Initiating the Data Store
+    DataStore.init(this._chromeWindowForGraph, aMessage.databaseName ||
+                                              "timeline-database");
   },
 
   /**
@@ -200,7 +207,9 @@ let DataSink = {
    *        - groupID (optional) - same for multiple events associated with the
    *          same continuous process for continuous and repeating events.
    *        - name - a name related with the event to show up on the UI.
-   *        - time - time of the event occurance.
+   *        - producer - a string containing the name of the producer which
+   *          recorded the message.
+   *        - time - time of the event occurence.
    *        - details (optional) - other details about the event.
    */
   addEvent: function DS_addEvent(aProducerName, aEventData) {
@@ -212,9 +221,10 @@ let DataSink = {
     normalizedData.id = this.sequenceId;
 
     // Adding the normalized data to the data store object.
-
-    // Informing the Graph UI about the new data.
-    this.sendMessage(DataSinkEventMessageType.NEW_DATA);
+    if (DataStore.add(normalizedData)) {
+      // Informing the Graph UI about the new data.
+      this.sendMessage(DataSinkEventMessageType.NEW_DATA);
+    }
   },
 
   /**
