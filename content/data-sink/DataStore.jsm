@@ -197,8 +197,8 @@ let DataStore = {
    * @param number aUpperKey
    *        Upper bound id of the data to retreive. null for no upper bound.
    */
-  getRangeById:
-  function DS_getRangeById(aCallback, aIndexName, aLowerKey, aUpperKey) {
+  getRangeByIndex:
+  function DS_getRangeByIndex(aCallback, aIndexName, aLowerKey, aUpperKey) {
     if (!this._databaseInitiated) {
       return false;
     }
@@ -247,6 +247,6 @@ let DataStore = {
           .onsuccess = function(e){ };
     }
     this.db.close();
-    this.window = this.db = this.indexedDB = null;
+    this._databaseInitiated = this.window = this.db = this.indexedDB = null;
   },
 };
