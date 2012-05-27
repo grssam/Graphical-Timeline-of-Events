@@ -214,7 +214,7 @@ NetworkResponseListener.prototype =
     if (!(aStream instanceof Ci.nsIAsyncInputStream) || !this.httpActivity) {
       return;
     }
-    
+
     let available = -1;
     try {
       // This may throw if the stream is closed normally or due to an error.
@@ -236,14 +236,15 @@ NetworkResponseListener.prototype =
  * requests. The nsIObserverService is also used for monitoring
  * http-on-examine-response notifications. All network request information is
  * routed to the remote Web Console.
- *
- * @param [object] aWindowList
- *        List of content windows for which NetworkProducer will listen for
- *        network activity.
  */
-function NetworkProducer(aWindowList) {
+let NetworkProducer =
+{
+  /**
+   * List of content windows that this producer is listening to.
+   */
+  listeningWindows: [],
 
-  this.httpTransactionCodes = {
+  httpTransactionCodes: {
     0x5001: "REQUEST_HEADER",
     0x5002: "REQUEST_BODY_SENT",
     0x5003: "RESPONSE_START",
@@ -258,33 +259,22 @@ function NetworkProducer(aWindowList) {
     0x804b0005: "STATUS_SENDING_TO",
     0x804b000a: "STATUS_WAITING_FOR",
     0x804b0006: "STATUS_RECEIVING_FROM"
-  };
+  },
 
-  this.harCreator = {
+  harCreator: {
     name: Services.appinfo.name + " - Graphical Timeline",
     version: Services.appinfo.version,
-  };
+  },
 
-  this._sequence = 0;
+  _sequence: 0,
 
   // Network response bodies are piped through a buffer of the given size (in
   // bytes).
-  this.responsePipeSegmentSize = null;
+  responsePipeSegmentSize: null,
 
-  this.openRequests = null;
-  this.openResponses = null;
-  this.progressListener = null;
+  openRequests: null,
+  openResponses: null,
 
-  /**
-   * List of content windows that this producer is listening to.
-   */
-  this.listeningWindows = aWindowList;
-
-  this.init();
-}
-
-NetworkProducer.prototype =
-{
   /**
    * Getter for a unique ID for the Network Producer.
    */
@@ -292,21 +282,23 @@ NetworkProducer.prototype =
 
   /**
    * The network producer initializer.
+   *
+   * @param [object] aWindowList
+   *        List of content windows for which NetworkProducer will listen for
+   *        network activity.
    */
-  init: function NP_init()
+  init: function NP_init(aWindowList)
   {
-    this.responsePipeSegmentSize = Services.prefs
-                                   .getIntPref("network.buffer.cache.size");
-
     this.openRequests = {};
     this.openResponses = {};
     this.listeningWindows = aWindowList;
+    this.responsePipeSegmentSize = Services.prefs
+                                   .getIntPref("network.buffer.cache.size");
 
     activityDistributor.addObserver(this);
 
     Services.obs.addObserver(this.httpResponseExaminer,
                              "http-on-examine-response", false);
-
   },
 
   /**
@@ -338,6 +330,121 @@ NetworkProducer.prototype =
   },
 
   /**
+   * Parse a raw Cookie header value.
+   *
+   * @param string aHeader
+   *        The raw Cookie header value.
+   * @return array
+   *         Array holding an object for each cookie. Each object holds the
+   *         following properties: name and value.
+   */
+  parseCookieHeader: function NP_parseCookieHeader(aHeader)
+  {
+    let cookies = aHeader.split(";");
+    let result = [];
+
+    cookies.forEach(function(aCookie) {
+      let [name, value] = aCookie.split("=");
+      result.push({name: unescape(name.trim()),
+      value: unescape(value.trim())});
+    });
+
+    return result;
+  },
+  
+  /**
+   * Parse a raw Set-Cookie header value.
+   *
+   * @param string aHeader
+   *        The raw Set-Cookie header value.
+   * @return array
+   *         Array holding an object for each cookie. Each object holds the
+   *         following properties: name, value, secure (boolean), httpOnly
+   *         (boolean), path, domain and expires (ISO date string).
+   */
+  parseSetCookieHeader: function NP_parseSetCookieHeader(aHeader)
+  {
+    let rawCookies = aHeader.split(/\r\n|\n|\r/);
+    let cookies = [];
+
+    rawCookies.forEach(function(aCookie) {
+      let name = unescape(aCookie.substr(0, aCookie.indexOf("=")).trim());
+      let parts = aCookie.substr(aCookie.indexOf("=") + 1).split(";");
+      let value = unescape(parts.shift().trim());
+
+      let cookie = {name: name, value: value};
+
+      parts.forEach(function(aPart) {
+        let part = aPart.trim();
+        if (part.toLowerCase() == "secure") {
+          cookie.secure = true;
+        }
+        else if (part.toLowerCase() == "httponly") {
+          cookie.httpOnly = true;
+        }
+        else if (part.indexOf("=") > -1) {
+          let pair = part.split("=");
+          pair[0] = pair[0].toLowerCase();
+          if (pair[0] == "path" || pair[0] == "domain") {
+            cookie[pair[0]] = pair[1];
+          }
+          else if (pair[0] == "expires") {
+            try {
+              pair[1] = pair[1].replace(/-/g, ' ');
+              cookie.expires = new Date(pair[1]).toISOString();
+            }
+            catch (ex) { }
+          }
+        }
+      });
+
+      cookies.push(cookie);
+    });
+
+    return cookies;
+  },
+
+  /**
+   * Reads the posted text from aRequest.
+   *
+   * @param nsIHttpChannel aRequest
+   * @param string aCharset
+   *        The content document charset, used when reading the POSTed data.
+   * @returns string or null
+   *          Returns the posted string if it was possible to read from aRequest
+   *          otherwise null.
+   */
+  readPostTextFromRequest: function NP_readPostTextFromRequest(aRequest, aCharset)
+  {
+    if (aRequest instanceof Ci.nsIUploadChannel) {
+      let iStream = aRequest.uploadStream;
+
+      let isSeekableStream = false;
+      if (iStream instanceof Ci.nsISeekableStream) {
+        isSeekableStream = true;
+      }
+
+      let prevOffset;
+      if (isSeekableStream) {
+        prevOffset = iStream.tell();
+        iStream.seek(Ci.nsISeekableStream.NS_SEEK_SET, 0);
+      }
+
+      // Read data from the stream.
+      let text = NetworkHelper.readAndConvertFromStream(iStream, aCharset);
+
+      // Seek locks the file, so seek to the beginning only if necko hasn't
+      // read it yet, since necko doesn't seek to 0 before reading (at lest
+      // not till 459384 is fixed).
+      if (isSeekableStream && prevOffset == 0) {
+        iStream.seek(Ci.nsISeekableStream.NS_SEEK_SET, 0);
+      }
+      return text;
+    }
+    return null;
+  },
+
+  /**
    * Observe notifications for the http-on-examine-response topic, coming from
    * the nsIObserverService.
    *
@@ -365,7 +472,7 @@ NetworkProducer.prototype =
     }
 
     let response = {
-      id: this.sequenceId,
+      id: NetworkProducer.sequenceId,
       channel: channel,
       headers: [],
       cookies: [],
@@ -392,7 +499,7 @@ NetworkProducer.prototype =
     }
 
     if (setCookieHeader) {
-      response.cookies = NetworkHelper.parseSetCookieHeader(setCookieHeader);
+      response.cookies = NetworkProducer.parseSetCookieHeader(setCookieHeader);
     }
     if (contentType) {
       response.contentType = contentType;
@@ -546,7 +653,7 @@ NetworkProducer.prototype =
     });
 
     if (cookieHeader) {
-      request.cookies = NetworkHelper.parseCookieHeader(cookieHeader);
+      request.cookies = this.parseCookieHeader(cookieHeader);
     }
 
     // Determine the HTTP version.
@@ -701,7 +808,14 @@ NetworkProducer.prototype =
     let currentStage =
       aHttpActivity.meta.stages[aHttpActivity.meta.stages.length - 1];
 
-    let time = aHttpActivity.timings[currentStage].first;
+    let time;
+    try {
+      time = aHttpActivity.timings[currentStage].first;
+    }
+    catch (e) {
+      // No time data exist for http-on-examine-response so return.
+      return;
+    }
 
     let eventType = null;
     if (currentStage == "REQUEST_HEADER") {
@@ -714,13 +828,13 @@ NetworkProducer.prototype =
       eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID;
     }
 
-    DataSink.addEvent("Producers:NetworkProducer", {
+    DataSink.addEvent("NetworkProducer", {
       type: eventType,
       name: currentStage,
       groupID: aHttpActivity.id,
       time: time,
       details: {
-        tabID: tabID,
+        tabID: tabId,
         meta: aHttpActivity.meta,
         log: aHttpActivity.log,
       }
@@ -742,9 +856,8 @@ NetworkProducer.prototype =
 
     let request = aHttpActivity.log.entries[0].request;
 
-    let sentBody = NetworkHelper
-      .readPostTextFromRequest(aHttpActivity.channel,
-                               aHttpActivity.charset);
+    let sentBody = this.readPostTextFromRequest(aHttpActivity.channel,
+                                                aHttpActivity.charset);
 
     if (!sentBody) {
       return;
@@ -899,22 +1012,15 @@ NetworkProducer.prototype =
   /**
    * Stops the Network Producer.
    */
-  stopProducer: function NP_stopProducer()
+  destroy: function NP_destroy()
   {
-    Services.obs.removeObserver(this.httpResponseExaminer,
+    Services.obs.removeObserver(NetworkProducer.httpResponseExaminer,
                                 "http-on-examine-response");
 
-    activityDistributor.removeObserver(this);
+    activityDistributor.removeObserver(NetworkProducer);
 
-    if (this.progressListener) {
-      let webProgress = docShell.QueryInterface(Ci.nsIWebProgress);
-      webProgress.removeProgressListener(this.progressListener);
-      delete this.progressListener;
-    }
-
-    delete this.openRequests;
-    delete this.openResponses;
-    delete this.listeningWindows;
+    NetworkProducer.openRequests = NetworkProducer.openResponses =
+      NetworkProducer.listeningWindows = null;
   },
 };
 

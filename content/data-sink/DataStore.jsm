@@ -9,7 +9,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 var EXPORTED_SYMBOLS = ["DataStore"];
 
 /**
- * The Data Sink
+ * The Data Store
  */
 let DataStore = {
 
@@ -66,8 +66,7 @@ let DataStore = {
       return false;
     }
 
-    let transaction = this.db.transaction(["normalizedData"],
-                                          this.window.IDBTransaction.WRITE);
+    let transaction = this.db.transaction(["normalizedData"], "readwrite");
 
     let objectStore = transaction.objectStore("normalizedData");
     if (aNormalizedData instanceof Array) {
@@ -77,8 +76,7 @@ let DataStore = {
       }
     }
     else {
-      let request = objectStore.add(aNormalizedData);
-      request.onsuccess = function(event) { };
+      objectStore.add(aNormalizedData).onsuccess = function(event) {};
     }
     return true;
   },
@@ -118,13 +116,13 @@ let DataStore = {
     }
     let range;
     if (aLowerId != null && aUpperId != null) {
-      range = new this.window.IDBKeyRange.bound(aLowerId, aUpperId);
+      range = this.window.IDBKeyRange.bound(aLowerId, aUpperId);
     }
     else if (aLowerId == null && aUpperId != null) {
-      range = new this.window.IDBKeyRange.upperBound(aUpperId);
+      range = this.window.IDBKeyRange.upperBound(aUpperId);
     }
     else if (aLowerId != null && aUpperId == null) {
-      range = new this.window.IDBKeyRange.lowerBound(aLowerId);
+      range = this.window.IDBKeyRange.lowerBound(aLowerId);
     }
     else {
       range = null;
@@ -132,18 +130,21 @@ let DataStore = {
 
     try {
       let data = [];
-      this.db.transaction("normalizedData").objectStore
-          .openCursor(range, 0).onsuccess = function(event){
-            let cursor = event.target.result;
-            if (cursor) {
-              data.push(cursor.value);
-              cursor.continue();
-            }
-            else {
-              aCallback(data);
-            }
-          };
+      this.db.transaction("normalizedData")
+          .objectStore("normalizedData")
+          .openCursor(range, this.window.IDBCursor.NEXT)
+          .onsuccess = function(event) {
+        let cursor = event.target.result;
+        if (cursor) {
+          data.push(cursor.value);
+          cursor.continue();
+        }
+        else {
+          aCallback(data);
+        }
+      };
     } catch (e) {
+      Services.prompt.confirm(null, "", e);
       return false;
     }
     return true;
@@ -164,20 +165,23 @@ let DataStore = {
     if (!this._databaseInitiated) {
       return false;
     }
-    let range = new this.window.IDBKeyRange.key(aIndexKey);
+    let range = this.window.IDBKeyRange.key(aIndexKey);
     try {
       let data = [];
-      this.db.transaction("normalizedData").objectStore.index(aIndexName)
-          .openCursor(range, 0).onsuccess = function(event){
-            let cursor = event.target.result;
-            if (cursor) {
-              data.push(cursor.value);
-              cursor.continue();
-            }
-            else {
-              aCallback(data);
-            }
-          };
+      this.db.transaction("normalizedData")
+          .objectStore("normalizedData")
+          .index(aIndexName)
+          .openCursor(range, this.window.IDBCursor.NEXT)
+          .onsuccess = function(event) {
+        let cursor = event.target.result;
+        if (cursor) {
+          data.push(cursor.value);
+          cursor.continue();
+        }
+        else {
+          aCallback(data);
+        }
+      };
     } catch (e) {
       return false;
     }
@@ -204,13 +208,13 @@ let DataStore = {
     }
     let range;
     if (aLowerKey != null && aUpperKey != null) {
-      range = new this.window.IDBKeyRange.bound(aLowerKey, aUpperKey);
+      range = this.window.IDBKeyRange.bound(aLowerKey, aUpperKey);
     }
     else if (aLowerKey == null && aUpperKey != null) {
-      range = new this.window.IDBKeyRange.upperBound(aUpperKey);
+      range = this.window.IDBKeyRange.upperBound(aUpperKey);
     }
     else if (aLowerKey != null && aUpperKey == null) {
-      range = new this.window.IDBKeyRange.lowerBound(aLowerKey);
+      range = this.window.IDBKeyRange.lowerBound(aLowerKey);
     }
     else {
       range = null;
@@ -218,17 +222,20 @@ let DataStore = {
 
     try {
       let data = [];
-      this.db.transaction("normalizedData").objectStore.index(aIndexName)
-          .openCursor(range, 0).onsuccess = function(event){
-            let cursor = event.target.result;
-            if (cursor) {
-              data.push(cursor.value);
-              cursor.continue();
-            }
-            else {
-              aCallback(data);
-            }
-          };
+      this.db.transaction("normalizedData")
+          .objectStore("normalizedData")
+          .index(aIndexName)
+          .openCursor(range, this.window.IDBCursor.NEXT)
+          .onsuccess = function(event) {
+        let cursor = event.target.result;
+        if (cursor) {
+          data.push(cursor.value);
+          cursor.continue();
+        }
+        else {
+          aCallback(data);
+        }
+      };
     } catch (e) {
       return false;
     }

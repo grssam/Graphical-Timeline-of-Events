@@ -24,7 +24,7 @@ const UIEventMessageType = {
 /**
  * List of message types that the UI can listen for.
  */
-const UIEventMessageType = {
+const DataSinkEventMessageType = {
   NEW_DATA: 0, // There is new data in the data store.
 };
 
@@ -47,7 +47,7 @@ let DataSink = {
   _enabledProducers: {},
   _sequenceId: 0,
 
-  NormalizedEventType = NORMALIZED_EVENT_TYPE,
+  NormalizedEventType: NORMALIZED_EVENT_TYPE,
 
   get sequenceId() (++this._sequenceId),
 
@@ -83,6 +83,7 @@ let DataSink = {
    *        }
    */
   init: function DS_init(aMessage) {
+    this._enabledProducers = {};
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
     let contentWindow = Cc["@mozilla.org/appshell/window-mediator;1"]
@@ -113,8 +114,8 @@ let DataSink = {
                    .ownerDocument.defaultView;
 
     // Initiating the Data Store
-    DataStore.init(this._chromeWindowForGraph, aMessage.databaseName ||
-                                              "timeline-database");
+    DataStore.init(this._chromeWindowForGraph, "timeline-database");
+    Services.prompt.confirm(null, "", "DataSink: Message to start received");
   },
 
   /**
@@ -124,7 +125,7 @@ let DataSink = {
    *        Data object associated with the incoming event.
    */
   _remoteListener: function DS_remoteListener(aEvent) {
-    let message = aEvent.detail.messageData || {};
+    let message = aEvent.detail.messageData;
     let type = aEvent.detail.messageType;
     switch(type) {
 
@@ -160,7 +161,7 @@ let DataSink = {
    */
   addRemoteListener: function DS_addRemoteListener(aChromeWindow) {
     aChromeWindow.addEventListener("GraphicalTimeline:UIEvent",
-                                   DataSink._remoteListner, true);
+                                   DataSink._remoteListener, true);
   },
 
   /**
@@ -171,7 +172,7 @@ let DataSink = {
    */
   removeRemoteListener: function DS_removeRemoteListener(aChromwWindow) {
     aChromeWindow.removeEventListner("GraphicalTimeline:UIEvent",
-                                     DataSink._remoteListner, true);
+                                     DataSink._remoteListener, true);
   },
 
   /**
@@ -190,7 +191,9 @@ let DataSink = {
                        "messageType": aMessageType,
                      },
                  };
-    let customEvent = new CustomEvent("GraphicalTimeline:DataSinkEvent", detail)
+    let customEvent =
+      new this._chromeWindowForGraph
+              .CustomEvent("GraphicalTimeline:DataSinkEvent", detail);
     this._chromeWindowForGraph.dispatchEvent(customEvent);
   },
 
@@ -207,7 +210,6 @@ let DataSink = {
    *        - groupID (optional) - same for multiple events associated with the
    *          same continuous process for continuous and repeating events.
    *        - name - a name related with the event to show up on the UI.
-   *        - producer - a string containing the name of the producer which
    *          recorded the message.
    *        - time - time of the event occurence.
    *        - details (optional) - other details about the event.
@@ -219,11 +221,12 @@ let DataSink = {
 
     let normalizedData = aEventData;
     normalizedData.id = this.sequenceId;
+    normalizedData.producer = aProducerName;
 
     // Adding the normalized data to the data store object.
     if (DataStore.add(normalizedData)) {
       // Informing the Graph UI about the new data.
-      this.sendMessage(DataSinkEventMessageType.NEW_DATA);
+      DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA);
     }
   },
 
@@ -256,8 +259,15 @@ let DataSink = {
     if (this._registeredProducers[aProducerName] != null) {
       if (aFeatures == null)
         aFeatures = [];
-      this._enabledProducers[aProducerName] =
-        new this._registeredProducers[aProducerName]([aContentWindow], aFeatures);
+      if (typeof this._registeredProducers[aProducerName] == 'function') {
+        this._enabledProducers[aProducerName] =
+          new this._registeredProducers[aProducerName]([aContentWindow],
+                                                       aFeatures);
+      }
+      else {
+        this._enabledProducers[aProducerName] = this._registeredProducers[aProducerName];
+        this._enabledProducers[aProducerName].init([aContentWindow], aFeatures);
+      }
     }
   },
 
@@ -283,7 +293,8 @@ let DataSink = {
     for (let producer in this._enabledProducers) {
       this.stopProducer(producer);
     }
-    this._listening = this._enabledProducers =
-                      this._registeredProducers = null;
+    DataStore.destroy(true);
+    this._enabledProducers = null;
+    Services.prompt.confirm(null, "", "Stopped all the producers");
   },
 };
