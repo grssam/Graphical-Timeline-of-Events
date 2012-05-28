@@ -39,6 +39,7 @@ let GraphUI = {
 
   UIOpened: false,
   newDataAvailable: false,
+  readingData: false,
 
   timer: null,
 
@@ -62,7 +63,8 @@ let GraphUI = {
    * Check for any pending data to read and sends a request to Data Store.
    */
   readData: function GUI_readData() {
-    if (GraphUI.newDataAvailable) {
+    if (GraphUI.newDataAvailable && !GraphUI.readingData) {
+      GraphUI.readingData = true;
       DataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
     }
   },
@@ -74,8 +76,8 @@ let GraphUI = {
    *        Array of normalized data received from Data Store.
    */
   processData: function GUI_processData(aData) {
+    GraphUI.readingData = GraphUI.newDataAvailable = false;
     GraphUI._currentId += aData.length;
-    GraphUI.newDataAvailable = false;
     // dumping to console for now.
     for (let i = 0; i < aData.length; i++) {
       GraphUI._console
@@ -158,7 +160,7 @@ let GraphUI = {
       GraphUI._window.clearInterval(GraphUI.timer);
       GraphUI.removeRemoteListener(GraphUI._window);
       GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK);
-      GraphUI.newDataAvailable = GraphUI.UIOpened =
+      GraphUI.newDataAvailable = GraphUI.UIOpened = GraphUI.timer =
         GraphUI._currentId = GraphUI._window = null;
     }
   }

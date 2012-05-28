@@ -68,10 +68,14 @@ function addToolbarButton(window) {
 
   function showHideUI() {
     if (GraphUI.UIOpened != true) {
+      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       GraphUI.showGraphUI();
     }
     else {
       GraphUI.hideGraphUI();
+      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+      Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
     }
   }
 
@@ -135,8 +139,6 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   });
 
   function init() {
-    Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
-    Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
     Cu.import("chrome://graphical-timeline/content/graph/GraphUI.jsm", global);
     watchWindows(handleCustomization);
     watchWindows(function(window) {
@@ -150,9 +152,12 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
       delete global.GraphUI;
       delete global.DataSink;
       delete global.NetworkProducer;
-      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-      Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-      Cu.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
+      try {
+        Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+      }
+      catch (e) {}
+      Components.utils.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
     });
   }
   reload = function() {
