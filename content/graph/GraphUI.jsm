@@ -38,7 +38,14 @@ let GraphUI = {
   _console: null,
 
   UIOpened: false,
+  newDataAvailable: false,
 
+  timer: null,
+
+  /**
+   * Displays the UI for the Graphical Timeline and sends message to start
+   * the Data Sink.
+   */
   showGraphUI: function GUI_showGraphUI() {
     GraphUI._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
@@ -46,16 +53,29 @@ let GraphUI = {
     GraphUI._console = Cc["@mozilla.org/consoleservice;1"]
                          .getService(Ci.nsIConsoleService);
     GraphUI.addRemoteListener(GraphUI._window);
+    GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 100);
     GraphUI.sendMessage(UIEventMessageType.INIT_DATA_SINK);
     GraphUI.UIOpened = true;
   },
 
+  /**
+   * Check for any pending data to read and sends a request to Data Store.
+   */
   readData: function GUI_readData() {
-    DataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
+    if (GraphUI.newDataAvailable) {
+      DataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
+    }
   },
 
+  /**
+   * Processes the data received from Data Store
+   *
+   * @param array aData
+   *        Array of normalized data received from Data Store.
+   */
   processData: function GUI_processData(aData) {
     GraphUI._currentId += aData.length;
+    GraphUI.newDataAvailable = false;
     // dumping to console for now.
     for (let i = 0; i < aData.length; i++) {
       GraphUI._console
@@ -80,7 +100,7 @@ let GraphUI = {
     let type = aEvent.detail.messageType;
     switch(type) {
       case DataSinkEventMessageType.NEW_DATA:
-        GraphUI.readData();
+        GraphUI.newDataAvailable = true;
         break;
     }
   },
@@ -129,12 +149,17 @@ let GraphUI = {
     GraphUI._window.dispatchEvent(customEvent);
   },
 
+  /**
+   * Hides the UI and stops all the activity of Data Sink.
+   */
   hideGraphUI: function GUI_hideGraphUI() {
     if (GraphUI.UIOpened == true) {
       Services.prompt.confirm(null, "", "GraphUI: Hiding UI");
-      GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK);
+      GraphUI._window.clearInterval(GraphUI.timer);
       GraphUI.removeRemoteListener(GraphUI._window);
-      GraphUI.UIOpened = GraphUI._currentId = GraphUI._window = null;
+      GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK);
+      GraphUI.newDataAvailable = GraphUI.UIOpened =
+        GraphUI._currentId = GraphUI._window = null;
     }
   }
 };
