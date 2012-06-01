@@ -310,7 +310,7 @@ let NetworkProducer =
    */
   addWindows: function NP_addWindows(aWindowList)
   {
-    for (let window in aWindowList) {
+    for each (let window in aWindowList) {
       this.listeningWindows.push(window);
     }
   },
@@ -324,7 +324,7 @@ let NetworkProducer =
    */
   removeWindows: function NP_removeWindows(aWindowList)
   {
-    for (let window in aWindowList) {
+    for each (let window in aWindowList) {
       this.listeningWindows.slice(this.listeningWindows.indexOf(window), 1);
     }
   },
@@ -779,10 +779,8 @@ let NetworkProducer =
   /**
    * Add an HTTP activity object to the data sink to send it to the
    * remote graph.
-   * A WebConsole:NetworkActivity message is sent. The message holds two
-   * properties:
-   *   - meta - the |aHttpActivity.meta| object.
-   *   - log - the |aHttpActivity.log| object.
+   * A Normalized Data is sent to the DataSink via the DataSink.addEvent method
+   * call.
    *
    * @param object aHttpActivity
    *        The HTTP activity object you want to send.

@@ -43,8 +43,8 @@ const NORMALIZED_EVENT_TYPE = {
  * The Data Sink
  */
 let DataSink = {
-  _registeredProducers: {},
-  _enabledProducers: {},
+  _registeredProducers: null,
+  _enabledProducers: null,
   _sequenceId: 0,
 
   NormalizedEventType: NORMALIZED_EVENT_TYPE,
@@ -84,6 +84,7 @@ let DataSink = {
    */
   init: function DS_init(aMessage) {
     this._enabledProducers = {};
+    this._registeredProducers = {};
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
     let contentWindow = Cc["@mozilla.org/appshell/window-mediator;1"]
