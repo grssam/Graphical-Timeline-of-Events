@@ -69,6 +69,7 @@ function addToolbarButton(window) {
   function showHideUI() {
     if (GraphUI.UIOpened != true) {
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
       GraphUI.showGraphUI();
@@ -77,8 +78,9 @@ function addToolbarButton(window) {
       GraphUI.hideGraphUI();
       DataSink.removeRemoteListener(window);
       window.alert("done");
-      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+      Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       global.DataSink = global.NetworkProducer = null;
     }
   }
@@ -149,6 +151,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
       try {
         GraphUI.hideGraphUI();
         Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       }
       catch (e) {}

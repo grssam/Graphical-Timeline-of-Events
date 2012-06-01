@@ -325,7 +325,7 @@ let NetworkProducer =
   removeWindows: function NP_removeWindows(aWindowList)
   {
     for each (let window in aWindowList) {
-      this.listeningWindows.slice(this.listeningWindows.indexOf(window), 1);
+      this.listeningWindows.splice(this.listeningWindows.indexOf(window), 1);
     }
   },
 

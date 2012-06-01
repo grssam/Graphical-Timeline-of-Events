@@ -63,7 +63,7 @@ let PageEventsProducer =
                 "document-element-inserted",
                 "user-interaction-active",
                 "user-interaction-inactive"],
-  }
+  },
 
   /**
    * The network producer initializer.
@@ -83,27 +83,7 @@ let PageEventsProducer =
     if (aEnabledEvents == null) {
       aEnabledEvents = this.defaultEvents;
     }
-
-    for each (let window in this.listeningWindows) {
-      for each (let eventType in aEnabledEvents) {
-        let started = false;
-        if (this.eventTypes[eventType]) {
-          started = true;
-          for each (let eventName in this.eventTypes[eventType]) {
-            window.addEventListener(eventName, this.sendActivity, true);
-          }
-        }
-        if (this.observedEvents[eventType]) {
-          started = true;
-          for each (let eventName in this.eventTypes[eventType]) {
-            Services.obs.addObserver(this.observeEvents, eventName, false);
-          }
-        }
-        if (started) {
-          this.enabledEvents.push(eventType);
-        }
-      }
-    }
+    this.addEventTypes(aEnabledEvents);
   },
 
   /**
@@ -117,7 +97,7 @@ let PageEventsProducer =
   {
     for each (let window in aWindowList) {
       if (this.listeningWindows.indexOf(window) == -1) {
-        this.addListenersToWindow(window);
+        this._addListenersToWindow(window);
         this.listeningWindows.push(window);
       }
     }
@@ -134,18 +114,146 @@ let PageEventsProducer =
   {
     for each (let window in aWindowList) {
       if (this.listeningWindows.indexOf(window) > -1) {
-        this.removeListenersFromWindow(window);
-        this.listeningWindows.slice(this.listeningWindows.indexOf(window), 1);
+        this._removeListenersFromWindow(window);
+        this.listeningWindows.splice(this.listeningWindows.indexOf(window), 1);
+      }
+    }
+  },
+
+  /**
+   * Adds the enabled listeners to the window.
+   *
+   * @param object aContentWindow
+   *        The window to which the event should be applied.
+   */
+  _addListenersToWindow: function PEP__addListenersToWindow(aContentWindow) {
+    for each (let eventType in PageEventsProducer.enabledEvents) {
+      if (this.eventTypes[eventType]) {
+        for each (let eventName in this.eventTypes[eventType]) {
+          aContentWindow.addEventListener(eventName, this.listenEvents, true);
+        }
+      }
+    }
+  },
+
+  /**
+   * Removes all the enabled listeners fromt he window.
+   *
+   * @param object aContentWindow
+   *        The window from which events are to be removed.
+   */
+  _removeListenersFromWindow: function PEP__removeListenersFromWindow(aContentWindow) {
+    for each (let eventType in PageEventsProducer.enabledEvents) {
+      if (this.eventTypes[eventType]) {
+        for each (let eventName in this.eventTypes[eventType]) {
+          aContentWindow.removeEventListener(eventName, this.listenEvents, true);
+        }
+      }
+    }
+  },
+
+  /**
+   * Adds event type sets to listen to.
+   *
+   * @param array aEventTypes
+   *        List of strings containing the type name of the events to start.
+   */
+  addEventTypes: function PEP_addEventTypes(aEventTypes) {
+    for each (let window in this.listeningWindows) {
+      for each (let eventType in aEventTypes) {
+        if (this.enabledEvents.indexOf(eventType) == -1) {
+          let started = false;
+          if (this.eventTypes[eventType]) {
+            started = true;
+            for each (let eventName in this.eventTypes[eventType]) {
+              window.addEventListener(eventName, this.listenEvents, true);
+            }
+          }
+          if (this.observedEvents[eventType]) {
+            started = true;
+            for each (let eventName in this.eventTypes[eventType]) {
+              Services.obs.addObserver(this.observeEvents, eventName, false);
+            }
+          }
+          if (started) {
+            this.enabledEvents.push(eventType);
+          }
+        }
+      }
+    }
+  },
+
+  /**
+   * Stops listening to the specified event types.
+   *
+   * @param array aEventTypes
+   *        List of strings containing the type name of the events to stop..
+   */
+  removeEventTypes: function PEP_removeEventTypes(aEventTypes) {
+    for each (let window in this.listeningWindows) {
+      for each (let eventType in aEventTypes) {
+        if (this.enabledEvents.indexOf(eventType) != -1) {
+          let stopped = false;
+          if (this.eventTypes[eventType]) {
+            stopped = true;
+            for each (let eventName in this.eventTypes[eventType]) {
+              window.removeEventListener(eventName, this.listenEvents, true);
+            }
+          }
+          if (this.observedEvents[eventType]) {
+            stopped = true;
+            for each (let eventName in this.eventTypes[eventType]) {
+              Services.obs.removeObserver(this.observeEvents, eventName, false);
+            }
+          }
+          if (stopped) {
+            this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
+          }
+        }
       }
     }
   },
 
   /**
    * nsIObserver for the browser notifications type events.
+   *
+   * A Normalized Data is sent to the DataSink via the DataSink.addEvent method
+   * call.
    */
   observeEvents:
   {
     observe: function PEP_OE_observe(aSubject, aTopic, aData) {
+      if (aTopic == "document-element-inserted") {
+        aSubject = aSubject.defaultView;
+      }
+      if (PageEventsProducer.listeningWindows.indexOf(aSubject) == -1) {
+        return;
+      }
+
+      let tabId = null;
+      // Get the chrome window associated with the content window
+      let chromeWindow = aSubject.QueryInterface(Ci.nsIInterfaceRequestor)
+                                 .getInterface(Ci.nsIWebNavigation)
+                                 .QueryInterface(Ci.nsIDocShell)
+                                 .chromeEventHandler
+                                 .ownerDocument.defaultView;
+      // Get the tab indexassociated with the content window
+      let tabIndex = chromeWindow.gBrowser
+        .getBrowserIndexForDocument(window.document);
+      // Get the unique tab id associated with the tab
+      try {
+        tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
+      } catch (ex) {}
+
+      DataSink.addEvent("PageEventsProducer", {
+        type: DataSink.NormalizedEventType.POINT_EVENT,
+        name: aTopic,
+        groupID: PageEventsProducer.sequenceId,
+        time: (new Date()).getTime(),
+        details: {
+          tabID: tabId,
+        }
+      });
     },
   },
 
@@ -158,10 +266,10 @@ let PageEventsProducer =
    * @param object aEvent
    *        The recorded event data.
    */
-  sendActivity: function PEP_sendActivity(aHttpActivity)
+  listenEvents: function PEP_listenEvents(aEvent)
   {
     let tabId = null;
-    let window = aHttpActivity.contentWindow;
+    let window = aEvent.originalTarget.ownerDocument.defaultView;
     // Get the chrome window associated with the content window
     let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
                              .getInterface(Ci.nsIWebNavigation)
@@ -176,38 +284,48 @@ let PageEventsProducer =
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {}
 
-    let currentStage =
-      aHttpActivity.meta.stages[aHttpActivity.meta.stages.length - 1];
-
-    let time;
-    try {
-      time = aHttpActivity.timings[currentStage].first;
-    }
-    catch (e) {
-      // No time data exist for http-on-examine-response so return.
-      return;
+    let eventDetail = {
+      target: aEvent.originalTarget,
     }
 
-    let eventType = null;
-    if (currentStage == "REQUEST_HEADER") {
-      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_START;
-    }
-    else if (currentStage == "TRANSACTION_CLOSE") {
-      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_END;
-    }
-    else {
-      eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID;
+    for (let eventTypeName in PageEventsProducer.eventTypes) {
+      if (PageEventsProducer.eventTypes[eventTypeName].indexOf(aEvent.type) >= 0) {
+        eventDetail.eventType = eventTypeName;
+        switch (eventTypeName) {
+          case "MouseEvent":
+            eventDetail.screenX = aEvent.screenX;
+            eventDetail.screenY = aEvent.screenY;
+            eventDetail.clientX = aEvent.clientX;
+            eventDetail.clientY = aEvent.clientY;
+            eventDetail.shiftKey = aEvent.shiftKey;
+            eventDetail.altKey = aEvent.altKey;
+            eventDetail.metaKey = aEvent.metaKey;
+            eventDetail.button = aEvent.button;
+            break;
+
+          case "KeyboardEvent":
+            eventDetail.keyCode = aEvent.keyCode;
+            eventDetail.shiftKey = aEvent.shiftKey;
+            eventDetail.altKey = aEvent.altKey;
+            eventDetail.metaKey = aEvent.metaKey;
+            eventDetail.ctrlKey = aEvent.ctrlKey;
+            break;
+
+          case "DragEvent":
+            eventDetail.data = aEvent.dataTransfer.getData("text/plain");
+            break;
+        }
+      }
     }
 
     DataSink.addEvent("PageEventsProducer", {
-      type: eventType,
-      name: currentStage,
-      groupID: aHttpActivity.id,
-      time: time,
+      type: DataSink.NormalizedEventType.POINT_EVENT,
+      name: aEvent.type,
+      groupID: PageEventsProducer.sequenceId,
+      time: aEvent.timeStamp || (new Date()).getTime(),
       details: {
         tabID: tabId,
-        meta: aHttpActivity.meta,
-        log: aHttpActivity.log,
+        detail: eventDetail,
       }
     });
   },
@@ -217,20 +335,7 @@ let PageEventsProducer =
    */
   destroy: function PEP_destroy()
   {
-    for each (let window in this.listeningWindows) {
-      for each (let eventType in this.enabledEvents) {
-        if (this.eventTypes[eventType]) {
-          for each (let eventName in this.eventTypes[eventType]) {
-            window.removeEventListener(eventName, this.sendActivity, true);
-          }
-        }
-        if (this.observedEvents[eventType]) {
-          for each (let eventName in this.eventTypes[eventType]) {
-            Services.obs.removeObserver(this.observeEvents, eventName, false);
-          }
-        }
-      }
-    }
+    this.removeEventTypes(this.enabledEvents);
     this.listeningWindows = this.enabledEvents = null;
   },
 };
