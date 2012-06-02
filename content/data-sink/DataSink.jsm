@@ -43,7 +43,7 @@ const NORMALIZED_EVENT_TYPE = {
  * The Data Sink
  */
 let DataSink = {
-  _registeredProducers: null,
+  _registeredProducers: {},
   _enabledProducers: null,
   _sequenceId: 0,
 
@@ -84,7 +84,6 @@ let DataSink = {
    */
   init: function DS_init(aMessage) {
     this._enabledProducers = {};
-    this._registeredProducers = {};
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
     let contentWindow = Cc["@mozilla.org/appshell/window-mediator;1"]
@@ -115,7 +114,7 @@ let DataSink = {
                    .ownerDocument.defaultView;
 
     // Initiating the Data Store
-    DataStore.init(this._chromeWindowForGraph, "timeline-database");
+    DataStore.init(this._chromeWindowForGraph, "timeline-database-" + (new Date()).getTime());
     Services.prompt.confirm(null, "", "DataSink: Message to start received");
   },
 
@@ -258,8 +257,6 @@ let DataSink = {
     }
 
     if (this._registeredProducers[aProducerName] != null) {
-      if (aFeatures == null)
-        aFeatures = [];
       if (typeof this._registeredProducers[aProducerName] == 'function') {
         this._enabledProducers[aProducerName] =
           new this._registeredProducers[aProducerName]([aContentWindow],
@@ -295,6 +292,7 @@ let DataSink = {
       this.stopProducer(producer);
     }
     DataStore.destroy(true);
+
     this._enabledProducers = null;
     Services.prompt.confirm(null, "", "Stopped all the producers");
   },

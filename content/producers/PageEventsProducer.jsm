@@ -35,8 +35,7 @@ let PageEventsProducer =
   /**
    * Types of events based on DOM event types and some predefined types.
    */
-  eventTypes:
-  {
+  eventTypes: {
     MouseEvent:    ["click", "mousedown", "mouseup", "mouseover", "mousemove",
                     "mouseout", "mouseenter", "mouseleave", "dblclick",
                     "resize", "DOMMouseScroll", "MozMousePixelScroll"],
@@ -56,8 +55,7 @@ let PageEventsProducer =
   /**
    * Events observed through system observer.
    */
-  observedEvents:
-  {
+  observedEvents: {
     PageEvent: ["chrome-document-global-created",
                 "content-document-global-created",
                 "document-element-inserted",
@@ -80,9 +78,10 @@ let PageEventsProducer =
     this.listeningWindows = aWindowList;
     this.enabledEvents = [];
 
-    if (aEnabledEvents == null) {
+    if (aEnabledEvents == null || aEnabledEvents.length == 0) {
       aEnabledEvents = this.defaultEvents;
     }
+
     this.addEventTypes(aEnabledEvents);
   },
 
@@ -126,7 +125,8 @@ let PageEventsProducer =
    * @param object aContentWindow
    *        The window to which the event should be applied.
    */
-  _addListenersToWindow: function PEP__addListenersToWindow(aContentWindow) {
+  _addListenersToWindow: function PEP__addListenersToWindow(aContentWindow)
+  {
     for each (let eventType in PageEventsProducer.enabledEvents) {
       if (this.eventTypes[eventType]) {
         for each (let eventName in this.eventTypes[eventType]) {
@@ -142,7 +142,8 @@ let PageEventsProducer =
    * @param object aContentWindow
    *        The window from which events are to be removed.
    */
-  _removeListenersFromWindow: function PEP__removeListenersFromWindow(aContentWindow) {
+  _removeListenersFromWindow: function PEP__removeListenersFromWindow(aContentWindow)
+  {
     for each (let eventType in PageEventsProducer.enabledEvents) {
       if (this.eventTypes[eventType]) {
         for each (let eventName in this.eventTypes[eventType]) {
@@ -158,7 +159,8 @@ let PageEventsProducer =
    * @param array aEventTypes
    *        List of strings containing the type name of the events to start.
    */
-  addEventTypes: function PEP_addEventTypes(aEventTypes) {
+  addEventTypes: function PEP_addEventTypes(aEventTypes)
+  {
     for each (let window in this.listeningWindows) {
       for each (let eventType in aEventTypes) {
         if (this.enabledEvents.indexOf(eventType) == -1) {
@@ -166,12 +168,12 @@ let PageEventsProducer =
           if (this.eventTypes[eventType]) {
             started = true;
             for each (let eventName in this.eventTypes[eventType]) {
-              window.addEventListener(eventName, this.listenEvents, true);
+              window.addEventListener(eventName, this.listenEvents, false);
             }
           }
           if (this.observedEvents[eventType]) {
             started = true;
-            for each (let eventName in this.eventTypes[eventType]) {
+            for each (let eventName in this.observedEvents[eventType]) {
               Services.obs.addObserver(this.observeEvents, eventName, false);
             }
           }
@@ -189,7 +191,8 @@ let PageEventsProducer =
    * @param array aEventTypes
    *        List of strings containing the type name of the events to stop..
    */
-  removeEventTypes: function PEP_removeEventTypes(aEventTypes) {
+  removeEventTypes: function PEP_removeEventTypes(aEventTypes)
+  {
     for each (let window in this.listeningWindows) {
       for each (let eventType in aEventTypes) {
         if (this.enabledEvents.indexOf(eventType) != -1) {
@@ -197,12 +200,12 @@ let PageEventsProducer =
           if (this.eventTypes[eventType]) {
             stopped = true;
             for each (let eventName in this.eventTypes[eventType]) {
-              window.removeEventListener(eventName, this.listenEvents, true);
+              window.removeEventListener(eventName, this.listenEvents, false);
             }
           }
           if (this.observedEvents[eventType]) {
             stopped = true;
-            for each (let eventName in this.eventTypes[eventType]) {
+            for each (let eventName in this.observedEvents[eventType]) {
               Services.obs.removeObserver(this.observeEvents, eventName, false);
             }
           }
@@ -220,28 +223,28 @@ let PageEventsProducer =
    * A Normalized Data is sent to the DataSink via the DataSink.addEvent method
    * call.
    */
-  observeEvents:
-  {
-    observe: function PEP_OE_observe(aSubject, aTopic, aData) {
+  observeEvents: {
+    observe: function PEP_OE_observe(aSubject, aTopic, aData)
+    {
       if (aTopic == "document-element-inserted") {
         aSubject = aSubject.defaultView;
       }
       if (PageEventsProducer.listeningWindows.indexOf(aSubject) == -1) {
         return;
       }
-
+      Services.prompt.confirm(null, aTopic, 1);
       let tabId = null;
-      // Get the chrome window associated with the content window
-      let chromeWindow = aSubject.QueryInterface(Ci.nsIInterfaceRequestor)
-                                 .getInterface(Ci.nsIWebNavigation)
-                                 .QueryInterface(Ci.nsIDocShell)
-                                 .chromeEventHandler
-                                 .ownerDocument.defaultView;
-      // Get the tab indexassociated with the content window
-      let tabIndex = chromeWindow.gBrowser
-        .getBrowserIndexForDocument(window.document);
-      // Get the unique tab id associated with the tab
       try {
+        // Get the chrome window associated with the content window
+        let chromeWindow = aSubject.QueryInterface(Ci.nsIInterfaceRequestor)
+                                   .getInterface(Ci.nsIWebNavigation)
+                                   .QueryInterface(Ci.nsIDocShell)
+                                   .chromeEventHandler
+                                   .ownerDocument.defaultView;
+        // Get the tab indexassociated with the content window
+        let tabIndex = chromeWindow.gBrowser
+          .getBrowserIndexForDocument(window.document);
+        // Get the unique tab id associated with the tab
         tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
       } catch (ex) {}
 
@@ -267,28 +270,28 @@ let PageEventsProducer =
    *        The recorded event data.
    */
   listenEvents: function PEP_listenEvents(aEvent)
-  {
+  {    Services.prompt.confirm(null, "", aEvent.type);
     let tabId = null;
-    let window = aEvent.originalTarget.ownerDocument.defaultView;
-    // Get the chrome window associated with the content window
-    let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
-                             .getInterface(Ci.nsIWebNavigation)
-                             .QueryInterface(Ci.nsIDocShell)
-                             .chromeEventHandler
-                             .ownerDocument.defaultView;
-    // Get the tab indexassociated with the content window
-    let tabIndex = chromeWindow.gBrowser
-      .getBrowserIndexForDocument(window.document);
-    // Get the unique tab id associated with the tab
     try {
+      let window = aEvent.target;
+      // Get the chrome window associated with the content window
+      let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
+                               .getInterface(Ci.nsIWebNavigation)
+                               .QueryInterface(Ci.nsIDocShell)
+                               .chromeEventHandler
+                               .ownerDocument.defaultView;
+      // Get the tab indexassociated with the content window
+      let tabIndex = chromeWindow.gBrowser
+        .getBrowserIndexForDocument(window.document);
+      // Get the unique tab id associated with the tab
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {}
 
     let eventDetail = {
-      target: aEvent.originalTarget,
-    }
+      target: aEvent.target.id || null,
+    };
 
-    for (let eventTypeName in PageEventsProducer.eventTypes) {
+    for each (let eventTypeName in PageEventsProducer.enabledEvents) {
       if (PageEventsProducer.eventTypes[eventTypeName].indexOf(aEvent.type) >= 0) {
         eventDetail.eventType = eventTypeName;
         switch (eventTypeName) {

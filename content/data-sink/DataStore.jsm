@@ -254,6 +254,7 @@ let DataStore = {
           .onsuccess = function(e){ };
     }
     this.db.close();
+
     this._databaseInitiated = this.window = this.db = this.indexedDB = null;
   },
 };

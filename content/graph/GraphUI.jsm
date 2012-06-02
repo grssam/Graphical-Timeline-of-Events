@@ -85,9 +85,11 @@ let GraphUI = {
                                "; Producer: " + aData[i].producer +
                                "; Name: " + aData[i].name +
                                "; Time: " + aData[i].time +
-                               "; Type: " + aData[i].type + "; Datails: url - " +
-                               aData[i].details.log.entries[0].request.url + " " +
-                               aData[i].details.log.entries[0].request.method + ";");
+                               "; Type: " + aData[i].type + "; Datails: " +
+                               (aData[i].producer == "NetworkProducer"? "url - " +
+                                aData[i].details.log.entries[0].request.url + " " +
+                                aData[i].details.log.entries[0].request.method + ";"
+                                : JSON.stringify(aData[i].details)));
     }
   },
 
