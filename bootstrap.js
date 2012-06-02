@@ -68,7 +68,7 @@ function addToolbarButton(window) {
 
   function showHideUI() {
     if (GraphUI.UIOpened != true) {
-      //Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
@@ -79,7 +79,7 @@ function addToolbarButton(window) {
       DataSink.removeRemoteListener(window);
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-      //Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       global.DataSink = global.PageEventsProducer = null;
     }
   }
@@ -147,14 +147,15 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     Cu.import("chrome://graphical-timeline/content/graph/GraphUI.jsm", global);
     watchWindows(handleCustomization);
     unload(function() {
+      Components.utils.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
       try {
         GraphUI.hideGraphUI();
-        //Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       }
       catch (e) {}
-      Components.utils.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
       global.GraphUI = global.DataSink = global.NetworkProducer = null;
     });
   }

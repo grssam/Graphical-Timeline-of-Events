@@ -278,7 +278,7 @@ let PageEventsProducer =
                                    .ownerDocument.defaultView;
         // Get the tab indexassociated with the content window
         let tabIndex = chromeWindow.gBrowser
-          .getBrowserIndexForDocument(window.document);
+          .getBrowserIndexForDocument(aSubject.document);
         // Get the unique tab id associated with the tab
         tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
       } catch (ex) {}
@@ -308,7 +308,18 @@ let PageEventsProducer =
   {
     let tabId = null;
     try {
-      let window = aEvent.target;
+      let window = null;
+      if (aEvent.target instanceof Ci.nsIDOMWindow) {
+        window = aEvent.target;
+      }
+      else if (aEvent.target.defaultView &&
+               aEvent.target.defaultView instanceof Ci.nsIDOMWindow) {
+        window = aEvent.target.defaultView;
+      }
+      else if (aEvent.target.ownerDocument &&
+               aEvent.target.ownerDocument.defaultView instanceof Ci.nsIDOMWindow) {
+        window = aEvent.target.ownerDocument.defaultView;
+      }
       // Get the chrome window associated with the content window
       let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
                                .getInterface(Ci.nsIWebNavigation)
