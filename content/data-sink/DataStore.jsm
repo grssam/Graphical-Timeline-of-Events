@@ -144,7 +144,6 @@ let DataStore = {
         }
       };
     } catch (e) {
-      Services.prompt.confirm(null, "", e);
       return false;
     }
     return true;

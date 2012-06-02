@@ -170,7 +170,7 @@ let DataSink = {
    * @param object aChromeWindow
    *        Reference to the chrome window from which listener is to be removed.
    */
-  removeRemoteListener: function DS_removeRemoteListener(aChromwWindow) {
+  removeRemoteListener: function DS_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListner("GraphicalTimeline:UIEvent",
                                      DataSink._remoteListener, true);
   },
@@ -215,7 +215,7 @@ let DataSink = {
    *        - details (optional) - other details about the event.
    */
   addEvent: function DS_addEvent(aProducerName, aEventData) {
-    if (!(aProducerName in this._enabledProducers)) {
+    if (!this._enabledProducers[aProducerName]) {
       return;
     }
 

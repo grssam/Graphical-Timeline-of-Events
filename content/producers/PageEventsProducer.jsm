@@ -39,9 +39,10 @@ let PageEventsProducer =
     MouseEvent:    ["click", "mousedown", "mouseup", "mouseover", "mousemove",
                     "mouseout", "mouseenter", "mouseleave", "dblclick",
                     "resize", "DOMMouseScroll", "MozMousePixelScroll"],
-    PageEvent:     ["DOMFrameContentLoaded", "MozAfterPaint", "DOMWindowClose",
-                    "load", "beforeunload", "unload", "DOMContentLoaded",
+    PageEvent:     ["DOMFrameContentLoaded", "DOMWindowClose", "load",
+                    "beforeunload", "unload", "DOMContentLoaded",
                     "pageshow", "pagehide", "readystatechange"],
+    PaintEvent:    ["MozAfterPaint"],
     KeyboardEvent: ["keydown", "keypress", "keyup"],
     DragEvent:     ["drag", "dragend", "dragenter", "dragleave", "dragover",
                     "dragstart", "drop"],
@@ -83,6 +84,13 @@ let PageEventsProducer =
     }
 
     this.addEventTypes(aEnabledEvents);
+
+    // Listner to reattach the events on location change.
+    this.gBrowser = Cc["@mozilla.org/appshell/window-mediator;1"]
+                      .getService(Ci.nsIWindowMediator)
+                      .getMostRecentWindow("navigator:browser")
+                      .gBrowser;
+    this.gBrowser.addTabsProgressListener(this.progressListner);
   },
 
   /**
@@ -130,7 +138,7 @@ let PageEventsProducer =
     for each (let eventType in PageEventsProducer.enabledEvents) {
       if (this.eventTypes[eventType]) {
         for each (let eventName in this.eventTypes[eventType]) {
-          aContentWindow.addEventListener(eventName, this.listenEvents, true);
+          aContentWindow.addEventListener(eventName, this.listenEvents, false);
         }
       }
     }
@@ -147,7 +155,7 @@ let PageEventsProducer =
     for each (let eventType in PageEventsProducer.enabledEvents) {
       if (this.eventTypes[eventType]) {
         for each (let eventName in this.eventTypes[eventType]) {
-          aContentWindow.removeEventListener(eventName, this.listenEvents, true);
+          aContentWindow.removeEventListener(eventName, this.listenEvents, false);
         }
       }
     }
@@ -167,8 +175,20 @@ let PageEventsProducer =
           let started = false;
           if (this.eventTypes[eventType]) {
             started = true;
-            for each (let eventName in this.eventTypes[eventType]) {
-              window.addEventListener(eventName, this.listenEvents, false);
+            if (eventType == "PaintEvent") {
+              let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
+                                   .getInterface(Ci.nsIWebNavigation)
+                                   .QueryInterface(Ci.nsIDocShell)
+                                   .chromeEventHandler
+                                   .ownerDocument.defaultView;
+              for each (let eventName in this.eventTypes[eventType]) {
+                chromeWindow.addEventListener(eventName, this.listenEvents, false);
+              }
+            }
+            else {
+              for each (let eventName in this.eventTypes[eventType]) {
+                window.addEventListener(eventName, this.listenEvents, false);
+              }
             }
           }
           if (this.observedEvents[eventType]) {
@@ -199,9 +219,24 @@ let PageEventsProducer =
           let stopped = false;
           if (this.eventTypes[eventType]) {
             stopped = true;
-            for each (let eventName in this.eventTypes[eventType]) {
-              window.removeEventListener(eventName, this.listenEvents, false);
+            try {
+              if (eventType == "PaintEvent") {
+                let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
+                                     .getInterface(Ci.nsIWebNavigation)
+                                     .QueryInterface(Ci.nsIDocShell)
+                                     .chromeEventHandler
+                                     .ownerDocument.defaultView;
+                for each (let eventName in this.eventTypes[eventType]) {
+                  chromeWindow.addEventListener(eventName, this.listenEvents, false);
+                }
+              }
+              else {
+                for each (let eventName in this.eventTypes[eventType]) {
+                  window.removeEventListener(eventName, this.listenEvents, false);
+                }
+              }
             }
+            catch (ex) {}
           }
           if (this.observedEvents[eventType]) {
             stopped = true;
@@ -232,7 +267,7 @@ let PageEventsProducer =
       if (PageEventsProducer.listeningWindows.indexOf(aSubject) == -1) {
         return;
       }
-      Services.prompt.confirm(null, aTopic, 1);
+
       let tabId = null;
       try {
         // Get the chrome window associated with the content window
@@ -270,7 +305,7 @@ let PageEventsProducer =
    *        The recorded event data.
    */
   listenEvents: function PEP_listenEvents(aEvent)
-  {    Services.prompt.confirm(null, "", aEvent.type);
+  {
     let tabId = null;
     try {
       let window = aEvent.target;
@@ -333,13 +368,26 @@ let PageEventsProducer =
     });
   },
 
+  progressListner: {
+    onLocationChange: function PEP_PL_onLocationChange(aBrowser, aWebProgress,
+                                                       aRequest, aLocation) {
+      let contentWindow = aBrowser.contentWindow;
+      if (PageEventsProducer.listeningWindows.indexOf(contentWindow) == -1) {
+        return;
+      }
+      PageEventsProducer.removeWindows([contentWindow]);
+      PageEventsProducer.addWindows([contentWindow]);
+    },
+  },
+
   /**
    * Stops the Page Events Producer.
    */
   destroy: function PEP_destroy()
   {
     this.removeEventTypes(this.enabledEvents);
-    this.listeningWindows = this.enabledEvents = null;
+    this.gBrowser.removeTabsProgressListener(this.progressListner);
+    this.gBrowser = this.listeningWindows = this.enabledEvents = null;
   },
 };
 
