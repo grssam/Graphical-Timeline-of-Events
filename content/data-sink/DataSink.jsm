@@ -5,7 +5,6 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
 
 var EXPORTED_SYMBOLS = ["DataSink"];
 
@@ -60,11 +59,11 @@ let DataSink = {
    *        The object received from the remote graph. If the message is null,
    *        default settings are used and all registered producers are started.
    *        aMessage properties:
-   *        - enabledProducers - (required) list of objects representing the
+   *        - enabledProducers - (optional) list of objects representing the
    *        enabled producers. Each object can have property |features|
    *        representing the enabled features of the producer.
-   *        - databaseName - (optional) this is a custom name chosen by the
-   *        user. A default name would be used if not provided.
+   *        - databaseName - (required) this is a custom name chosen by the
+   *        user. This should be present and Graph UI should send this.
    *
    *        Example message:
    *        {
@@ -91,7 +90,7 @@ let DataSink = {
                         .getMostRecentWindow("navigator:browser")
                         .content;
     // enable the required producers if aMessage not null.
-    if (aMessage) {
+    if (aMessage && aMessage.enabledProducers) {
       for (let producer in this._registeredProducers) {
         if (aMessage.enabledProducers[producer]) {
           this.startProducer(contentWindow, producer,
@@ -114,7 +113,9 @@ let DataSink = {
                    .ownerDocument.defaultView;
 
     // Initiating the Data Store
-    DataStore.init(this._chromeWindowForGraph, "timeline-database-" + (new Date()).getTime());
+    Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+    let dbName = aMessage.databaseName;
+    this.dataStore = new DataStore(dbName);
     Services.prompt.confirm(null, "", "DataSink: Message to start received");
   },
 
@@ -134,7 +135,7 @@ let DataSink = {
         break;
 
       case UIEventMessageType.DESTROY_DATA_SINK:
-        DataSink.destroy();
+        DataSink.destroy(message);
         break;
 
       case UIEventMessageType.START_PRODUCER:
@@ -171,7 +172,7 @@ let DataSink = {
    *        Reference to the chrome window from which listener is to be removed.
    */
   removeRemoteListener: function DS_removeRemoteListener(aChromeWindow) {
-    aChromeWindow.removeEventListner("GraphicalTimeline:UIEvent",
+    aChromeWindow.removeEventListener("GraphicalTimeline:UIEvent",
                                      DataSink._remoteListener, true);
   },
 
@@ -224,7 +225,7 @@ let DataSink = {
     normalizedData.producer = aProducerName;
 
     // Adding the normalized data to the data store object.
-    if (DataStore.add(normalizedData)) {
+    if (this.dataStore.add(normalizedData)) {
       // Informing the Graph UI about the new data.
       DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA);
     }
@@ -286,14 +287,21 @@ let DataSink = {
 
   /**
    * Stop the running producers and destroy the Sink.
+   *
+   * @param object aMessage
+   *        message from the UI containing a property
+   *        - deleteDatabase
+   *          true if you want to delete the database when closing.
    */
-  destroy: function DS_destroy() {
+  destroy: function DS_destroy(aMessage) {
     for (let producer in this._enabledProducers) {
       this.stopProducer(producer);
     }
-    DataStore.destroy(true);
-
-    this._enabledProducers = null;
+    this.dataStore.destroy(aMessage.deleteDatabase);
+    try {
+      Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+    } catch (ex) {}
+    this.dataStore = this._enabledProducers = null;
     Services.prompt.confirm(null, "", "Stopped all the producers");
   },
 };

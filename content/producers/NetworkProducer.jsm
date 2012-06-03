@@ -92,6 +92,10 @@ NetworkResponseListener.prototype =
    */
   setAsyncListener: function NRL_setAsyncListener(aStream, aListener)
   {
+    // Quiting early if producer has stopped
+    if (!NetworkProducer || !Ci) {
+      return;
+    }
     // Asynchronously wait for the stream to be readable or closed.
     aStream.asyncWait(aListener, 0, 0, Services.tm.mainThread);
   },
@@ -134,6 +138,11 @@ NetworkResponseListener.prototype =
   */
   _findOpenResponse: function NNRL__findOpenResponse()
   {
+    // Quiting early if producer has stopped
+    if (!NetworkProducer || !Ci) {
+      return;
+    }
+
     if (this._foundOpenResponse) {
       return;
     }
@@ -179,6 +188,11 @@ NetworkResponseListener.prototype =
    */
   onStreamClose: function NRL_onStreamClose()
   {
+    // Quiting early if producer has stopped
+    if (!NetworkProducer || !Ci) {
+      return;
+    }
+
     if (!this.httpActivity) {
       return;
     }
@@ -211,6 +225,11 @@ NetworkResponseListener.prototype =
    */
   onInputStreamReady: function NRL_onInputStreamReady(aStream)
   {
+    // Quiting early if producer has stopped
+    if (!NetworkProducer || !Ci) {
+      return;
+    }
+
     if (!(aStream instanceof Ci.nsIAsyncInputStream) || !this.httpActivity) {
       return;
     }
@@ -221,7 +240,7 @@ NetworkResponseListener.prototype =
       available = aStream.available();
     }
     catch (ex) { }
-    
+
     if (available != -1) {
       this.setAsyncListener(aStream, this);
     }

@@ -5,7 +5,6 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
 
 var EXPORTED_SYMBOLS = ["GraphUI"];
 
@@ -40,6 +39,7 @@ let GraphUI = {
   UIOpened: false,
   newDataAvailable: false,
   readingData: false,
+  databaseName: "",
 
   timer: null,
 
@@ -55,7 +55,12 @@ let GraphUI = {
                          .getService(Ci.nsIConsoleService);
     GraphUI.addRemoteListener(GraphUI._window);
     GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 100);
-    GraphUI.sendMessage(UIEventMessageType.INIT_DATA_SINK);
+    // Importing the Data Store and making a database
+    Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+    GraphUI.databaseName = "timeline-database-" + (new Date()).getTime();
+    GraphUI.dataStore = new DataStore(GraphUI.databaseName);
+    GraphUI.sendMessage(UIEventMessageType.INIT_DATA_SINK,
+                        {databaseName: GraphUI.databaseName});
     GraphUI.UIOpened = true;
   },
 
@@ -65,7 +70,7 @@ let GraphUI = {
   readData: function GUI_readData() {
     if (GraphUI.newDataAvailable && !GraphUI.readingData) {
       GraphUI.readingData = true;
-      DataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
+      GraphUI.dataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
     }
   },
 
@@ -160,10 +165,15 @@ let GraphUI = {
     if (GraphUI.UIOpened == true) {
       Services.prompt.confirm(null, "", "GraphUI: Hiding UI");
       GraphUI._window.clearInterval(GraphUI.timer);
+      GraphUI.dataStore.destroy();
+      try {
+        Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+      } catch (ex) {}
       GraphUI.removeRemoteListener(GraphUI._window);
-      GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK);
+      GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
+                          {deleteDatabase: true}); // true to delete the database
       GraphUI.newDataAvailable = GraphUI.UIOpened = GraphUI.timer =
-        GraphUI._currentId = GraphUI._window = null;
+        GraphUI.dataStore = GraphUI._currentId = GraphUI._window = null;
     }
   }
 };

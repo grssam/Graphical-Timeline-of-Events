@@ -152,7 +152,6 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
         GraphUI.hideGraphUI();
         Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-        Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       }
       catch (e) {}

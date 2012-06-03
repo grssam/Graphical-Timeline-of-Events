@@ -236,7 +236,7 @@ let PageEventsProducer =
                 }
               }
             }
-            catch (ex) {}
+            catch (ex) {Services.prompt.confirm(null, "", "PEP: " + ex);}
           }
           if (this.observedEvents[eventType]) {
             stopped = true;

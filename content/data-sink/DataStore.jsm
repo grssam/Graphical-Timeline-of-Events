@@ -2,42 +2,32 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
-
-Cu.import("resource://gre/modules/Services.jsm");
-
 var EXPORTED_SYMBOLS = ["DataStore"];
 
 /**
  * The Data Store
+ *
+ * @param string aDBName
+ *        The name of the database to be used for this session, both by
+ *        Data Sink and the Graph UI.
  */
-let DataStore = {
+function DataStore(aDBName) {
+  this._databaseInitiated = false;
+  this.db = null;
+  this.databaseName = aDBName;
+  Components.classes["@mozilla.org/dom/indexeddb/manager;1"]
+    .getService(Components.interfaces.nsIIndexedDatabaseManager)
+    .initWindowless(this);
+  this.init();
+}
 
-  _databaseInitiated: false,
-
-  window: null,
-  indexedDB: null,
-  db: null,
-  databaseName: "",
-
+DataStore.prototype = {
   /**
    * The Data Store initialization code.
-   *
-   * @param object aWindow
-   *        The window to retreive the mozIndexedDB object.
-   * @param string aDBName
-   *        The name of the database to be used for this session, both by
-   *        Data Sink and the Graph UI.
    */
-  init: function DS_init(aWindow, aDBName) {
-    if (!aWindow) {
-      return;
-    }
-
-    this.window = aWindow;
-    this.indexedDB = aWindow.mozIndexedDB;
-    this.databaseName = aDBName;
-    let request = this.indexedDB.open(aDBName, 1);
+  init: function DS_init()
+  {
+    let request = this.mozIndexedDB.open(this.aDBName, 1);
     request.onsuccess = function(event) {
       this.db = request.result;
       this._databaseInitiated = true;
@@ -48,7 +38,8 @@ let DataStore = {
   /**
    * Function to setup the data base according to the normalized event data.
    */
-  setupDataBase: function DS_setupDataBase(aEvent) {
+  setupDataBase: function DS_setupDataBase(aEvent)
+  {
     let db = aEvent.target.result;
     let objectStore = db.createObjectStore("normalizedData", { keyPath: "id" });
 
@@ -61,7 +52,8 @@ let DataStore = {
   /**
    * Adds data to the object store.
    */
-  add: function DS_add(aNormalizedData) {
+  add: function DS_add(aNormalizedData)
+  {
     if (!this._databaseInitiated) {
       return false;
     }
@@ -89,7 +81,8 @@ let DataStore = {
    * @param function aCallback
    *        Callback function which will handle the asynchrounously read data.
    */
-  getById: function DS_getById(aId, aCallback) {
+  getById: function DS_getById(aId, aCallback)
+  {
     if (!this._databaseInitiated) {
       return false;
     }
@@ -110,19 +103,21 @@ let DataStore = {
    * @param number aUpperId
    *        Upper bound id of the data to retreive. null for no upper bound.
    */
-  getRangeById: function DS_getRangeById(aCallback, aLowerId, aUpperId) {
+  getRangeById: function DS_getRangeById(aCallback, aLowerId, aUpperId)
+  {
     if (!this._databaseInitiated) {
       return false;
     }
+
     let range;
     if (aLowerId != null && aUpperId != null) {
-      range = this.window.IDBKeyRange.bound(aLowerId, aUpperId);
+      range = this.IDBKeyRange.bound(aLowerId, aUpperId);
     }
     else if (aLowerId == null && aUpperId != null) {
-      range = this.window.IDBKeyRange.upperBound(aUpperId);
+      range = this.IDBKeyRange.upperBound(aUpperId);
     }
     else if (aLowerId != null && aUpperId == null) {
-      range = this.window.IDBKeyRange.lowerBound(aLowerId);
+      range = this.IDBKeyRange.lowerBound(aLowerId);
     }
     else {
       range = null;
@@ -132,7 +127,7 @@ let DataStore = {
       let data = [];
       this.db.transaction("normalizedData")
           .objectStore("normalizedData")
-          .openCursor(range, this.window.IDBCursor.NEXT)
+          .openCursor(range, "next" /* IDBCursor.NEXT */)
           .onsuccess = function(event) {
         let cursor = event.target.result;
         if (cursor) {
@@ -160,17 +155,18 @@ let DataStore = {
    * @param function aCallback
    *        Callback function which will handle the asynchrounously read data.
    */
-  getByIndex: function DS_getByIndex(aIndexName, aIndexKey, aCallback) {
+  getByIndex: function DS_getByIndex(aIndexName, aIndexKey, aCallback)
+  {
     if (!this._databaseInitiated) {
       return false;
     }
-    let range = this.window.IDBKeyRange.key(aIndexKey);
+    let range = this.IDBKeyRange.key(aIndexKey);
     try {
       let data = [];
       this.db.transaction("normalizedData")
           .objectStore("normalizedData")
           .index(aIndexName)
-          .openCursor(range, this.window.IDBCursor.NEXT)
+          .openCursor(range, "next" /* IDBCursor.NEXT */)
           .onsuccess = function(event) {
         let cursor = event.target.result;
         if (cursor) {
@@ -201,19 +197,20 @@ let DataStore = {
    *        Upper bound id of the data to retreive. null for no upper bound.
    */
   getRangeByIndex:
-  function DS_getRangeByIndex(aCallback, aIndexName, aLowerKey, aUpperKey) {
+  function DS_getRangeByIndex(aCallback, aIndexName, aLowerKey, aUpperKey)
+  {
     if (!this._databaseInitiated) {
       return false;
     }
     let range;
     if (aLowerKey != null && aUpperKey != null) {
-      range = this.window.IDBKeyRange.bound(aLowerKey, aUpperKey);
+      range = this.IDBKeyRange.bound(aLowerKey, aUpperKey);
     }
     else if (aLowerKey == null && aUpperKey != null) {
-      range = this.window.IDBKeyRange.upperBound(aUpperKey);
+      range = this.IDBKeyRange.upperBound(aUpperKey);
     }
     else if (aLowerKey != null && aUpperKey == null) {
-      range = this.window.IDBKeyRange.lowerBound(aLowerKey);
+      range = this.IDBKeyRange.lowerBound(aLowerKey);
     }
     else {
       range = null;
@@ -224,7 +221,7 @@ let DataStore = {
       this.db.transaction("normalizedData")
           .objectStore("normalizedData")
           .index(aIndexName)
-          .openCursor(range, this.window.IDBCursor.NEXT)
+          .openCursor(range, "next" /* IDBCursor.NEXT */)
           .onsuccess = function(event) {
         let cursor = event.target.result;
         if (cursor) {
@@ -244,16 +241,18 @@ let DataStore = {
   /**
    * Closes the database.
    *
-   * @param boolean aDelete
-   *        True if you want to delete the database.
+   * @param boolean aDeleteDatabase
+   *        true if user wants to delete the database just created.
    */
-  destroy: function DS_destroy(aDelete) {
-    if (aDelete === true) {
-      this.indexedDB.deleteDatabase(this.databaseName)
-          .onsuccess = function(e){ };
+  destroy: function DS_destroy(aDeleteDatabase)
+  {
+    if (aDeleteDatabase === true) {
+      this.mozIndexedDB.deleteDatabase(this.databaseName)
+          .onsuccess = function(e){};
     }
     this.db.close();
 
-    this._databaseInitiated = this.window = this.db = this.indexedDB = null;
+    this._databaseInitiated = this.db = this.mozIndexedDB =
+      this.IDBKeyRange = null;
   },
 };
