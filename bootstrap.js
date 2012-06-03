@@ -80,7 +80,7 @@ function addToolbarButton(window) {
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-      global.DataSink = global.PageEventsProducer = null;
+      global.DataSink = global.NetworkProducer = global.PageEventsProducer = null;
     }
   }
 

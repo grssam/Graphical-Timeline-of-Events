@@ -27,7 +27,7 @@ DataStore.prototype = {
    */
   init: function DS_init()
   {
-    let request = this.mozIndexedDB.open(this.aDBName, 1);
+    let request = this.mozIndexedDB.open(this.databaseName, 1);
     request.onsuccess = function(event) {
       this.db = request.result;
       this._databaseInitiated = true;

@@ -94,6 +94,12 @@ NetworkResponseListener.prototype =
   {
     // Quiting early if producer has stopped
     if (!NetworkProducer || !Ci) {
+      this.sink.outputStream.close();
+      this.httpActivity.channel = null;
+      this.httpActivity = null;
+      this.sink = null;
+      this.inputStream = null;
+      this.requtStream = null;
       return;
     }
     // Asynchronously wait for the stream to be readable or closed.
@@ -486,7 +492,7 @@ let NetworkProducer =
     let channel = aSubject.QueryInterface(Ci.nsIHttpChannel);
     // Try to get the source window of the request.
     let win = NetworkHelper.getWindowForRequest(channel);
-    if (!win) {
+    if (!win || NetworkProducer.listeningWindows.indexOf(win) == -1) {
       return;
     }
 

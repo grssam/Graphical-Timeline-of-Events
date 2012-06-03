@@ -301,7 +301,7 @@ let DataSink = {
     try {
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
-    this.dataStore = this._enabledProducers = null;
+    DataStore = this.dataStore = this._enabledProducers = null;
     Services.prompt.confirm(null, "", "Stopped all the producers");
   },
 };

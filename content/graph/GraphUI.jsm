@@ -163,7 +163,6 @@ let GraphUI = {
    */
   hideGraphUI: function GUI_hideGraphUI() {
     if (GraphUI.UIOpened == true) {
-      Services.prompt.confirm(null, "", "GraphUI: Hiding UI");
       GraphUI._window.clearInterval(GraphUI.timer);
       GraphUI.dataStore.destroy();
       try {
@@ -172,7 +171,7 @@ let GraphUI = {
       GraphUI.removeRemoteListener(GraphUI._window);
       GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
                           {deleteDatabase: true}); // true to delete the database
-      GraphUI.newDataAvailable = GraphUI.UIOpened = GraphUI.timer =
+      GraphUI.newDataAvailable = GraphUI.UIOpened = GraphUI.timer = DataStore =
         GraphUI.dataStore = GraphUI._currentId = GraphUI._window = null;
     }
   }
