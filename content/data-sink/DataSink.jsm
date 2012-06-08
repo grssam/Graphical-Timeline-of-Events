@@ -12,19 +12,23 @@ var EXPORTED_SYMBOLS = ["DataSink"];
  * List of message types that the UI can send.
  */
 const UIEventMessageType = {
-  INIT_DATA_SINK: 0, // Initialize the Data Sink and start all the producers.
-  DESTROY_DATA_SINK: 1, // Destroy the Data Sink and stop all producer activity.
-  START_PRODUCER: 2, // To start a single producer.
-  STOP_PRODUCER: 3, // To stop a single producer.
-  ADD_WINDOW: 4, // Add another window to listen for tab based events.
-  REMOVE_WINDOW: 5, // Stop listening for events for tab based events.
+  PING_HELLO: 0, // Tells the remote Data Sink that a UI has been established.
+  INIT_DATA_SINK: 1, // Initialize the Data Sink and start all the producers.
+  DESTROY_DATA_SINK: 2, // Destroy the Data Sink and stop all producer activity.
+  START_PRODUCER: 3, // To start a single producer.
+  STOP_PRODUCER: 4, // To stop a single producer.
+  ADD_WINDOW: 5, // Add another window to listen for tab based events.
+  REMOVE_WINDOW: 6, // Stop listening for events for tab based events.
 };
 
 /**
  * List of message types that the UI can listen for.
  */
 const DataSinkEventMessageType = {
-  NEW_DATA: 0, // There is new data in the data store.
+  PING_BACK: 0, // A reply from the remote Data Sink when the UI sends PING_HELLO.
+                // Only upon receiving this message, the UI can send a message
+                // to start the producers.
+  NEW_DATA: 1, // There is new data in the data store.
 };
 
 const NORMALIZED_EVENT_TYPE = {
@@ -38,12 +42,20 @@ const NORMALIZED_EVENT_TYPE = {
   REPEATING_EVENT_STOP: 6, // End of a repeating event.
 };
 
+const ERRORS = {
+  ID_TAKEN: 0, // Id is already used by another timeline UI.
+};
+
 /**
  * The Data Sink
  */
 let DataSink = {
+  // Object list holding reference to the producer object.
   _registeredProducers: {},
+  // Object list holding reference to the enabled producr instance.
   _enabledProducers: null,
+  // Object list containing all the available information on registered producers.
+  _producerInfoList: {};
   _sequenceId: 0,
 
   NormalizedEventType: NORMALIZED_EVENT_TYPE,
@@ -52,18 +64,26 @@ let DataSink = {
 
   _chromeWindowForGraph: null,
 
+  // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
+  registeredUI: [],
+
+  // The database name for the current session of data sink.
+  databaseName: "",
+
+  // Represents whether data sink has been started or not.
+  initiated: false,
+
   /**
    * The Data Sink initialization code.
    *
    * @param object aMessage
-   *        The object received from the remote graph. If the message is null,
-   *        default settings are used and all registered producers are started.
-   *        aMessage properties:
+   *        The object received from the remote graph.
    *        - enabledProducers - (optional) list of objects representing the
    *        enabled producers. Each object can have property |features|
    *        representing the enabled features of the producer.
-   *        - databaseName - (required) this is a custom name chosen by the
-   *        user. This should be present and Graph UI should send this.
+   *        If null, all producers will be started.
+   *        - timelineUIId - (required) This is a unique id represnting a
+   *        timeline UI.
    *
    *        Example message:
    *        {
@@ -76,12 +96,28 @@ let DataSink = {
    *            },
    *            PageEventProducer:
    *            {
+   *              features: ["LoadEvent", "MouseEvent"],
    *            },
    *          },
-   *          databaseName: "new_DB",
+   *          timelineUIId: "timeline-ui-12483",
    *        }
    */
   init: function DS_init(aMessage) {
+    // Do not start the producers again.
+    if (this.initiated) {
+      return;
+    }
+
+    // Stop if aMessage is null (as we need the timelineUIId).
+    if (!aMessage || aMessage.timelineUIId) {
+      return;
+    }
+
+    // If this timeline UI is not registered, quit.
+    if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
+      return;
+    }
+
     this._enabledProducers = {};
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
@@ -90,7 +126,7 @@ let DataSink = {
                         .getMostRecentWindow("navigator:browser")
                         .content;
     // enable the required producers if aMessage not null.
-    if (aMessage && aMessage.enabledProducers) {
+    if (aMessage.enabledProducers) {
       for (let producer in this._registeredProducers) {
         if (aMessage.enabledProducers[producer]) {
           this.startProducer(contentWindow, producer,
@@ -114,9 +150,45 @@ let DataSink = {
 
     // Initiating the Data Store
     Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-    let dbName = aMessage.databaseName;
-    this.dataStore = new DataStore(dbName);
+    this.dataStore = new DataStore(this.databaseName);
     Services.prompt.confirm(null, "", "DataSink: Message to start received");
+    this.initiated = true;
+  },
+
+  /**
+   * Registers a remote Timeline UI and sends back a ping reply containing the
+   * name of the IndexedDB database.
+   *
+   * @param object aMessage
+   *        This contains the property timelineUIId representing the id to be
+   *        registered.
+   *
+   *        Example message:
+   *        {
+   *          timelineUIId: "timeline-ui-12483",
+   *        }
+   */
+  replyToPing: function DS_replyToPing(aMessage) {
+    if (!aMessage || !aMessage.timelineUIId) {
+      return;
+    }
+    if (!this.registeredUI) {
+      this.registeredUI = [];
+    }
+
+    let id = aMessage.timelineUIId;
+    if (this.registeredUI.indexOf(id) == -1) {
+      this.registeredUI.push(id);
+      if (this.databaseName == "") {
+        this.databaseName = "timeline-database-" + (new Date()).getTime();
+      }
+      aMessage.databaseName = this.databaseName;
+      aMessage.producerInfoList = this._producerInfoList;
+    }
+    else {
+      aMessage.error = ERRORS.ID_TAKEN;
+    }
+    this.sendMessage(DataSinkEventMessageType.PING_BACK, aMessage);
   },
 
   /**
@@ -129,6 +201,10 @@ let DataSink = {
     let message = aEvent.detail.messageData;
     let type = aEvent.detail.messageType;
     switch(type) {
+
+      case UIEventMessageType.PING_HELLO:
+        DataSink.replyToPing(message);
+        break;
 
       case UIEventMessageType.INIT_DATA_SINK:
         DataSink.init(message);
@@ -237,9 +313,11 @@ let DataSink = {
    *
    * @param object aProducer
    *        Reference to the producer ot be registered with Data Sink.
+   * @param object aProducerInfo
    */
-  registerProducer: function DS_registerProducer(aProducer, aName) {
-    this._registeredProducers[aName] = aProducer;
+  registerProducer: function DS_registerProducer(aProducer, aProducerInfo) {
+    this._registeredProducers[aProducerInfo.name] = aProducer;
+    this._producerInfoList[aProducerInfo.name] = aProducerInfo;
   },
 
   /**
@@ -290,10 +368,23 @@ let DataSink = {
    *
    * @param object aMessage
    *        message from the UI containing a property
-   *        - deleteDatabase
+   *        - deleteDatabase (boolean)
    *          true if you want to delete the database when closing.
+   *        - timelineUIId (string)
+   *          string containing the id of the UI that is being closed.
+   *          It might not be the last listening UI, so we will destroy
+   *          everything only if its the last.
    */
   destroy: function DS_destroy(aMessage) {
+    if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
+      return;
+    }
+    this.registeredUI.splice(this.registeredUI.indexOf(aMessage.timelineUIId), 1);
+
+    if (this.registeredUI.length > 0) {
+      return;
+    }
+
     for (let producer in this._enabledProducers) {
       this.stopProducer(producer);
     }
@@ -301,7 +392,9 @@ let DataSink = {
     try {
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
-    DataStore = this.dataStore = this._enabledProducers = null;
+    DataStore = this.registeredUI = this.dataStore = this._enabledProducers = null;
+    this.initiated = false;
+    this.databaseName = "";
     Services.prompt.confirm(null, "", "Stopped all the producers");
   },
 };

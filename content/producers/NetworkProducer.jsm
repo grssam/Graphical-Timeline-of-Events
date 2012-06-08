@@ -1047,5 +1047,19 @@ let NetworkProducer =
   },
 };
 
+/**
+ * The information packet sent to the Data Sink.
+ */
+let producerInfo = {
+  // Name of the producer.
+  name: "NetworkProducer",
+  // Type of events that this producer listens to (one type per producer).
+  // All the continuous events types are considered same.
+  type: DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID,
+  // Features of this producer that can be turned on or off.
+  // For this producer, its null as of 8th June 2012.
+  features: null,
+};
+
 // Register this producer to Data Sink
-DataSink.registerProducer(NetworkProducer, "NetworkProducer");
+DataSink.registerProducer(NetworkProducer, producerInfo);

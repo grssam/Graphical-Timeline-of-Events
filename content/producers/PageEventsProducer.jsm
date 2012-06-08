@@ -402,5 +402,20 @@ let PageEventsProducer =
   },
 };
 
+/**
+ * The information packet sent to the Data Sink.
+ */
+let producerInfo = {
+  // Name of the producer.
+  name: "PageEventsProducer",
+  // Type of events that this producer listens to (one type per producer).
+  type: DataSink.NormalizedEventType.POINT_EVENT,
+  // Features of this producer that can be turned on or off.
+  // For this producer, its the list of eventsTypes.
+  features: ["MouseEvent", "PageEvent", "PaintEvent", "KeyboardEvent",
+             "DragEvent", "FocusEvent", "UIEvent", "FormEvent",
+             "MenuEvent", "MiscEvent"],
+};
+
 // Register this producer to Data Sink
-DataSink.registerProducer(PageEventsProducer, "PageEventsProducer");
+DataSink.registerProducer(PageEventsProducer, producerInfo);
