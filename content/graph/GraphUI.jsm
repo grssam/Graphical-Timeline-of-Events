@@ -98,7 +98,7 @@ TimelineView.prototype = {
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
-    if (TimelinePreferences.visiblePanes.indexOf("producer") == -1) {
+    if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
       this.producersPane.collapsed = true;
       this.producersButton.checked = false;
     }
@@ -356,7 +356,7 @@ TimelineView.prototype = {
     // Updating the preferences.
     TimelinePreferences.height = this._frame.height;
     if (this.producersPane.collapsed == false) {
-      TimelinePreferences.visiblePanes = ["producer"];
+      TimelinePreferences.visiblePanes = ["producers"];
     }
     else {
       TimelinePreferences.visiblePanes = [];
