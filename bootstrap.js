@@ -147,9 +147,9 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     Cu.import("chrome://graphical-timeline/content/graph/GraphUI.jsm", global);
     watchWindows(handleCustomization);
     unload(function() {
+      GraphUI.destroy();
       Components.utils.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
       try {
-        GraphUI.destroy();
         Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");

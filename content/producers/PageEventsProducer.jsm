@@ -164,6 +164,24 @@ let PageEventsProducer =
   },
 
   /**
+   * Function used by Data Sink to enable features.
+   * @see addEventTypes
+   */
+  enableFeatures: function PEP_enableFeatures(aFeatures)
+  {
+    this.addEventTypes(aFeatures);
+  },
+
+  /**
+   * Function used by Data Sink to disable features.
+   * @see addEventTypes
+   */
+  disableFeatures: function PEP_disableFeatures(aFeatures)
+  {
+    this.removeEventTypes(aFeatures);
+  },
+
+  /**
    * Adds event type sets to listen to.
    *
    * @param array aEventTypes
@@ -229,7 +247,7 @@ let PageEventsProducer =
                                      .chromeEventHandler
                                      .ownerDocument.defaultView;
                 for each (let eventName in this.eventTypes[eventType]) {
-                  chromeWindow.addEventListener(eventName, this.listenEvents, false);
+                  chromeWindow.removeEventListener(eventName, this.listenEvents, false);
                 }
               }
               else {
