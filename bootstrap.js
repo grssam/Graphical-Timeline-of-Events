@@ -72,10 +72,10 @@ function addToolbarButton(window) {
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
-      GraphUI.showGraphUI();
+      GraphUI.init();
     }
     else {
-      GraphUI.hideGraphUI();
+      GraphUI.destroy();
       DataSink.removeRemoteListener(window);
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
       Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
@@ -149,7 +149,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     unload(function() {
       Components.utils.unload("chrome://graphical-timeline/content/graph/GraphUI.jsm");
       try {
-        GraphUI.hideGraphUI();
+        GraphUI.destroy();
         Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");

@@ -1051,8 +1051,10 @@ let NetworkProducer =
  * The information packet sent to the Data Sink.
  */
 let producerInfo = {
+  //Id of the producer.
+  id: "NetworkProducer",
   // Name of the producer.
-  name: "NetworkProducer",
+  name: "Network Producer",
   // Type of events that this producer listens to (one type per producer).
   // All the continuous events types are considered same.
   type: DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID,

@@ -26,6 +26,8 @@ let PageEventsProducer =
    */
   get sequenceId() "PageEventsProducer-" + (++this._sequence),
 
+  get enabledFeatures() this.enabledEvents,
+
   // Default set which will be neabled if nothing specified in the init call.
   defaultEvents: ["PageEvent"],
 
@@ -406,8 +408,10 @@ let PageEventsProducer =
  * The information packet sent to the Data Sink.
  */
 let producerInfo = {
+  // Id of the producer.
+  id: "PageEventsProducer",
   // Name of the producer.
-  name: "PageEventsProducer",
+  name: "Page Events Producer",
   // Type of events that this producer listens to (one type per producer).
   type: DataSink.NormalizedEventType.POINT_EVENT,
   // Features of this producer that can be turned on or off.

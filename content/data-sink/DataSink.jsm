@@ -28,7 +28,10 @@ const DataSinkEventMessageType = {
   PING_BACK: 0, // A reply from the remote Data Sink when the UI sends PING_HELLO.
                 // Only upon receiving this message, the UI can send a message
                 // to start the producers.
-  NEW_DATA: 1, // There is new data in the data store.
+  NEW_DATA: 1,  // There is new data in the data store.
+  UPDATE_UI: 2, // This event will be sent when there are local changes in
+                // active features or producers and those changes need to be
+                // reflected back to the UI.
 };
 
 const NORMALIZED_EVENT_TYPE = {
@@ -50,19 +53,23 @@ const ERRORS = {
  * The Data Sink
  */
 let DataSink = {
+  // List of content windows that this Data Sink is active on.
+  listeningWindows: [],
   // Object list holding reference to the producer object.
   _registeredProducers: {},
   // Object list holding reference to the enabled producr instance.
   _enabledProducers: null,
   // Object list containing all the available information on registered producers.
-  _producerInfoList: {};
+  _producerInfoList: {},
   _sequenceId: 0,
 
   NormalizedEventType: NORMALIZED_EVENT_TYPE,
 
   get sequenceId() (++this._sequenceId),
 
-  _chromeWindowForGraph: null,
+  get _chromeWindowForGraph() Cc["@mozilla.org/appshell/window-mediator;1"]
+                                .getService(Ci.nsIWindowMediator)
+                                .getMostRecentWindow("navigator:browser"),
 
   // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
   registeredUI: [],
@@ -105,11 +112,13 @@ let DataSink = {
   init: function DS_init(aMessage) {
     // Do not start the producers again.
     if (this.initiated) {
+      // Send the update message without any id so that all UI update.
+      this.sendUpdateNotification("");
       return;
     }
 
     // Stop if aMessage is null (as we need the timelineUIId).
-    if (!aMessage || aMessage.timelineUIId) {
+    if (!aMessage || !aMessage.timelineUIId) {
       return;
     }
 
@@ -125,19 +134,19 @@ let DataSink = {
                         .getService(Ci.nsIWindowMediator)
                         .getMostRecentWindow("navigator:browser")
                         .content;
+    this.listeningWindows = [contentWindow];
     // enable the required producers if aMessage not null.
     if (aMessage.enabledProducers) {
       for (let producer in this._registeredProducers) {
         if (aMessage.enabledProducers[producer]) {
-          this.startProducer(contentWindow, producer,
-                             aMessage.enabledProducers[producer].features);
+          this.startProducer(producer, aMessage.enabledProducers[producer].features);
         }
       }
     }
     // enable all known producers with all features if aMessage null.
     else {
       for (let producer in this._registeredProducers) {
-        this.startProducer(contentWindow, producer);
+        this.startProducer(producer);
       }
     }
 
@@ -153,6 +162,7 @@ let DataSink = {
     this.dataStore = new DataStore(this.databaseName);
     Services.prompt.confirm(null, "", "DataSink: Message to start received");
     this.initiated = true;
+    this.sendUpdateNotification();
   },
 
   /**
@@ -188,7 +198,41 @@ let DataSink = {
     else {
       aMessage.error = ERRORS.ID_TAKEN;
     }
+
     this.sendMessage(DataSinkEventMessageType.PING_BACK, aMessage);
+  },
+
+  /**
+   * Sends an updated list of active producers and features to all the remote UI
+   * instances so that they can update the UI accordingly. Also sends the Id of
+   * the remote UI responsible for the update.
+   *
+   * @param string Id
+   *        Id of the remote UI responsible for the update. (Optional)
+   *
+   * @return aMessage
+   *         This message is of the same format that the UI sends to start the
+   *         Data Sink.
+   *         @see DataSink.init()
+   */
+  sendUpdateNotification: function DS_sendUpdateNotification(Id)
+  {
+    let message =
+    {
+      enabledProducers: {},
+      timelineUIId: Id,
+    };
+    for (let producer in this._enabledProducers) {
+      let featureList = [];
+      if (this._enabledProducers.enabledFeatures) {
+        featureList = this._enabledProducers.enabledFeatures;
+      }
+      message.enabledProducers[producer] =
+      {
+        features: featureList,
+      };
+    }
+    this.sendMessage(DataSinkEventMessageType.UPDATE_UI, message);
   },
 
   /**
@@ -215,16 +259,21 @@ let DataSink = {
         break;
 
       case UIEventMessageType.START_PRODUCER:
-        let contentWindow = Cc["@mozilla.org/appshell/window-mediator;1"]
-                            .getService(Ci.nsIWindowMediator)
-                            .getMostRecentWindow("navigator:browser")
-                            .content;
-        DataSink.startProducer(contentWindow, message.producerName,
-                               message.features);
+        if (!message.timelineUIId ||
+            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+          return;
+        }
+        DataSink.startProducer(message.producerId, message.features);
+        DataSink.sendUpdateNotification(message.timelineUIId);
         break;
 
       case UIEventMessageType.STOP_PRODUCER:
-        DataSink.stopProducer(message.producerName);
+        if (!message.timelineUIId ||
+            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+          return;
+        }
+        DataSink.stopProducer(message.producerId);
+        DataSink.sendUpdateNotification(message.timelineUIId);
         break;
     }
   },
@@ -278,8 +327,8 @@ let DataSink = {
    * Each producer calls this method to add a newly captured event/activity.
    * This function converts the data into a normalized form.
    *
-   * @param string aProducerName
-   *        Name of the producer from which the event is coming.
+   * @param string aProducerId
+   *        Id of the producer from which the event is coming.
    *        Example: NetworkProducer
    * @param object aEventData
    *        The event object. Contain the following properties:
@@ -291,14 +340,14 @@ let DataSink = {
    *        - time - time of the event occurence.
    *        - details (optional) - other details about the event.
    */
-  addEvent: function DS_addEvent(aProducerName, aEventData) {
-    if (!this._enabledProducers[aProducerName]) {
+  addEvent: function DS_addEvent(aProducerId, aEventData) {
+    if (!this._enabledProducers[aProducerId]) {
       return;
     }
 
     let normalizedData = aEventData;
     normalizedData.id = this.sequenceId;
-    normalizedData.producer = aProducerName;
+    normalizedData.producer = aProducerId;
 
     // Adding the normalized data to the data store object.
     if (this.dataStore.add(normalizedData)) {
@@ -316,34 +365,34 @@ let DataSink = {
    * @param object aProducerInfo
    */
   registerProducer: function DS_registerProducer(aProducer, aProducerInfo) {
-    this._registeredProducers[aProducerInfo.name] = aProducer;
-    this._producerInfoList[aProducerInfo.name] = aProducerInfo;
+    this._registeredProducers[aProducerInfo.id] = aProducer;
+    this._producerInfoList[aProducerInfo.id] = aProducerInfo;
   },
 
   /**
    * Function to explicitly start a producer.
    *
-   * @param string aProducerName
-   *        Name of the producer to start.
+   * @param string aProducerId
+   *        Id of the producer to start.
    * @param array aFeatures (optional)
    *        List of enabled features. All features will be enabled if null.
    */
   startProducer:
-  function DS_startProducer(aContentWindow, aProducerName, aFeatures) {
-    if (typeof aProducerName != "string") {
-      // aProducerName is not a string.
+  function DS_startProducer(aProducerId, aFeatures) {
+    if (typeof aProducerId != "string") {
+      // aProducerId is not a string.
       return;
     }
 
-    if (this._registeredProducers[aProducerName] != null) {
-      if (typeof this._registeredProducers[aProducerName] == 'function') {
-        this._enabledProducers[aProducerName] =
-          new this._registeredProducers[aProducerName]([aContentWindow],
-                                                       aFeatures);
+    if (this._registeredProducers[aProducerId] != null) {
+      if (typeof this._registeredProducers[aProducerId] == 'function') {
+        this._enabledProducers[aProducerId] =
+          new this._registeredProducers[aProducerId](this.listeningWindows,
+                                                     aFeatures);
       }
       else {
-        this._enabledProducers[aProducerName] = this._registeredProducers[aProducerName];
-        this._enabledProducers[aProducerName].init([aContentWindow], aFeatures);
+        this._enabledProducers[aProducerId] = this._registeredProducers[aProducerId];
+        this._enabledProducers[aProducerId].init(this.listeningWindows, aFeatures);
       }
     }
   },
@@ -351,16 +400,16 @@ let DataSink = {
   /**
    * Function to explicitly stop a producer.
    *
-   * @param string aProducerName
+   * @param string aProducerId
    *        Name of the producer to stop.
    */
-  stopProducer: function DS_stopProducer(aProducerName) {
-    if (typeof aProducerName != "string") {
-      // aProducerName is not a string.
+  stopProducer: function DS_stopProducer(aProducerId) {
+    if (typeof aProducerId != "string") {
+      // aProducerId is not a string.
       return;
     }
 
-    this._enabledProducers[aProducerName].destroy();
+    this._enabledProducers[aProducerId].destroy();
   },
 
   /**
@@ -392,7 +441,8 @@ let DataSink = {
     try {
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
-    DataStore = this.registeredUI = this.dataStore = this._enabledProducers = null;
+    DataStore = this.registeredUI = this.dataStore = 
+      this._enabledProducers = this.listeningWindows = null;
     this.initiated = false;
     this.databaseName = "";
     Services.prompt.confirm(null, "", "Stopped all the producers");

@@ -53,10 +53,16 @@ function pref(key, val) {
 }
 
 // Set custom values for this add-on
-pref.root = "extensions.graphical-timeline.";
+pref.root = "devtools.timeline.";
 pref.defaults = {
   buttonParentID: "addon-bar",
   buttonNextSiblingID: "",
+  height: "300px",
+  activeProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
+  activeFeatures: JSON.stringify(["PageEventsProducer:LoadEvents",
+                                    "PageEventsProducer:MouseEvents"]),
+  visiblePanes: JSON.stringify(["producers"]),
+  visibleProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
 };
 
 pref.observe = function(prefs, callback) {

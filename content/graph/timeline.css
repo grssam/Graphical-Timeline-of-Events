@@ -1,0 +1,100 @@
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ft=javascript ts=2 et sw=2 tw=80: */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#body {
+  background: -moz-dialog;
+}
+
+/**
+ * Timeline content
+ */
+
+#dbg-content {
+  padding: 0;
+}
+
+/**
+ * Lists and headers
+ */
+
+.list-item {
+  padding: 2px;
+  font: -moz-list;
+}
+
+.list-item.selected {
+  background: Highlight;
+  color: HighlightText;
+}
+
+.list-item.empty {
+  color: GrayText;
+}
+
+.details {
+  -moz-margin-start: 10px;
+  font: -moz-list;
+}
+
+/**
+ * Animations
+ */
+
+.details[open][animated] {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: showblock;
+}
+
+@-moz-keyframes showblock {
+  from {
+    opacity: 0;
+    -moz-transform-origin: top;
+    -moz-transform: scaleY(0);
+  }
+
+  to {
+    opacity: 1;
+    -moz-transform-origin: top;
+    -moz-transform: scaleY(1);
+  }
+}
+
+/**
+ * Toolbar Controls
+ */
+
+#record {
+  list-style-image: url("images/timeline-record.png");
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+#record[checked=true] {
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
+#timeline-controls > toolbarbutton {
+  border-width: 0;
+  -moz-border-end-width: 1px;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  outline-offset: -3px;
+}
+
+#timeline-controls > toolbarbutton:last-of-type {
+  -moz-border-end-width: 0;
+}
+
+#timeline-controls {
+  border: 1px solid hsla(210,8%,5%,.45);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 hsla(209,29%,72%,.15) inset, 0 0 0 1px hsla(209,29%,72%,.1) inset, 0 0 0 1px hsla(209,29%,72%,.1), 0 1px 0 hsla(210,16%,76%,.1);
+  margin: 0 3px;
+}
+
+.devtools-toolbarbutton:not([label]) > .toolbarbutton-text {
+  display: none;
+}

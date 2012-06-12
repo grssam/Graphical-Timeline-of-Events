@@ -1,0 +1,36 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!-- LOCALIZATION NOTE : FILE This file contains the Graphical Timeline strings -->
+<!-- LOCALIZATION NOTE : FILE Do not translate commandkey -->
+
+<!-- LOCALIZATION NOTE : FILE The correct localization of this file might be to
+  - keep it in English, or another language commonly spoken among web developers.
+  - You want to make that choice consistent across the developer tools.
+  - A good criteria is the language in which you'd find the best
+  - documentation on web development on the web. -->
+
+<!-- LOCALIZATION NOTE (timelineMenu.label): This is the label for the
+  -  application menu item that opens the timeline UI. -->
+<!ENTITY timelineMenu.label2          "Graphical Timeline">
+
+<!-- LOCALIZATION NOTE (remoteTimelineMenu.label): This is the label for the
+  -  application menu item that opens the remote timeline UI. -->
+<!ENTITY remoteTimelineMenu.label    "Remote Timeline">
+
+<!-- LOCALIZATION NOTE (timelineMenu.commandkey): This is the command key that
+  -  launches the timeline UI. Do not translate this one! -->
+<!ENTITY timelineMenu.commandkey     "X">
+
+<!-- LOCALIZATION NOTE (timelineUI.closeButton.tooltip): This is the tooltip for
+  -  the button that closes the timeline UI. -->
+<!ENTITY timelineUI.closeButton.tooltip        "Close">
+
+<!-- LOCALIZATION NOTE (timelineUI.toggleProducersButton.label): This is the
+  -  label for the button that toggles the Producers Pane in the timeline UI. -->
+<!ENTITY timelineUI.toggleProducersButton.label        "Producers">
+
+<!-- LOCALIZATION NOTE (timelineUI.emptyFilterText): This is the placeholder text
+  -  for the search bar in the timeline UI. -->
+<!ENTITY timelineUI.emptyFilterText        "Click to Search">
