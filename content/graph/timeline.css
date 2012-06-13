@@ -9,14 +9,6 @@
 }
 
 /**
- * Timeline content
- */
-
-#dbg-content {
-  padding: 0;
-}
-
-/**
  * Lists and headers
  */
 
@@ -80,49 +72,21 @@
 
 @-moz-keyframes showblock {
   from {
-    opacity: 0;
-    -moz-transform-origin: top;
-    -moz-transform: scaleY(0);
+    max-height: 0px;
   }
 
   to {
-    opacity: 1;
-    -moz-transform-origin: top;
-    -moz-transform: scaleY(1);
+    max-height: 500px;
   }
 }
 
 @-moz-keyframes hideblock {
   from {
-    opacity: 1;
-    -moz-transform-origin: top;
-    -moz-transform: scaleY(1);
+    max-height: 500px;
   }
 
   to {
-    opacity: 0;
-    -moz-transform-origin: top;
-    -moz-transform: scaleY(0);
-  }
-}
-
-@-moz-keyframes showblocksliding {
-  from {
-    max-width: 0px;
-  }
-
-  to {
-    max-width: 500px;
-  }
-}
-
-@-moz-keyframes hideblocksliding {
-  from {
-    max-width: 500px;
-  }
-
-  to {
-    max-width: 0px;
+    max-height: 0px;
   }
 }
 
@@ -179,29 +143,21 @@
  */
 
 #producers-pane {
+  width: 200px;
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
   overflow: auto;
 }
 
-#producers-pane[visible=true] {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: showblocksliding;
-  max-width: 500px;
-  overflow: auto;
-}
-
-#producers-pane:not([visible=true]) {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: hideblocksliding;
-  max-width: 0px;
-  overflow: hidden;
+.producer-box {
+  display: block;
+  max-height: 0px !important;
+  width: 100%;
 }
 
 .producer-name-box {
   height: 25px;
-  margin: 0px;
-  padding: 0px;
+  width: 100%;
   background-image: -moz-linear-gradient(bottom, rgb(78,93,109) 0px, rgb(72,87,103) 1px, rgb(89,108,127) 100%);
   border-top: 1px solid rgb(85,103,123);
   border-bottom: 1px solid rgb(48,62,76);
@@ -211,7 +167,6 @@
   color: rgb(15,27,38);
   margin: 0px;
   padding: 4px 5px 2px 5px;
-  font-family: "Segoe UI";
   font-size: 12px;
   text-shadow: 0px 1px 1px rgba(255,255,255,0.1);
 }
@@ -251,23 +206,27 @@
  */
 
 .producer-feature-box {
-  max-height: 150px;
-  overflow: auto;
+  max-height: 500px;
+  overflow: hidden;
+  width: 100%;
+  margin: 0px !important;
+  padding: 0px !important;
 }
 
 .producer-feature-box > checkbox {
+  width: 100%;
   color: rgb(207,218,230) !important;
   min-height: 24px;
   border-bottom: 1px solid rgb(19,29,40);
   border-top: 1px solid rgb(33,44,55);
 }
 
-.producer-feature-box > checkbox :last-of-type {
-  border-bottom: 1px solid rgba(0,0,0,0);
+.producer-feature-box > checkbox:last-of-type {
+  border-bottom: 1px solid rgba(0,0,0,0) !important;
 }
 
-.producer-feature-box > checkbox :first-of-type {
-  border-top: 1px solid rgba(0,0,0,0);
+.producer-feature-box > checkbox:first-of-type {
+  border-top: 1px solid rgba(0,0,0,0) !important;
 }
 
 .producer-feature-box > checkbox:not([checked=true]) {
@@ -277,13 +236,13 @@
 .producer-box[visible=true] > .producer-feature-box {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: showblock;
-  -moz-transform: scaleY(1);
+  max-height: 500px;
 }
 
 .producer-box:not([visible=true]) > .producer-feature-box {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: hideblock;
-  -moz-transform: scaleY(0);
+  max-height: 0px;
 }
 
 #canvas-container {

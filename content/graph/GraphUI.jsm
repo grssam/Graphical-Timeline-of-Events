@@ -105,6 +105,7 @@ TimelineView.prototype = {
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
       this.producersPane.setAttribute("visible", false);
+      this.producersPane.collapsed = true;
       this.producersPaneOpened = false;
       this.producersButton.checked = false;
     }
@@ -112,6 +113,7 @@ TimelineView.prototype = {
       this.producersPane.setAttribute("visible", true);
       this.producersPaneOpened = true;
       this.producersButton.checked = true;
+      this.producersPane.collapsed = false;
     }
   },
 
@@ -276,12 +278,14 @@ TimelineView.prototype = {
   {
     this.producersPaneOpened = true;
     this.producersPane.setAttribute("visible", true);
+    this.producersPane.collapsed = false;
   },
 
   _hideProducersPane: function NV__hideProducersPane()
   {
     this.producersPaneOpened = false;
     this.producersPane.setAttribute("visible", false);
+    this.producersPane.collapsed = true;
   },
 
   /**
