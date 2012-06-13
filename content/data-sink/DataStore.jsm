@@ -47,6 +47,7 @@ DataStore.prototype = {
     objectStore.createIndex("time", "time", { unique: false });
     objectStore.createIndex("producer", "producer", { unique: false });
     objectStore.createIndex("type", "type", { unique: false });
+    this._databaseInitiated = true;
   },
 
   /**

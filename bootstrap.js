@@ -72,15 +72,17 @@ function addToolbarButton(window) {
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
-      GraphUI.init();
+      GraphUI.init(function () { // temporary function to be called at destroy
+                                 // This is done to avoide memory leak while closing via close button
+        global.DataSink.removeRemoteListener(window);
+        Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+        Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+        Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        global.DataSink = global.NetworkProducer = global.PageEventsProducer = null;
+      }.bind(global));
     }
     else {
       GraphUI.destroy();
-      DataSink.removeRemoteListener(window);
-      Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-      Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-      Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-      global.DataSink = global.NetworkProducer = global.PageEventsProducer = null;
     }
   }
 

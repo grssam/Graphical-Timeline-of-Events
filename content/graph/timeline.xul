@@ -36,17 +36,14 @@
                      tooltiptext="&timelineUI.closeButton.tooltip;"
                      class="devtools-closebutton"/>
     </toolbar>
-    <hbox id="tml-content" flex="1">
+    <hbox id="timeline-content" flex="1">
       <vbox id="producers-pane"/>
-      <splitter id="stack-script-splitter" class="devtools-side-splitter"/>
-      <spacer flex="1"/>
-<!--       <vbox id="timeline-container" flex="1">
+      <splitter id="stack-panes-splitter" class="devtools-side-splitter"/>
+       <vbox id="timeline-container" flex="1">
         <hbox id="canvas-container" flex="1">
-          <html:canvas id="timeline-graph" width="100%" height="300px">
-          </html:canvas>
         </hbox>
-        <html:div id="axis" />
-      </vbox> -->
+        <hbox id="timeline-axis" />
+      </vbox>
     </hbox>
   </vbox>
 </window>

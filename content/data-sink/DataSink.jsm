@@ -218,7 +218,7 @@ let DataSink = {
         this.startProducer(producer);
       }
     }
-Services.prompt.confirm(null, "", "3");
+
     this.listening = true;
     this.sendUpdateNotification(aMessage.timelineUIId);
   },
@@ -242,7 +242,6 @@ Services.prompt.confirm(null, "", "3");
       }
       this._enabledProducers = null;
       this.listening = false;
-      Services.prompt.confirm(null, "", "Stop");
     }
   },
 
@@ -591,6 +590,7 @@ Services.prompt.confirm(null, "", "3");
         this.stopProducer(producer);
       }
     }
+    Services.prompt.confirm(null, "", aMessage.deleteDatabase === true);
     this.dataStore.destroy(aMessage.deleteDatabase);
     try {
       Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");

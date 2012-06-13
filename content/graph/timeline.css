@@ -34,19 +34,49 @@
   color: GrayText;
 }
 
-.details {
-  -moz-margin-start: 10px;
-  font: -moz-list;
+/**
+ * Devtools Checkbox
+ */
+.devtools-checkbox > .checkbox-check {
+  -moz-appearance: none;
+  display: none;
+}
+
+.devtools-checkbox {
+  -moz-appearance: none;
+  list-style-image: url("images/devtools-checkbox.png");
+  -moz-image-region: rect(0px, 15px, 14px, 0px);
+  min-width: 78px;
+  min-height: 18px;
+  margin: 0;
+  color: inherit;
+}
+
+.devtools-checkbox:-moz-focusring {
+  outline: 1px dotted hsla(210,30%,85%,0.4);
+  outline-offset: -4px;
+}
+
+.devtools-checkbox:not([label]) {
+  min-width: 22px;
+}
+
+.devtools-checkbox:not([checked=true]):hover:active {
+  -moz-image-region: rect(0px, 15px, 14px, 0px);
+  background-color: hsla(210,18%,9%,.1);
+}
+
+.devtools-checkbox[checked=true] {
+  -moz-image-region: rect(0px, 30px, 14px, 15px);
+}
+
+.devtools-checkbox[checked=true]:hover:active {
+  background-color: hsla(211,68%,6%,.2);
 }
 
 /**
  * Animations
  */
-
-.details[open][animated] {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: showblock;
-}
 
 @-moz-keyframes showblock {
   from {
@@ -59,6 +89,40 @@
     opacity: 1;
     -moz-transform-origin: top;
     -moz-transform: scaleY(1);
+  }
+}
+
+@-moz-keyframes hideblock {
+  from {
+    opacity: 1;
+    -moz-transform-origin: top;
+    -moz-transform: scaleY(1);
+  }
+
+  to {
+    opacity: 0;
+    -moz-transform-origin: top;
+    -moz-transform: scaleY(0);
+  }
+}
+
+@-moz-keyframes showblocksliding {
+  from {
+    max-width: 0px;
+  }
+
+  to {
+    max-width: 500px;
+  }
+}
+
+@-moz-keyframes hideblocksliding {
+  from {
+    max-width: 500px;
+  }
+
+  to {
+    max-width: 0px;
   }
 }
 
@@ -97,4 +161,143 @@
 
 .devtools-toolbarbutton:not([label]) > .toolbarbutton-text {
   display: none;
+}
+
+#timeline-content {
+  border-top: 1px solid rgb(20,30,39);
+  padding: 0px !important;
+  margin: 0px !important;
+}
+
+#timeline-toolbar {
+  margin: 0px !important;
+  border-width: 0px !important;
+}
+
+/**
+ * Producers Pane
+ */
+
+#producers-pane {
+  background: rgb(22,33,43);
+  border-right: 1px solid rgb(26,38,51);
+  overflow: auto;
+}
+
+#producers-pane[visible=true] {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: showblocksliding;
+  max-width: 500px;
+  overflow: auto;
+}
+
+#producers-pane:not([visible=true]) {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: hideblocksliding;
+  max-width: 0px;
+  overflow: hidden;
+}
+
+.producer-name-box {
+  height: 25px;
+  margin: 0px;
+  padding: 0px;
+  background-image: -moz-linear-gradient(bottom, rgb(78,93,109) 0px, rgb(72,87,103) 1px, rgb(89,108,127) 100%);
+  border-top: 1px solid rgb(85,103,123);
+  border-bottom: 1px solid rgb(48,62,76);
+}
+
+.producer-name-box .producer-name-label {
+  color: rgb(15,27,38);
+  margin: 0px;
+  padding: 4px 5px 2px 5px;
+  font-family: "Segoe UI";
+  font-size: 12px;
+  text-shadow: 0px 1px 1px rgba(255,255,255,0.1);
+}
+
+/**
+ * Collapse button
+ */
+
+.producer-collapse-button {
+  -moz-appearance: none;
+  min-width: 10px;
+  min-height: 15px;
+  list-style-image: url("images/timeline-toggle.png");
+  border-width: 0px;
+  -moz-image-region: rect(0px, 10px, 15px, 0px);
+}
+
+.producer-box:not([visible=true]) .producer-collapse-button {
+  -moz-image-region: rect(0px, 20px, 15px, 10px);
+}
+
+.producer-collapse-button:-moz-focusring {
+  outline: 1px dotted hsla(210,30%,85%,0.4);
+  outline-offset: -4px;
+}
+
+.producer-box:not([visible=true]) .producer-collapse-button:hover:active {
+  background-color: hsla(210,18%,9%,.1);
+}
+
+.producer-box[visible=true] .producer-collapse-button:hover:active {
+  background-color: hsla(211,68%,6%,.2);
+}
+
+/**
+ * Feature Box
+ */
+
+.producer-feature-box {
+  max-height: 150px;
+  overflow: auto;
+}
+
+.producer-feature-box > checkbox {
+  color: rgb(207,218,230) !important;
+  min-height: 24px;
+  border-bottom: 1px solid rgb(19,29,40);
+  border-top: 1px solid rgb(33,44,55);
+}
+
+.producer-feature-box > checkbox :last-of-type {
+  border-bottom: 1px solid rgba(0,0,0,0);
+}
+
+.producer-feature-box > checkbox :first-of-type {
+  border-top: 1px solid rgba(0,0,0,0);
+}
+
+.producer-feature-box > checkbox:not([checked=true]) {
+  color: rgba(207,218,230,0.5) !important;
+}
+
+.producer-box[visible=true] > .producer-feature-box {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: showblock;
+  -moz-transform: scaleY(1);
+}
+
+.producer-box:not([visible=true]) > .producer-feature-box {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: hideblock;
+  -moz-transform: scaleY(0);
+}
+
+#canvas-container {
+  background: url("images/background-noise.png");
+  box-shadow: 3px 0px 10px 5px rgba(4,30,53,.2) inset;
+}
+
+#timeline-container {
+  background: rgb(53,67,82);
+}
+
+#timeline-axis {
+  min-height: 25px;
+  background: rgb(22,33,43);
+  border-bottom: 1px solid rgb(15,108,155);
+  border-top: 1px solid rgb(26,37,47);
 }

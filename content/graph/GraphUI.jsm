@@ -71,6 +71,7 @@ function TimelineView(aChromeWindow) {
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
+  this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.closeUI = this.closeUI.bind(this);
   this.$ = this.$.bind(this);
   this._showProducersPane = this._showProducersPane.bind(this);
@@ -103,12 +104,12 @@ TimelineView.prototype = {
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
-      this.producersPane.collapsed = true;
+      this.producersPane.setAttribute("visible", false);
       this.producersPaneOpened = false;
       this.producersButton.checked = false;
     }
     else {
-      this.producersPane.collapsed = false;
+      this.producersPane.setAttribute("visible", true);
       this.producersPaneOpened = true;
       this.producersButton.checked = true;
     }
@@ -213,9 +214,8 @@ TimelineView.prototype = {
       let spacer = this._frameDoc.createElement("spacer");
       spacer.setAttribute("flex", "1");
       nameBox.appendChild(spacer);
-      let enableButton = this._frameDoc.createElement("toolbarbutton");
-      enableButton.setAttribute("class", "producer-resume-button");
-      enableButton.setAttribute("type", "checkbox");
+      let enableButton = this._frameDoc.createElement("checkbox");
+      enableButton.setAttribute("class", "devtools-checkbox");
       if (TimelinePreferences.activeProducers.indexOf(producer.id) != -1) {
         enableButton.setAttribute("checked", true);
       }
@@ -223,6 +223,7 @@ TimelineView.prototype = {
       nameBox.appendChild(enableButton);
       let collapseButton = this._frameDoc.createElement("toolbarbutton");
       collapseButton.setAttribute("class", "producer-collapse-button");
+      collapseButton.addEventListener("command", this.toggleProducerBox, true);
       nameBox.appendChild(collapseButton);
       producerBox.appendChild(nameBox);
 
@@ -233,6 +234,7 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       for each (let feature in producer.features) {
         let featureCheckbox = this._frameDoc.createElement("checkbox");
+        featureCheckbox.setAttribute("class", "devtools-checkbox");
         featureCheckbox.setAttribute("flex", "1");
         featureCheckbox.setAttribute("label", feature);
         featureCheckbox.addEventListener("command", this.toggleFeature, true);
@@ -273,13 +275,13 @@ TimelineView.prototype = {
   _showProducersPane: function NV__showProducersPane()
   {
     this.producersPaneOpened = true;
-    this.producersPane.collapsed = false;
+    this.producersPane.setAttribute("visible", true);
   },
 
   _hideProducersPane: function NV__hideProducersPane()
   {
     this.producersPaneOpened = false;
-    this.producersPane.collapsed = true;
+    this.producersPane.setAttribute("visible", false);
   },
 
   /**
@@ -374,6 +376,25 @@ TimelineView.prototype = {
   },
 
   /**
+   * Toggles the producer box.
+   *
+   * @param object aEvent
+   *        Associated event for the command event call.
+   */
+  toggleProducerBox: function NV_toggleProducerBox(aEvent) {
+    let producerBox = aEvent.target.parentNode.parentNode;
+    if (!producerBox) {
+      return;
+    }
+    if (producerBox.getAttribute("visible") == "true") {
+      producerBox.setAttribute("visible", false);
+    }
+    else {
+      producerBox.setAttribute("visible", true);
+    }
+  },
+
+  /**
    * Closes the UI, removes the frame and the splitter ans dispatches an
    * unloading event to tell the parent window.
    */
@@ -384,7 +405,7 @@ TimelineView.prototype = {
 
     // Updating the preferences.
     TimelinePreferences.height = this._frame.height;
-    if (this.producersPane.collapsed == false) {
+    if (this.producersPane.getAttribute("visible") == "true") {
       TimelinePreferences.visiblePanes = ["producers"];
     }
     else {
@@ -438,14 +459,17 @@ let GraphUI = {
   newDataAvailable: false,
   readingData: false,
   databaseName: "",
+  shouldDeleteDatabaseItself: true,
   producerInfoList: null,
   id: null,
   timer: null,
+  callback: null,
 
   /**
    * Prepares the UI and sends ping to the Data Sink.
    */
-  init: function GUI_init() {
+  init: function GUI_init(aCallback) {
+    GraphUI.callback = aCallback;
     GraphUI._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
                         .getMostRecentWindow("navigator:browser");
@@ -478,6 +502,7 @@ let GraphUI = {
     GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 100);
     GraphUI.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     GraphUI.listening = true;
+    GraphUI.shouldDeleteDatabaseItself = false;
   },
 
   /**
@@ -708,7 +733,7 @@ let GraphUI = {
         GraphUI._window.clearInterval(GraphUI.timer);
         GraphUI.timer = null;
       }
-      GraphUI.dataStore.destroy();
+      GraphUI.dataStore.destroy(GraphUI.shouldDeleteDatabaseItself);
       try {
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       } catch (ex) {}
@@ -717,12 +742,15 @@ let GraphUI = {
                           {deleteDatabase: true, // true to delete the database
                            timelineUIId: GraphUI.id, // to tell which UI is closing.
                           });
+      GraphUI.shouldDeleteDatabaseItself = true;
       GraphUI.pingSent = GraphUI.listening = false;
       GraphUI.removeRemoteListener(GraphUI._window);
       GraphUI._view.closeUI();
       GraphUI._view = GraphUI.newDataAvailable = GraphUI.UIOpened =
         GraphUI.timer = GraphUI._currentId = GraphUI._window = null;
       GraphUI.producerInfoList = null;
+      if (GraphUI.callback)
+        GraphUI.callback();
     }
   }
 };
