@@ -855,7 +855,7 @@ let NetworkProducer =
       type: eventType,
       name: currentStage,
       groupID: aHttpActivity.id,
-      time: time,
+      time: time/1000, // Converting micro to milli seconds.
       details: {
         tabID: tabId,
         meta: aHttpActivity.meta,
@@ -953,7 +953,7 @@ let NetworkProducer =
     if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
       return;
     }
-    this._setupHarTimings(aHttpActivity);
+    //this._setupHarTimings(aHttpActivity);
     this.sendActivity(aHttpActivity);
     delete this.openRequests[aHttpActivity.id];
   },

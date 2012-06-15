@@ -245,18 +245,63 @@
   max-height: 0px;
 }
 
-#canvas-container {
-  background: url("images/background-noise.png");
-  box-shadow: 3px 0px 10px 5px rgba(4,30,53,.2) inset;
-}
-
 #timeline-container {
   background: rgb(53,67,82);
 }
 
+.absolute {
+  display: block;
+  position: absolute !important;
+}
+
+#canvas-container {
+  display: block;
+  position: absolute !important;
+  min-height: 100%;
+  min-width: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  background: url("images/background-noise.png");
+  box-shadow: 3px 0px 10px 5px rgba(4,30,53,.2) inset;
+  overflow: hidden;
+}
+
 #timeline-axis {
+  z-index: 2;
+  bottom: 0px;
   min-height: 25px;
+  min-width: 100%;
+  max-width: 100%;
   background: rgb(22,33,43);
   border-bottom: 1px solid rgb(15,108,155);
   border-top: 1px solid rgb(26,37,47);
+}
+
+#timeline-canvas {
+  top: 0px;
+  left: 0px;
+  z-index: 0;
+}
+
+#timeline-current-time {
+  padding: 0px 9px;
+  margin: 0 -9px;
+  z-index: 10;
+  left: 50%;
+  top: 0px;
+  min-height: 150%;
+  max-height: 150%;
+  min-width: 2px;
+  max-width: 2px;
+  background: -moz-linear-gradient(left, transparent 5px, rgba(27,25,40,0.5) 8px,
+                                               rgb(3,101,151) 9px, rgb(3,101,151) 11px,
+                                               rgba(27,25,40,0.5) 12px, transparent 15px);
+  cursor: e-resize;
+  -moz-transition: background 250ms linear 0s, left 10ms ease-in 0s;
+}
+
+#timeline-current-time:hover {
+  background: -moz-linear-gradient(left, transparent 5px, rgba(27,25,40,0.5) 8px,
+                                               rgb(3,150,200) 9px, rgb(3,150,200) 11px,
+                                               rgba(27,25,40,0.5) 12px, transparent 15px);
 }

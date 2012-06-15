@@ -19,13 +19,6 @@ let PageEventsProducer =
    */
   listeningWindows: null,
 
-  _sequence: 0,
-
-  /**
-   * Getter for a unique ID for the Page Events Producer.
-   */
-  get sequenceId() "PageEventsProducer-" + (++this._sequence),
-
   get enabledFeatures() this.enabledEvents,
 
   // Default set which will be neabled if nothing specified in the init call.
@@ -303,10 +296,19 @@ let PageEventsProducer =
         tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
       } catch (ex) {}
 
+      let groupId = "";
+      for each (let eventTypeName in PageEventsProducer.enabledEvents) {
+        if (PageEventsProducer.observedEvents[eventTypeName] && 
+            PageEventsProducer.observedEvents[eventTypeName].indexOf(aTopic) >= 0) {
+          groupId = eventTypeName;
+          break;
+        }
+      }
+
       DataSink.addEvent("PageEventsProducer", {
         type: DataSink.NormalizedEventType.POINT_EVENT,
         name: aTopic,
-        groupID: PageEventsProducer.sequenceId,
+        groupID: groupId,
         time: (new Date()).getTime(),
         details: {
           tabID: tabId,
@@ -357,9 +359,11 @@ let PageEventsProducer =
       target: aEvent.target.id || null,
     };
 
+    let groupId = "";
+
     for each (let eventTypeName in PageEventsProducer.enabledEvents) {
       if (PageEventsProducer.eventTypes[eventTypeName].indexOf(aEvent.type) >= 0) {
-        eventDetail.eventType = eventTypeName;
+        groupId = eventDetail.eventType = eventTypeName;
         switch (eventTypeName) {
           case "MouseEvent":
             eventDetail.screenX = aEvent.screenX;
@@ -390,8 +394,8 @@ let PageEventsProducer =
     DataSink.addEvent("PageEventsProducer", {
       type: DataSink.NormalizedEventType.POINT_EVENT,
       name: aEvent.type,
-      groupID: PageEventsProducer.sequenceId,
-      time: aEvent.timeStamp || (new Date()).getTime(),
+      groupID: groupId,
+      time: (new Date()).getTime(),
       details: {
         tabID: tabId,
         detail: eventDetail,

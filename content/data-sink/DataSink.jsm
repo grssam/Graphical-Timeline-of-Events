@@ -167,9 +167,8 @@ let DataSink = {
                    .ownerDocument.defaultView;
 
     // Initiating the Data Store
-    Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-    this.dataStore = new DataStore(this.databaseName);
-    Services.prompt.confirm(null, "", "DataSink: Message to start received");
+    //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+    //this.dataStore = new DataStore(this.databaseName);
     this.initiated = true;
     this.sendUpdateNotification("");
   },
@@ -439,7 +438,7 @@ let DataSink = {
    * @param object aEventData
    *        The event object. Contain the following properties:
    *        - type - one of the NORMALIZED_EVENT_TYPE
-   *        - groupID (optional) - same for multiple events associated with the
+   *        - groupID - same for multiple events associated with the
    *          same continuous process for continuous and repeating events.
    *        - name - a name related with the event to show up on the UI.
    *          recorded the message.
@@ -456,10 +455,10 @@ let DataSink = {
     normalizedData.producer = aProducerId;
 
     // Adding the normalized data to the data store object.
-    if (this.dataStore.add(normalizedData)) {
+    //if (this.dataStore.add(normalizedData)) {
       // Informing the Graph UI about the new data.
-      DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA);
-    }
+      DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA, normalizedData);
+    //}
   },
 
   /**
@@ -590,15 +589,13 @@ let DataSink = {
         this.stopProducer(producer);
       }
     }
-    Services.prompt.confirm(null, "", aMessage.deleteDatabase === true);
-    this.dataStore.destroy(aMessage.deleteDatabase);
+    //this.dataStore.destroy(aMessage.deleteDatabase);
     try {
-      Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+      //Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
-    DataStore = this.registeredUI = this.dataStore = 
-      this._enabledProducers = this.listeningWindows = null;
+    //DataStore = this.dataStore = null;
+    this.registeredUI = this._enabledProducers = this.listeningWindows = null;
     this.initiated = false;
     this.databaseName = "";
-    Services.prompt.confirm(null, "", "Stopped all the producers");
   },
 };

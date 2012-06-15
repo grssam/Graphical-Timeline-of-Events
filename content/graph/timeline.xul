@@ -41,8 +41,11 @@
       <splitter id="stack-panes-splitter" class="devtools-side-splitter"/>
        <vbox id="timeline-container" flex="1">
         <hbox id="canvas-container" flex="1">
+          <html:div id="timeline-current-time" class="absolute"/>
+          <html:canvas id="timeline-canvas" class="absolute" height="100%" width="100%">
+          </html:canvas>
+          <html:div id="timeline-axis" class="absolute" />
         </hbox>
-        <hbox id="timeline-axis" />
       </vbox>
     </hbox>
   </vbox>

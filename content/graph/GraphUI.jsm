@@ -38,8 +38,389 @@ const DataSinkEventMessageType = {
                 // reflected back to the UI.
 };
 
+const NORMALIZED_EVENT_TYPE = {
+  POINT_EVENT: 0, // An instantaneous event like a mouse click.
+  CONTINUOUS_EVENT_START: 1, // Start of a process like reloading of a page.
+  CONTINUOUS_EVENT_MID: 2, // End of a earlier started process.
+  CONTINUOUS_EVENT_END: 3, // End of a earlier started process.
+  REPEATING_EVENT_START: 4, // Start of a repeating event like a timer.
+  REPEATING_EVENT_MID: 5, // An entity of a repeating event which is neither
+                          // start nor end.
+  REPEATING_EVENT_STOP: 6, // End of a repeating event.
+};
+
 const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
+};
+
+const COLOR_LIST = ["#ED5314", "#FEEB51", "#9BCA3E", "#F1433F", "#BCF1ED",
+                    "#E6E6E6", "#1FBED6", "#FF717E", "#00FF00", "#FF717E"];
+/**
+ * Canvas Content Handler.
+ * Manages the canvas and draws anything on it when required.
+ *
+ * @param string aId
+ *        Id of the canvas element.
+ * @param object aDoc
+ *        reference to the document in which the canvas resides.
+ */
+function CanvasManager(aId, aDoc) {
+  this.id = aId;
+  this.doc = aDoc
+  this.currentTime = this.startTime = (new Date()).getTime();
+  this.lastVisibleTime = null;
+  this.offsetTop = 0;
+  this.scrolling = false;
+  this.scrollStartTime = null;
+  this.scrollOffset = 0;
+  this.acceleration = 0;
+
+  /**
+   *  This will be the storage for the timestamp of events occuring ina group.
+   * {
+   *  "group1":
+   *    {
+   *      y: 45, // Vertical location of the group.
+   *      color: "rgb(23,45,89)", // Preferably a bright color.
+   *      shadow: "rgba(56,78,95)", // must be related to the color above.
+   *      type: NORMALIZED_EVENT_TYPE.POINT_EVENT, // one of NORMALIZED_EVENT_TYPE
+   *      producerId: "PageEventsProducer", // Id of the producer related to the data.
+   *      active: true, // If it is a continuous event and is still not finished.
+   *    },
+   *  "another_group_and_so_on" : {...},
+   * }
+   */
+  this.groupedData = {};
+
+  this.globalTiming = [];
+  this.globalGroup = [];
+
+  // How many milli seconds per pixel.
+  this.scale = 5;
+
+  this.colorIndex = 0;
+  this.waitForData = false;
+
+  this.canvas = aDoc.getElementById(aId);
+  this.ctx = this.canvas.getContext('2d');
+
+  // Bind
+  this.render = this.render.bind(this);
+  this.pushData = this.pushData.bind(this);
+  this.drawDot = this.drawDot.bind(this);
+  this.drawLine = this.drawLine.bind(this);
+  this.getOffsetForGroup = this.getOffsetForGroup.bind(this);
+  this.updateGroupOffset = this.updateGroupOffset.bind(this);
+  this.stopRendering = this.stopRendering.bind(this);
+  this.startRendering = this.startRendering.bind(this);
+  this.searchIndexForTime = this.searchIndexForTime.bind(this);
+  this.stopScrolling = this.stopScrolling.bind(this);
+
+  this.isRendering = true;
+  this.render();
+}
+
+CanvasManager.prototype = {
+  get width() this.canvas.width,
+
+  set width(val)
+  {
+    this.canvas.width = val;
+  },
+
+  get height() this.canvas.height,
+
+  set height(val)
+  {
+    this.canvas.height = val;
+  },
+
+  /**
+   * Gets the Y offset of the group residing in the Producers Pane.
+   *
+   * @param string aGroupId
+   *        Id of the group to obtain the Y offset.
+   *
+   * @param string producerId
+   *        Id of the producer, the group belongs to.
+   *
+   * @return number The offset of the groupId provided, or null.
+   */
+  getOffsetForGroup: function CM_getOffsetForGroup(aGroupId, producerId)
+  {
+    let temp = false;
+    if (this.doc.getElementById("producers-pane").collapsed == true) {
+      this.doc.getElementById("producers-pane").collapsed = false;
+      temp = true;
+    }
+    let producerBoxes = this.doc.getElementsByClassName("producer-box");
+    for (let i = 0; i < producerBoxes.length; i++) {
+      let producerBox = producerBoxes[i];
+      let id = producerBox.getAttribute("producerId");
+      if (id != producerId) {
+        continue;
+      }
+
+      if (producerBox.getAttribute("visible") == "false" || id =="NetworkProducer") {
+        return (producerBox.firstChild.boxObject.y +
+                producerBox.firstChild.boxObject.height/2 - 32);
+      }
+
+      let feature = producerBox.firstChild.nextSibling.firstChild;
+      while (feature) {
+        if (feature.getAttribute("groupId") == aGroupId) {
+          if (temp) {
+            this.doc.getElementById("producers-pane").collapsed = true;
+          }
+          return (feature.boxObject.y + feature.boxObject.height/2 - 32);
+        }
+        feature = feature.nextSibling;
+      }
+    }
+    if (temp) {
+      this.doc.getElementById("producers-pane").collapsed = true;
+    }
+    return null;
+  },
+
+  /**
+   * Updates the Y offset related to each groupId.
+   */
+  updateGroupOffset: function CM_updateGroupOffset()
+  {
+    for (groupId in this.groupedData) {
+      this.groupedData[groupId].y =
+        this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
+    }
+  },
+
+  /**
+   * Binary search to match for the index having time just less than the provided.
+   *
+   * @param number aTime
+   *        The time to searach.
+   */
+  searchIndexForTime: function CM_searchIndexForTime(aTime)
+  {
+    let {length} = this.globalTiming;
+    if (this.globalTiming[length - 1] < aTime) {
+      return length - 1;
+    }
+    let left = 0, right = length - 1,mid;
+    while (right - left > 1) {
+      mid = Math.floor((left + right)/2);
+      if (this.globalTiming[mid] > aTime) {
+        right = mid;
+      }
+      else if (this.globalTiming[mid] < aTime) {
+        left = mid;
+      }
+      else
+        return mid;
+    }
+    return left;
+  },
+
+  /**
+   * Gets the message and puts it into the groupedData.
+   *
+   * @param object aData
+   *        The normalized event data read by the GraphUI from DataStore.
+   */
+  pushData: function CM_pushData(aData)
+  {
+    let groupId = aData.groupID;
+
+    this.globalGroup.push(groupId);
+    this.globalTiming.push(aData.time);
+    switch (aData.type) {
+      case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
+        this.groupedData[groupId] = {
+          y: this.getOffsetForGroup(groupId, aData.producer),
+          color: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
+          shadow: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
+          type: NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START,
+          producerId: aData.producer,
+          active: true,
+          timestamps: [aData.time],
+        };
+        break;
+
+      case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
+        this.groupedData[groupId].timestamps.push(aData.time);
+        break;
+
+      case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
+        this.groupedData[groupId].timestamps.push(aData.time);
+        this.groupedData[groupId].active = false;
+        break;
+
+      case NORMALIZED_EVENT_TYPE.POINT_EVENT:
+        if (!this.groupedData[groupId]) {
+          this.groupedData[groupId] = {
+            y: this.getOffsetForGroup(groupId, aData.producer),
+            color: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
+            shadow: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
+            type: NORMALIZED_EVENT_TYPE.POINT_EVENT,
+            producerId: aData.producer,
+            active: false,
+            timestamps: [aData.time],
+          };
+        }
+        else {
+          this.groupedData[groupId].timestamps.push(aData.time);
+        }
+        break;
+    }
+    this.colorIndex++;
+    if (this.waitForData) {
+      this.waitForData = false;
+      this.render();
+    }
+  },
+
+  /**
+   * Draws a dot to represnt an event at the x,y location of color col.
+   */
+  drawDot: function CM_drawDot(x, y, col)
+  { 
+    if (this.offsetTop > y) {
+      return;
+    }
+    this.ctx.beginPath();
+    this.ctx.fillStyle = col;
+    this.ctx.arc(x, y - this.offsetTop, 6, 0, Math.PI*2, false);
+    this.ctx.fill();
+  },
+
+  /**
+   * Draws a horizontal line from x,y to endx,y with a color col.
+   */
+  drawLine: function CM_drawLine(x, y, col, endx)
+  {
+    if (this.offsetTop > y) {
+      return;
+    }
+    this.ctx.fillStyle = col;
+    this.ctx.fillRect(x, y - 2.5 - this.offsetTop, endx-x, 5);
+  },
+
+  startRendering: function CM_startRendering()
+  {
+    if (!this.isRendering) {
+      this.isRendering = true;
+      this.render();
+    }
+  },
+
+  stopRendering: function CM_stopRendering()
+  {
+    this.isRendering = false;
+  },
+
+  startScrolling: function CM_startScrolling()
+  {
+    this.scrolling = true;
+    if (this.waitForData) {
+      this.waitForData = false;
+      this.render();
+    }
+  },
+
+  stopScrolling: function CM_stopScrolling()
+  {
+    this.acceleration = 0;
+    this.scrollOffset = (new Date()).getTime() - this.currentTime;
+    this.scrolling = false;
+  },
+
+  /**
+   * Renders the canvas.
+   */
+  render: function CM_render()
+  {
+    if (!this.isRendering || this.waitForData) {
+      return;
+    }
+    let objectsDrawn = 0;
+    this.ctx.clearRect(0,0,this.width,this.height);
+    this.ctx.shadowOffsetY = 2;
+    this.ctx.shadowBlur = 3;
+    this.ctx.shadowColor = "rgba(10,10,10,0.5)";
+
+    // getting the current time, which will be at the center of the canvas.
+    if (!this.scrolling) {
+      this.currentTime = (new Date()).getTime() - this.scrollOffset;
+    }
+    else if (this.acceleration != 0) {
+      this.currentTime =
+        this.scrollStartTime - this.acceleration *
+                               ((new Date()).getTime() - this.scrollStartTime) /
+                                100;
+    }
+    let firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
+    this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
+
+    for each (group in this.groupedData) {
+      if (group.active && group.timestamps[group.timestamps.length - 1] < firstVisibleTime) {
+        this.drawLine(0, group.y, group.color, 0.5*this.width +
+                      (this.scrolling? ((new Date()).getTime() - this.currentTime)/this.scale:
+                                      this.scrollOffset/this.scale));
+      }
+    }
+
+    let i = this.scrolling?this.searchIndexForTime(this.lastVisibleTime)
+                          :this.globalTiming.length - 1;
+    for (; i >= 0; i--) {
+      let groupId = this.globalGroup[i];
+      let time = this.globalTiming[i];
+      if (time >= firstVisibleTime) {
+        let y = this.groupedData[groupId].y;
+        let col = this.groupedData[groupId].color;
+        // Draw any line first if needed.
+        switch (this.groupedData[groupId].type) {
+          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
+          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
+          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
+            let timings = this.groupedData[groupId].timestamps;
+            let x = (Math.max(timings[0], firstVisibleTime) - firstVisibleTime)/this.scale;
+            let endx = this.scrolling? 0.5*this.width + ((new Date()).getTime() -
+                                                         this.currentTime)/this.scale:
+                                       (this.currentTime - firstVisibleTime +
+                                        this.scrollOffset)/this.scale;
+            if (!this.groupedData[groupId].active) {
+              endx = (timings[timings.length - 1] - firstVisibleTime)/this.scale;
+            }
+            this.drawLine(x,y,col,endx);
+            objectsDrawn++;
+            break;
+        }
+        // Prepare the drawing of dot now.
+        this.drawDot((time - firstVisibleTime)/this.scale, y, col);
+        objectsDrawn++;
+      }
+      // No need of going down further as time is lready below visible state.
+      else {
+        break;
+      }
+    }
+    // Drawing one vertical line at end to represent current time.
+    if (this.scrollOffset != 0 || this.scrolling) {
+      this.ctx.fillStyle = "rgba(3,101,151,0.75)";
+      this.ctx.fillRect(0.5*this.width +
+                        (this.scrolling? ((new Date()).getTime() -
+                                         this.currentTime)/this.scale:
+                                        this.scrollOffset/this.scale),
+                        0, 2, this.height);
+    
+    }
+    if (objectsDrawn == 0 && !this.scrolling) {
+      this.waitForData = true;
+    }
+    else {
+      this.doc.defaultView.mozRequestAnimationFrame(this.render);
+    }
+  }
 };
 
 /**
@@ -57,6 +438,7 @@ function TimelineView(aChromeWindow) {
   this._splitter.setAttribute("class", "devtools-horizontal-splitter");
 
   this.loaded = false;
+  this.canvasStarted = false;
   this.recording = false;
   this.producersPaneOpened = false;
 
@@ -65,6 +447,7 @@ function TimelineView(aChromeWindow) {
   this._nbox = gBrowser.getNotificationBox(gBrowser.selectedTab.linkedBrowser);
   this._nbox.appendChild(this._splitter);
   this._nbox.appendChild(this._frame);
+  this._canvas = null;
 
   this.createProducersPane = this.createProducersPane.bind(this);
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
@@ -72,11 +455,15 @@ function TimelineView(aChromeWindow) {
   this.toggleFeature = this.toggleFeature.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
+  this.handleScroll = this.handleScroll.bind(this);
   this.closeUI = this.closeUI.bind(this);
   this.$ = this.$.bind(this);
   this._showProducersPane = this._showProducersPane.bind(this);
   this._hideProducersPane = this._hideProducersPane.bind(this);
   this._onLoad = this._onLoad.bind(this);
+  this._onDragStart = this._onDragStart.bind(this);
+  this._onDrag = this._onDrag.bind(this);
+  this._onDragEnd = this._onDragEnd.bind(this);
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
@@ -88,7 +475,7 @@ TimelineView.prototype = {
   /**
    * Attaches various events and sets references to the different parts of the UI.
    */
-  _onLoad: function NV__onLoad()
+  _onLoad: function TV__onLoad()
   {
     this.loaded = true;
     this._frame.removeEventListener("load", this._onLoad, true);
@@ -124,7 +511,7 @@ TimelineView.prototype = {
    * @param aMessage
    *        @see DataSink.init()
    */
-  updateUI: function NV_updateUI(aMessage)
+  updateUI: function TV_updateUI(aMessage)
   {
     let enabledProducers = [];
     let enabledFeatures = [];
@@ -170,7 +557,7 @@ TimelineView.prototype = {
    *        - features - The features of the producer that can be toggled.
    *        - type - The type of the events that producer will send.
    */
-  createProducersPane: function NV_createProducersPane(aProducerInfoList)
+  createProducersPane: function TV_createProducersPane(aProducerInfoList)
   {
     if (!this.loaded) {
       this._frame.addEventListener("load", function nvCreatePane() {
@@ -239,6 +626,7 @@ TimelineView.prototype = {
         featureCheckbox.setAttribute("class", "devtools-checkbox");
         featureCheckbox.setAttribute("flex", "1");
         featureCheckbox.setAttribute("label", feature);
+        featureCheckbox.setAttribute("groupId", feature);
         featureCheckbox.addEventListener("command", this.toggleFeature, true);
         if (TimelinePreferences.activeFeatures
                                .indexOf(producer.id + ":" + feature) == -1) {
@@ -261,7 +649,7 @@ TimelineView.prototype = {
   /**
    * Toggles the Producers Pane.
    */
-  toggleProducersPane: function NV_toggleProducersPane()
+  toggleProducersPane: function TV_toggleProducersPane()
   {
     if (!this.loaded) {
       return;
@@ -274,14 +662,14 @@ TimelineView.prototype = {
     }
   },
 
-  _showProducersPane: function NV__showProducersPane()
+  _showProducersPane: function TV__showProducersPane()
   {
     this.producersPaneOpened = true;
     this.producersPane.setAttribute("visible", true);
     this.producersPane.collapsed = false;
   },
 
-  _hideProducersPane: function NV__hideProducersPane()
+  _hideProducersPane: function TV__hideProducersPane()
   {
     this.producersPaneOpened = false;
     this.producersPane.setAttribute("visible", false);
@@ -291,7 +679,7 @@ TimelineView.prototype = {
   /**
    * Starts and stops the listening of Data.
    */
-  toggleRecording: function NV_toggleRecording()
+  toggleRecording: function TV_toggleRecording()
   {
     if (!this.recording) {
       let message = {
@@ -314,9 +702,22 @@ TimelineView.prototype = {
         }
       }
       GraphUI.startListening(message);
+      // Starting the canvas.
+      if (!this.canvasStarted) {
+        this._canvas = new CanvasManager("timeline-canvas", this._frameDoc);
+        this._canvas.width = this.$("timeline-content").boxObject.width;
+        this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
+        this._canvas.height = this.$("canvas-container").boxObject.height;
+        this.canvasStarted = true;
+        this.handleScroll();
+      }
+      else {
+        this._canvas.startRendering();
+      }
     }
     else {
       GraphUI.stopListening({timelineUIId: GraphUI.id});
+      this._canvas.stopRendering();
     }
     this.recording = !this.recording;
   },
@@ -327,7 +728,7 @@ TimelineView.prototype = {
    * @param object aEvent
    *        Associated event for the command event call.
    */
-  toggleFeature: function NV_toggleFeature(aEvent)
+  toggleFeature: function TV_toggleFeature(aEvent)
   {
     if (!this.recording) {
       return;
@@ -349,7 +750,7 @@ TimelineView.prototype = {
    * @param object aEvent
    *        Associated event for the command event call.
    */
-  toggleProducer: function NV_toggleProducer(aEvent)
+  toggleProducer: function TV_toggleProducer(aEvent)
   {
     let target = aEvent.target;
     if (target.hasAttribute("checked")) {
@@ -385,7 +786,8 @@ TimelineView.prototype = {
    * @param object aEvent
    *        Associated event for the command event call.
    */
-  toggleProducerBox: function NV_toggleProducerBox(aEvent) {
+  toggleProducerBox: function TV_toggleProducerBox(aEvent)
+  {
     let producerBox = aEvent.target.parentNode.parentNode;
     if (!producerBox) {
       return;
@@ -396,13 +798,73 @@ TimelineView.prototype = {
     else {
       producerBox.setAttribute("visible", true);
     }
+    if (this.canvasStarted) {
+      this._canvas.updateGroupOffset();
+    }
+  },
+
+  /**
+   * Gets the data and sends it to the canvas to display
+   *
+   * @param object aData
+   *        Normalized event data.
+   */
+  displayData: function NV_displayData(aData)
+  {
+    this._canvas.pushData(aData);
+  },
+
+  _onDragStart: function TV__onDragStart(aEvent)
+  {
+    this.$("timeline-current-time").removeEventListener("mousedown",
+                                                        this._onDragStart, true);
+    this.$("canvas-container").addEventListener("mousemove",
+                                                this._onDrag, true);
+    this._frameDoc.addEventListener("mouseup",
+                                    this._onDragEnd, true);
+    this._frameDoc.addEventListener("click",
+                                    this._onDragEnd, true);
+  },
+
+  _onDrag: function TV__onDrag(aEvent)
+  {
+    this._canvas.startScrolling();
+    if (!this._canvas.scrollStartTime) {
+      this._canvas.scrollStartTime = (new Date()).getTime();
+    }
+    this.$("timeline-current-time").style.left =
+      (aEvent.clientX - this.$("canvas-container").boxObject.x) + "px";
+    this._canvas.acceleration = this._canvas.width/2 - aEvent.clientX +
+                                this.$("canvas-container").boxObject.x;
+  },
+
+  _onDragEnd: function TV__onDragEnd(aEvent)
+  {
+    this._canvas.stopScrolling();
+    this.$("canvas-container").removeEventListener("mousemove",
+                                                   this._onDrag, true);
+    this._frameDoc.removeEventListener("mouseup",
+                                       this._onDragEnd, true);
+    this._frameDoc.removeEventListener("click",
+                                       this._onDragEnd, true);
+    this.handleScroll();
+  },
+
+  /**
+   * Handles dragging of the current time vertical line to scroll to previous time.
+   */
+  handleScroll: function TV_handleScroll()
+  {
+    this.$("timeline-current-time").addEventListener("mousedown",
+                                                     this._onDragStart, true);
   },
 
   /**
    * Closes the UI, removes the frame and the splitter ans dispatches an
    * unloading event to tell the parent window.
    */
-  closeUI: function NV_closeUI() {
+  closeUI: function TV_closeUI()
+  {
     if (!this.loaded) {
       return;
     }
@@ -430,7 +892,7 @@ TimelineView.prototype = {
     this._frame.parentNode.removeChild(this._frame);
   },
 
-  _onUnload: function NV__onUnload()
+  _onUnload: function TV__onUnload()
   {
     this._frame = null;
     this._frameDoc = null;
@@ -440,9 +902,9 @@ TimelineView.prototype = {
   },
 
   /**
-   * Equivalent function to this._framDoc.getElementById(ID)
+   * Equivalent function to this._frameDoc.getElementById(ID)
    */
-  $: function NV_$(ID) {
+  $: function TV_$(ID) {
     return this._frameDoc.getElementById(ID);
   },
 };
@@ -503,7 +965,7 @@ let GraphUI = {
    * Starts the Data Sink and all the producers.
    */
   startListening: function GUI_startListening(aMessage) {
-    GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 100);
+    //GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 25);
     GraphUI.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     GraphUI.listening = true;
     GraphUI.shouldDeleteDatabaseItself = false;
@@ -516,8 +978,8 @@ let GraphUI = {
     if (!GraphUI.listening) {
       return;
     }
-    GraphUI._window.clearInterval(GraphUI.timer);
-    GraphUI.timer = null;
+    //GraphUI._window.clearInterval(GraphUI.timer);
+    //GraphUI.timer = null;
     GraphUI.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
     GraphUI.listening = false;
   },
@@ -548,8 +1010,8 @@ let GraphUI = {
       GraphUI.databaseName = aMessage.databaseName;
       GraphUI.producerInfoList = aMessage.producerInfoList;
       // Importing the Data Store and making a database
-      Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-      GraphUI.dataStore = new DataStore(GraphUI.databaseName);
+      //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
+      //GraphUI.dataStore = new DataStore(GraphUI.databaseName);
       GraphUI.buildUI();
     }
   },
@@ -629,7 +1091,7 @@ let GraphUI = {
   readData: function GUI_readData() {
     if (GraphUI.newDataAvailable && !GraphUI.readingData) {
       GraphUI.readingData = true;
-      GraphUI.dataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
+      //GraphUI.dataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
     }
   },
 
@@ -644,6 +1106,7 @@ let GraphUI = {
     GraphUI._currentId += aData.length;
     // dumping to console for now.
     for (let i = 0; i < aData.length; i++) {
+      GraphUI._view.displayData(aData[i]);
       GraphUI._console
              .logStringMessage("ID: " + aData[i].id +
                                "; Producer: " + aData[i].producer +
@@ -674,6 +1137,7 @@ let GraphUI = {
 
       case DataSinkEventMessageType.NEW_DATA:
         GraphUI.newDataAvailable = true;
+        GraphUI.processData([message]);
         break;
 
       case DataSinkEventMessageType.UPDATE_UI:
@@ -734,14 +1198,14 @@ let GraphUI = {
   destroy: function GUI_destroy() {
     if (GraphUI.UIOpened == true) {
       if (GraphUI.listening) {
-        GraphUI._window.clearInterval(GraphUI.timer);
-        GraphUI.timer = null;
+        //GraphUI._window.clearInterval(GraphUI.timer);
+        //GraphUI.timer = null;
       }
-      GraphUI.dataStore.destroy(GraphUI.shouldDeleteDatabaseItself);
+      //GraphUI.dataStore.destroy(GraphUI.shouldDeleteDatabaseItself);
       try {
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       } catch (ex) {}
-      DataStore = GraphUI.dataStore = null;
+      //DataStore = GraphUI.dataStore = null;
       GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
                           {deleteDatabase: true, // true to delete the database
                            timelineUIId: GraphUI.id, // to tell which UI is closing.
@@ -751,7 +1215,7 @@ let GraphUI = {
       GraphUI.removeRemoteListener(GraphUI._window);
       GraphUI._view.closeUI();
       GraphUI._view = GraphUI.newDataAvailable = GraphUI.UIOpened =
-        GraphUI.timer = GraphUI._currentId = GraphUI._window = null;
+        GraphUI._currentId = GraphUI._window = null;
       GraphUI.producerInfoList = null;
       if (GraphUI.callback)
         GraphUI.callback();
