@@ -226,12 +226,13 @@ let PageEventsProducer =
    */
   removeEventTypes: function PEP_removeEventTypes(aEventTypes)
   {
+    let stopped = {};
     for each (let window in this.listeningWindows) {
       for each (let eventType in aEventTypes) {
         if (this.enabledEvents.indexOf(eventType) != -1) {
-          let stopped = false;
+          stopped[eventType] = false;
           if (this.eventTypes[eventType]) {
-            stopped = true;
+            stopped[eventType] = true;
             try {
               if (eventType == "PaintEvent") {
                 let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
@@ -252,15 +253,17 @@ let PageEventsProducer =
             catch (ex) {}
           }
           if (this.observedEvents[eventType]) {
-            stopped = true;
+            stopped[eventType] = true;
             for each (let eventName in this.observedEvents[eventType]) {
               Services.obs.removeObserver(this.observeEvents, eventName, false);
             }
           }
-          if (stopped) {
-            this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
-          }
         }
+      }
+    }
+    for each (let eventType in aEventTypes) {
+      if (this.enabledEvents.indexOf(eventType) != -1 && stopped[eventType]) {
+        this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
       }
     }
   },

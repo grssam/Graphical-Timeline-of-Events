@@ -929,14 +929,27 @@ TimelineView.prototype = {
       TimelinePreferences.visiblePanes = [];
     }
     let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
-    let visibleProducers = [];
+    let visibleProducers = [], activeFeatures = [], activeProducers = [];
     for (let i = 0; i < producerBoxes.length; i++) {
       let producerBox = producerBoxes[i];
+      let id = producerBox.getAttribute("producerId");
       if (producerBox.getAttribute("visible") == "true") {
-        visibleProducers.push(producerBox.getAttribute("producerId"));
+        visibleProducers.push(id);
+      }
+      if (producerBox.getAttribute("enabled") == "true") {
+        activeProducers.push(id);
+      }
+      let feature = producerBox.firstChild.nextSibling.firstChild;
+      while (feature) {
+        if (feature.hasAttribute("checked")) {
+          activeFeatures.push(id + ":" + feature.getAttribute("label"));
+        }
+        feature = feature.nextSibling;
       }
     }
     TimelinePreferences.visibleProducers = visibleProducers;
+    TimelinePreferences.activeFeatures = activeFeatures;
+    TimelinePreferences.activeProducers = activeProducers;
 
     // Removing frame and splitter.
     this._splitter.parentNode.removeChild(this._splitter);
@@ -1340,7 +1353,7 @@ let TimelinePreferences = {
   set activeProducers(producerList) {
     Services.prefs.setCharPref("devtools.timeline.activeProducers",
                                JSON.stringify(producerList));
-    this._activeProducers = JSONproducerList;
+    this._activeProducers = producerList;
   },
 
   /**
