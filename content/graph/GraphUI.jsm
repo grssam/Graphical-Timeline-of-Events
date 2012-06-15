@@ -74,6 +74,8 @@ function CanvasManager(aId, aDoc) {
   this.scrollStartTime = null;
   this.scrollOffset = 0;
   this.acceleration = 0;
+  this.nonScrollingTimeGap = 0;
+  this.lastScrollStopTime = null;
 
   /**
    *  This will be the storage for the timestamp of events occuring ina group.
@@ -320,6 +322,13 @@ CanvasManager.prototype = {
 
   startScrolling: function CM_startScrolling()
   {
+    if (!this.scrollStartTime) {
+      this.scrollStartTime = (new Date()).getTime();
+      this.scrollOffset = 0;
+    }
+    if (!this.scrolling && this.lastScrollStopTime != null) {
+      this.nonScrollingTimeGap += ((new Date()).getTime() - this.lastScrollStopTime);
+    }
     this.scrolling = true;
     if (this.waitForData) {
       this.waitForData = false;
@@ -330,7 +339,8 @@ CanvasManager.prototype = {
   stopScrolling: function CM_stopScrolling()
   {
     this.acceleration = 0;
-    this.scrollOffset = (new Date()).getTime() - this.currentTime;
+    this.lastScrollStopTime = (new Date()).getTime();
+    this.scrollOffset = this.lastScrollStopTime - this.currentTime;
     this.scrolling = false;
   },
 
@@ -353,9 +363,9 @@ CanvasManager.prototype = {
       this.currentTime = (new Date()).getTime() - this.scrollOffset;
     }
     else if (this.acceleration != 0) {
-      this.currentTime =
-        this.scrollStartTime - this.acceleration *
-                               ((new Date()).getTime() - this.scrollStartTime) /
+      this.currentTime = this.nonScrollingTimeGap +
+        this.scrollStartTime - this.acceleration *((new Date()).getTime() -
+                                this.scrollStartTime - this.nonScrollingTimeGap) /
                                 100;
     }
     let firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
@@ -441,6 +451,7 @@ function TimelineView(aChromeWindow) {
   this.canvasStarted = false;
   this.recording = false;
   this.producersPaneOpened = false;
+  this.startingScrollOffset = null;
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -453,6 +464,7 @@ function TimelineView(aChromeWindow) {
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
+  this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
@@ -483,11 +495,13 @@ TimelineView.prototype = {
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
     this.producersButton = this.$("producers");
+    this.currentTimeButton = this.$("current");
     this.producersPane = this.$("producers-pane");
     // Attaching events.
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
+    this.currentTimeButton.addEventListener("command", this.moveToCurrentTime, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
@@ -647,6 +661,41 @@ TimelineView.prototype = {
   },
 
   /**
+   * Moves the view to current time.
+   */
+  moveToCurrentTime: function TV_moveToCurrentTime()
+  {
+    if (this._canvas.scrollOffset == 0) {
+      this.startingScrollOffset = null;
+      this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
+      this.currentTimeButton.setAttribute("checked", true);
+      this._canvas.scrollStartTime = null;
+      this._canvas.nonScrollingTimeGap = 0;
+    }
+    else {
+      if (this.startingScrollOffset == null) {
+        this.startingScrollOffset = this._canvas.scrollOffset;
+      }
+      this._canvas.scrollOffset -= this.startingScrollOffset/30;
+      if ((this._canvas.scrollOffset >= 0 &&
+           this._canvas.scrollOffset < this.startingScrollOffset/30) ||
+          (this._canvas.scrollOffset < 0 &&
+           this._canvas.scrollOffset > this.startingScrollOffset/30)) {
+        this._canvas.nonScrollingTimeGap = this._canvas.scrollOffset = 0;
+        this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
+        this._canvas.scrollStartTime = null;
+      }
+      else {
+        this._frameDoc.defaultView.setTimeout(this.moveToCurrentTime, 1000/60);
+      }
+      if (this._canvas.waitForData) {
+        this._canvas.waitForData = false;
+        this._canvas.render();
+      }
+    }
+  },
+
+  /**
    * Toggles the Producers Pane.
    */
   toggleProducersPane: function TV_toggleProducersPane()
@@ -706,6 +755,7 @@ TimelineView.prototype = {
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager("timeline-canvas", this._frameDoc);
         this._canvas.width = this.$("timeline-content").boxObject.width;
+        this.currentTimeButton.setAttribute("checked", true);
         this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
         this._canvas.height = this.$("canvas-container").boxObject.height;
         this.canvasStarted = true;
@@ -829,9 +879,10 @@ TimelineView.prototype = {
   _onDrag: function TV__onDrag(aEvent)
   {
     this._canvas.startScrolling();
-    if (!this._canvas.scrollStartTime) {
-      this._canvas.scrollStartTime = (new Date()).getTime();
-    }
+    try {
+      this.currentTimeButton.removeAttribute("checked");
+    } catch (ex) {}
+
     this.$("timeline-current-time").style.left =
       (aEvent.clientX - this.$("canvas-container").boxObject.x) + "px";
     this._canvas.acceleration = this._canvas.width/2 - aEvent.clientX +

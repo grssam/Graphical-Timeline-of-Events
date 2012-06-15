@@ -27,6 +27,11 @@
                        type="checkbox"
                        label="&timelineUI.toggleProducersButton.label;"
                        tabindex="1"/>
+        <toolbarbutton id="current"
+                       class="devtools-toolbarbutton"
+                       type="checkbox"
+                       label="&timelineUI.currentTime.label;"
+                       tabindex="2"/>
       </hbox>
       <textbox id="search-bar" type="search"
                class="devtools-searchinput"
