@@ -589,6 +589,7 @@ CanvasManager.prototype = {
     for each (group in this.groupedData) {
       if (group.active && group.timestamps[group.timestamps.length - 1] < this.firstVisibleTime) {
         this.drawLine(0, group.y, group.id, this.currentWidth);
+        objectsDrawn++;
       }
       else if (group.timestamps[group.timestamps.length - 1] > this.firstVisibleTime &&
                (group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
