@@ -53,19 +53,17 @@ const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
 };
 
-const COLOR_LIST = ["#ED5314", "#FEEB51", "#9BCA3E", "#F1433F", "#BCF1ED",
-                    "#E6E6E6", "#1FBED6", "#FF717E", "#00FF00", "#FF717E"];
+const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f7ff",
+                    "#f9b4ff", "#f770ff", "#ff0000", "#ff61fd", "#ffaf60", "#fffc04"];
+
 /**
  * Canvas Content Handler.
  * Manages the canvas and draws anything on it when required.
  *
- * @param string aId
- *        Id of the canvas element.
  * @param object aDoc
  *        reference to the document in which the canvas resides.
  */
-function CanvasManager(aId, aDoc) {
-  this.id = aId;
+function CanvasManager(aDoc) {
   this.doc = aDoc
   this.currentTime = this.startTime = (new Date()).getTime();
   this.lastVisibleTime = null;
@@ -75,16 +73,24 @@ function CanvasManager(aId, aDoc) {
   this.scrollOffset = 0;
   this.acceleration = 0;
   this.nonScrollingTimeGap = 0;
+  this.lastWidth = 0;
   this.lastScrollStopTime = null;
+  // this.imageList = [];
+  // this.patternList = [];
+
+  // for (let i = 0; i < COLOR_LIST.length; i++) {
+    // this.imageList[i] = new aDoc.defaultView.Image();
+    // this.imageList[i].src = "chrome://graphical-timeline/content/graph/images/dots/" +
+                            // COLOR_LIST[i].replace("#", "") + ".png";
+  // }
 
   /**
    *  This will be the storage for the timestamp of events occuring ina group.
    * {
    *  "group1":
    *    {
+   *      id: 1,
    *      y: 45, // Vertical location of the group.
-   *      color: "rgb(23,45,89)", // Preferably a bright color.
-   *      shadow: "rgba(56,78,95)", // must be related to the color above.
    *      type: NORMALIZED_EVENT_TYPE.POINT_EVENT, // one of NORMALIZED_EVENT_TYPE
    *      producerId: "PageEventsProducer", // Id of the producer related to the data.
    *      active: true, // If it is a continuous event and is still not finished.
@@ -100,14 +106,32 @@ function CanvasManager(aId, aDoc) {
   // How many milli seconds per pixel.
   this.scale = 5;
 
-  this.colorIndex = 0;
-  this.waitForData = false;
+  this.id = 0;
+  this.waitForLineData = false;
+  this.waitForDotData = false;
 
-  this.canvas = aDoc.getElementById(aId);
-  this.ctx = this.canvas.getContext('2d');
+  this.canvasLines = aDoc.getElementById("timeline-canvas-lines");
+  this.ctxL = this.canvasLines.getContext('2d');
+  this.canvasDots = aDoc.getElementById("timeline-canvas-dots");
+  this.ctxD = this.canvasDots.getContext('2d');
+  this.canvasRuler = aDoc.getElementById("ruler-canvas");
+  this.ctxR = this.canvasRuler.getContext('2d');
+
+  //Building the line patterns
+  // let imagePattern = [];
+  // for (let i = 0; i < COLOR_LIST.length; i++) {
+    // imagePattern[i] = new aDoc.defaultView.Image();
+    // imagePattern[i].onload = function() {
+      // this.patternList[i] = this.ctx.createPattern(imagePattern[i],'repeat');
+    // }.bind(this);
+    // imagePattern[i].src = "chrome://graphical-timeline/content/graph/images/lines/" +
+                          // COLOR_LIST[i].replace("#", "") + ".png";
+  // }
 
   // Bind
-  this.render = this.render.bind(this);
+  this.renderDots = this.renderDots.bind(this);
+  this.renderLines = this.renderLines.bind(this);
+  this.renderRuler = this.renderRuler.bind(this);
   this.pushData = this.pushData.bind(this);
   this.drawDot = this.drawDot.bind(this);
   this.drawLine = this.drawLine.bind(this);
@@ -119,22 +143,38 @@ function CanvasManager(aId, aDoc) {
   this.stopScrolling = this.stopScrolling.bind(this);
 
   this.isRendering = true;
-  this.render();
+  this.renderDots();
+  this.renderLines();
+  this.renderRuler();
 }
 
 CanvasManager.prototype = {
-  get width() this.canvas.width,
+  get width()
+  {
+    if (this._width === undefined) {
+      this._width = this.canvasLines.width;
+    }
+    return this._width;
+  },
 
   set width(val)
   {
-    this.canvas.width = val;
+    this._width = val;
+    this.canvasLines.width = this.canvasDots.width = val;
   },
 
-  get height() this.canvas.height,
+  get height()
+  {
+    if (this._height === undefined) {
+      this._height = this.canvasLines.height;
+    }
+    return this._height;
+  },
 
   set height(val)
   {
-    this.canvas.height = val;
+    this._height = val;
+    this.canvasLines.height = this.canvasDots.height = val;
   },
 
   /**
@@ -238,31 +278,52 @@ CanvasManager.prototype = {
     switch (aData.type) {
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
         this.groupedData[groupId] = {
+          id: this.id,
           y: this.getOffsetForGroup(groupId, aData.producer),
-          color: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
-          shadow: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
           type: NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START,
           producerId: aData.producer,
           active: true,
           timestamps: [aData.time],
         };
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
+        if (this.waitForLineData) {
+          this.waitForLineData = false;
+          this.renderLines();
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
         this.groupedData[groupId].timestamps.push(aData.time);
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
         this.groupedData[groupId].timestamps.push(aData.time);
         this.groupedData[groupId].active = false;
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
+        if (this.waitForLineData) {
+          this.waitForLineData = false;
+          this.renderLines();
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.POINT_EVENT:
         if (!this.groupedData[groupId]) {
           this.groupedData[groupId] = {
+            id: this.id,
             y: this.getOffsetForGroup(groupId, aData.producer),
-            color: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
-            shadow: COLOR_LIST[this.colorIndex%COLOR_LIST.length],
             type: NORMALIZED_EVENT_TYPE.POINT_EVENT,
             producerId: aData.producer,
             active: false,
@@ -272,46 +333,49 @@ CanvasManager.prototype = {
         else {
           this.groupedData[groupId].timestamps.push(aData.time);
         }
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
         break;
     }
-    this.colorIndex++;
-    if (this.waitForData) {
-      this.waitForData = false;
-      this.render();
-    }
   },
 
   /**
-   * Draws a dot to represnt an event at the x,y location of color col.
+   * Draws a dot to represnt an event at the x,y.
    */
-  drawDot: function CM_drawDot(x, y, col)
-  { 
-    if (this.offsetTop > y) {
-      return;
-    }
-    this.ctx.beginPath();
-    this.ctx.fillStyle = col;
-    this.ctx.arc(x, y - this.offsetTop, 6, 0, Math.PI*2, false);
-    this.ctx.fill();
-  },
-
-  /**
-   * Draws a horizontal line from x,y to endx,y with a color col.
-   */
-  drawLine: function CM_drawLine(x, y, col, endx)
+  drawDot: function CM_drawDot(x, y, id)
   {
     if (this.offsetTop > y) {
       return;
     }
-    this.ctx.fillStyle = col;
-    this.ctx.fillRect(x, y - 2.5 - this.offsetTop, endx-x, 5);
+    //this.ctx.drawImage(this.imageList[id%12],x - 5,y - 6 - this.offsetTop,10,12);
+    this.ctxD.beginPath();
+    this.ctxD.fillStyle = COLOR_LIST[id%12];
+    this.ctxD.arc(x,y - this.offsetTop, 5, 0, 6.2842,true);
+    this.ctxD.fill();
+  },
+
+  /**
+   * Draws a horizontal line from x,y to endx,y.
+   */
+  drawLine: function CM_drawLine(x, y, id, endx)
+  {
+    if (this.offsetTop > y) {
+      return;
+    }
+    this.ctxL.fillStyle = COLOR_LIST[id%12];
+    this.ctxL.fillRect(x, y - 2 - this.offsetTop, endx-x, 4);
   },
 
   startRendering: function CM_startRendering()
   {
     if (!this.isRendering) {
       this.isRendering = true;
-      this.render();
+      this.renderDots();
+      this.renderLines();
+      this.renderRuler();
     }
   },
 
@@ -330,9 +394,13 @@ CanvasManager.prototype = {
       this.nonScrollingTimeGap += ((new Date()).getTime() - this.lastScrollStopTime);
     }
     this.scrolling = true;
-    if (this.waitForData) {
-      this.waitForData = false;
-      this.render();
+    if (this.waitForDotData) {
+      this.waitForDotData = false;
+      this.renderDots();
+    }
+    if (this.waitForLineData) {
+      this.waitForLineData = false;
+      this.renderLines();
     }
   },
 
@@ -345,68 +413,96 @@ CanvasManager.prototype = {
   },
 
   /**
-   * Renders the canvas.
+   * Renders the canvas ruler.
    */
-  render: function CM_render()
+  renderRuler: function CM_renderRuler()
   {
-    if (!this.isRendering || this.waitForData) {
+    if (!this.isRendering) {
       return;
     }
-    let objectsDrawn = 0;
-    this.ctx.clearRect(0,0,this.width,this.height);
-    this.ctx.shadowOffsetY = 2;
-    this.ctx.shadowBlur = 3;
-    this.ctx.shadowColor = "rgba(10,10,10,0.5)";
+    if (this.canvasRuler.width < this.width) {
+      this.canvasRuler.width = this.width;
+    }
 
+    this.ctxR.clearRect(0,0,this.width,25);
     // getting the current time, which will be at the center of the canvas.
     if (!this.scrolling) {
       this.currentTime = (new Date()).getTime() - this.scrollOffset;
     }
     else if (this.acceleration != 0) {
       this.currentTime = this.nonScrollingTimeGap +
-        this.scrollStartTime - this.acceleration *((new Date()).getTime() -
-                                this.scrollStartTime - this.nonScrollingTimeGap) /
-                                100;
+        this.scrollStartTime - this.acceleration * ((new Date()).getTime() - this.scrollStartTime -
+                                                    this.nonScrollingTimeGap) / 100;
     }
-    let firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
-    this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
-
-    for each (group in this.groupedData) {
-      if (group.active && group.timestamps[group.timestamps.length - 1] < firstVisibleTime) {
-        this.drawLine(0, group.y, group.color, 0.5*this.width +
-                      (this.scrolling? ((new Date()).getTime() - this.currentTime)/this.scale:
-                                      this.scrollOffset/this.scale));
+    let firstTime = this.currentTime - 0.5*this.width*this.scale;
+    this.ctxR.beginPath();
+    this.ctxR.strokeStyle = "rgb(3,101,151)";
+    this.ctxR.lineWidth = 2;
+    for (let i = -1*((firstTime/this.scale)%1000),j=0; i < this.width; i += 100/this.scale,j++) {
+      if (i < 0) {
+        continue;
+      }
+      this.ctxR.moveTo(i,25);
+      if (j%10 == 0) {
+        this.ctxR.lineWidth = 1;
+        this.ctxR.font = "16px sans-serif";
+        this.ctxR.strokeText((new Date(firstTime)).getMinutes() + "  " +
+                             (new Date(firstTime + i*this.scale)).getSeconds(), i - 22, 12);
+        this.ctxR.lineWidth = 2;
+        this.ctxR.lineTo(i,5);
+      }
+      else if (j%5 == 0) {
+        this.ctxR.lineTo(i,10);
+      }
+      else {
+        this.ctxR.lineTo(i,15);
       }
     }
+    this.ctxR.stroke();
+    this.doc.defaultView.mozRequestAnimationFrame(this.renderRuler);
+  },
+
+  /**
+   * Renders the canvas dots.
+   */
+  renderDots: function CM_renderDots()
+  {
+    if (!this.isRendering || this.waitForDotData) {
+      return;
+    }
+    let objectsDrawn = 0;
+
+    this.ctxD.shadowOffsetY = 2;
+    this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
+    this.ctxD.shadowBlur = 2;
+
+    if (this.scrollOffset > 0 || this.scrollStartTime != null) {
+      this.ctxD.clearRect(0,0,this.width,this.height);
+    }
+    else {
+      this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
+                          ((new Date()).getTime() - this.currentTime)/this.scale
+                          :this.scrollOffset/this.scale) + 10,this.height);
+    }
+    // getting the current time, which will be at the center of the canvas.
+    if (!this.scrolling) {
+      this.currentTime = (new Date()).getTime() - this.scrollOffset;
+    }
+    else if (this.acceleration != 0) {
+      this.currentTime = this.nonScrollingTimeGap +
+        this.scrollStartTime - this.acceleration * ((new Date()).getTime() - this.scrollStartTime -
+                                                    this.nonScrollingTimeGap) / 100;
+    }
+    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
+    this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
 
     let i = this.scrolling?this.searchIndexForTime(this.lastVisibleTime)
                           :this.globalTiming.length - 1;
     for (; i >= 0; i--) {
-      let groupId = this.globalGroup[i];
-      let time = this.globalTiming[i];
-      if (time >= firstVisibleTime) {
-        let y = this.groupedData[groupId].y;
-        let col = this.groupedData[groupId].color;
-        // Draw any line first if needed.
-        switch (this.groupedData[groupId].type) {
-          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
-          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
-          case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
-            let timings = this.groupedData[groupId].timestamps;
-            let x = (Math.max(timings[0], firstVisibleTime) - firstVisibleTime)/this.scale;
-            let endx = this.scrolling? 0.5*this.width + ((new Date()).getTime() -
-                                                         this.currentTime)/this.scale:
-                                       (this.currentTime - firstVisibleTime +
-                                        this.scrollOffset)/this.scale;
-            if (!this.groupedData[groupId].active) {
-              endx = (timings[timings.length - 1] - firstVisibleTime)/this.scale;
-            }
-            this.drawLine(x,y,col,endx);
-            objectsDrawn++;
-            break;
-        }
-        // Prepare the drawing of dot now.
-        this.drawDot((time - firstVisibleTime)/this.scale, y, col);
+      if (this.globalTiming[i] >= this.firstVisibleTime) {
+        this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
+                     this.groupedData[this.globalGroup[i]].y,
+                     this.groupedData[this.globalGroup[i]].id);
         objectsDrawn++;
       }
       // No need of going down further as time is lready below visible state.
@@ -414,21 +510,80 @@ CanvasManager.prototype = {
         break;
       }
     }
-    // Drawing one vertical line at end to represent current time.
-    if (this.scrollOffset != 0 || this.scrolling) {
-      this.ctx.fillStyle = "rgba(3,101,151,0.75)";
-      this.ctx.fillRect(0.5*this.width +
-                        (this.scrolling? ((new Date()).getTime() -
-                                         this.currentTime)/this.scale:
-                                        this.scrollOffset/this.scale),
-                        0, 2, this.height);
-    
-    }
+
     if (objectsDrawn == 0 && !this.scrolling) {
-      this.waitForData = true;
+      this.waitForDotData = true;
     }
     else {
-      this.doc.defaultView.mozRequestAnimationFrame(this.render);
+      this.doc.defaultView.mozRequestAnimationFrame(this.renderDots);
+    }
+  },
+
+  /**
+   * Renders the canvas lines.
+   */
+  renderLines: function CM_renderLines()
+  {
+    if (!this.isRendering || this.waitForLineData) {
+      return;
+    }
+    let objectsDrawn = 0;
+    this.currentWidth = 0.5*this.width +
+      (this.scrolling? ((new Date()).getTime() - this.currentTime)/this.scale:
+                       this.scrollOffset/this.scale);
+
+    if (this.scrollOffset > 0 || this.scrollStartTime != null) {
+      this.ctxL.clearRect(0,0,this.width,this.height);
+    }
+    else {
+      this.ctxL.clearRect(0,0,this.currentWidth + 10,this.height);
+    }
+    // getting the current time, which will be at the center of the canvas.
+    if (!this.scrolling) {
+      this.currentTime = (new Date()).getTime() - this.scrollOffset;
+    }
+    else if (this.acceleration != 0) {
+      this.currentTime = this.nonScrollingTimeGap +
+        this.scrollStartTime - this.acceleration * ((new Date()).getTime() - this.scrollStartTime -
+                                                    this.nonScrollingTimeGap) / 100;
+    }
+    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
+
+    let endx,x;
+    for each (group in this.groupedData) {
+      if (group.active && group.timestamps[group.timestamps.length - 1] < this.firstVisibleTime) {
+        this.drawLine(0, group.y, group.id, this.currentWidth);
+      }
+      else if (group.timestamps[group.timestamps.length - 1] > this.firstVisibleTime &&
+               (group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
+                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
+                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID)) {
+        x = (Math.max(group.timestamps[0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+        if (!group.active) {
+          endx = (group.timestamps[group.timestamps.length - 1] - this.firstVisibleTime)/this.scale;
+        }
+        else {
+         endx = this.scrolling? 0.5*this.width + ((new Date()).getTime() -
+                                this.currentTime)/this.scale
+                              :(this.currentTime - this.firstVisibleTime +
+                                this.scrollOffset)/this.scale;
+        }
+        this.drawLine(x,group.y,group.id,endx);
+        objectsDrawn++;
+      }
+    }
+
+    // Drawing one vertical line at end to represent current time.
+    if (this.scrollOffset != 0 || this.scrolling) {
+      this.ctxL.fillStyle = "rgba(3,101,151,0.75)";
+      this.ctxL.fillRect(this.currentWidth, 0, 2, this.height);
+    }
+
+    if (objectsDrawn == 0 && !this.scrolling) {
+      this.waitForLineData = true;
+    }
+    else {
+      this.doc.defaultView.mozRequestAnimationFrame(this.renderLines);
     }
   }
 };
@@ -669,28 +824,37 @@ TimelineView.prototype = {
       this.startingScrollOffset = null;
       this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
       this.currentTimeButton.setAttribute("checked", true);
-      this._canvas.scrollStartTime = null;
+      this._canvas.scrollStartTime = this._canvas.lastScrollStopTime = null;
       this._canvas.nonScrollingTimeGap = 0;
+    }
+    else if ((this._canvas.scrollOffset >= 0 &&
+             this._canvas.scrollOffset < this.startingScrollOffset/30) ||
+            (this._canvas.scrollOffset < 0 &&
+             this._canvas.scrollOffset > this.startingScrollOffset/30)) {
+      this._canvas.nonScrollingTimeGap = this._canvas.scrollOffset = 0;
+      this._frameDoc.defaultView.setTimeout(this.moveToCurrentTime, 1000/60);
+      if (this._canvas.waitForLineData) {
+        this._canvas.waitForLineData = false;
+        this._canvas.renderLines();
+      }
+      if (this._canvas.waitForDotData) {
+        this._canvas.waitForDotData = false;
+        this._canvas.renderDots();
+      }
     }
     else {
       if (this.startingScrollOffset == null) {
         this.startingScrollOffset = this._canvas.scrollOffset;
       }
       this._canvas.scrollOffset -= this.startingScrollOffset/30;
-      if ((this._canvas.scrollOffset >= 0 &&
-           this._canvas.scrollOffset < this.startingScrollOffset/30) ||
-          (this._canvas.scrollOffset < 0 &&
-           this._canvas.scrollOffset > this.startingScrollOffset/30)) {
-        this._canvas.nonScrollingTimeGap = this._canvas.scrollOffset = 0;
-        this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
-        this._canvas.scrollStartTime = null;
+      this._frameDoc.defaultView.setTimeout(this.moveToCurrentTime, 1000/60);
+      if (this._canvas.waitForLineData) {
+        this._canvas.waitForLineData = false;
+        this._canvas.renderLines();
       }
-      else {
-        this._frameDoc.defaultView.setTimeout(this.moveToCurrentTime, 1000/60);
-      }
-      if (this._canvas.waitForData) {
-        this._canvas.waitForData = false;
-        this._canvas.render();
+      if (this._canvas.waitForDotData) {
+        this._canvas.waitForDotData = false;
+        this._canvas.renderDots();
       }
     }
   },
@@ -753,7 +917,7 @@ TimelineView.prototype = {
       GraphUI.startListening(message);
       // Starting the canvas.
       if (!this.canvasStarted) {
-        this._canvas = new CanvasManager("timeline-canvas", this._frameDoc);
+        this._canvas = new CanvasManager(this._frameDoc);
         this._canvas.width = this.$("timeline-content").boxObject.width;
         this.currentTimeButton.setAttribute("checked", true);
         this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
@@ -981,7 +1145,7 @@ let GraphUI = {
   _view: null,
   _currentId: 1,
   _window: null,
-  _console: null,
+  //_console: null,
 
   UIOpened: false,
   listening: false,
@@ -1003,8 +1167,8 @@ let GraphUI = {
     GraphUI._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
                         .getMostRecentWindow("navigator:browser");
-    GraphUI._console = Cc["@mozilla.org/consoleservice;1"]
-                         .getService(Ci.nsIConsoleService);
+    //GraphUI._console = Cc["@mozilla.org/consoleservice;1"]
+    //                     .getService(Ci.nsIConsoleService);
     GraphUI.addRemoteListener(GraphUI._window);
     if (!GraphUI.id) {
       GraphUI.id = "timeline-ui-" + (new Date()).getTime();
@@ -1168,19 +1332,18 @@ let GraphUI = {
   processData: function GUI_processData(aData) {
     GraphUI.readingData = GraphUI.newDataAvailable = false;
     GraphUI._currentId += aData.length;
-    // dumping to console for now.
     for (let i = 0; i < aData.length; i++) {
       GraphUI._view.displayData(aData[i]);
-      GraphUI._console
-             .logStringMessage("ID: " + aData[i].id +
-                               "; Producer: " + aData[i].producer +
-                               "; Name: " + aData[i].name +
-                               "; Time: " + aData[i].time +
-                               "; Type: " + aData[i].type + "; Datails: " +
-                               (aData[i].producer == "NetworkProducer"? "url - " +
-                                aData[i].details.log.entries[0].request.url + " " +
-                                aData[i].details.log.entries[0].request.method + ";"
-                                : JSON.stringify(aData[i].details)));
+      // GraphUI._console
+             // .logStringMessage("ID: " + aData[i].id +
+                               // "; Producer: " + aData[i].producer +
+                               // "; Name: " + aData[i].name +
+                               // "; Time: " + aData[i].time +
+                               // "; Type: " + aData[i].type + "; Datails: " +
+                               // (aData[i].producer == "NetworkProducer"? "url - " +
+                                // aData[i].details.log.entries[0].request.url + " " +
+                                // aData[i].details.log.entries[0].request.method + ";"
+                                // : JSON.stringify(aData[i].details)));
     }
   },
 

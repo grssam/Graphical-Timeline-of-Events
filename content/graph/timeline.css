@@ -266,7 +266,7 @@
   overflow: hidden;
 }
 
-#timeline-axis {
+#timeline-ruler {
   z-index: 2;
   bottom: 0px;
   min-height: 25px;
@@ -277,7 +277,18 @@
   border-top: 1px solid rgb(26,37,47);
 }
 
-#timeline-canvas {
+#timeline-ruler > canvas {
+  position: absolute;
+  bottom: 0px;
+}
+
+#timeline-canvas-dots {
+  top: 0px;
+  left: 0px;
+  z-index: 1;
+}
+
+#timeline-canvas-lines {
   top: 0px;
   left: 0px;
   z-index: 0;
