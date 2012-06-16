@@ -75,6 +75,7 @@ function CanvasManager(aDoc) {
   this.nonScrollingTimeGap = 0;
   this.lastWidth = 0;
   this.lastScrollStopTime = null;
+  this.dirtyDots = [];
   // this.imageList = [];
   // this.patternList = [];
 
@@ -161,7 +162,7 @@ CanvasManager.prototype = {
   set width(val)
   {
     this._width = val;
-    this.canvasLines.width = this.canvasDots.width = val;
+    this.canvasRuler.width = this.canvasLines.width = this.canvasDots.width = val;
   },
 
   get height()
@@ -383,6 +384,7 @@ CanvasManager.prototype = {
     //this.ctx.drawImage(this.imageList[id%12],x - 5,y - 6 - this.offsetTop,10,12);
     this.ctxD.beginPath();
     this.ctxD.fillStyle = COLOR_LIST[id%12];
+    this.dirtyDots.push({x:x,y:y-this.offsetTop});
     this.ctxD.arc(x,y - this.offsetTop, 5, 0, 6.2842,true);
     this.ctxD.fill();
   },
@@ -450,10 +452,6 @@ CanvasManager.prototype = {
     if (!this.isRendering) {
       return;
     }
-    if (this.canvasRuler.width < this.width) {
-      this.canvasRuler.width = this.width;
-    }
-
     this.ctxR.clearRect(0,0,this.width,25);
     // getting the current time, which will be at the center of the canvas.
     if (!this.scrolling) {
@@ -464,20 +462,22 @@ CanvasManager.prototype = {
         this.scrollStartTime - this.acceleration * ((new Date()).getTime() - this.scrollStartTime -
                                                     this.nonScrollingTimeGap) / 100;
     }
-    let firstTime = this.currentTime - 0.5*this.width*this.scale;
+    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
     this.ctxR.beginPath();
     this.ctxR.strokeStyle = "rgb(3,101,151)";
     this.ctxR.lineWidth = 2;
-    for (let i = -1*((firstTime/this.scale)%1000),j=0; i < this.width; i += 100/this.scale,j++) {
+    this.ctxR.font = "16px sans-serif";
+    for (let i = -1*((this.firstVisibleTime/this.scale)%1000), j = 0;
+         i < this.width;
+         i += 100/this.scale, j++) {
       if (i < 0) {
         continue;
       }
       this.ctxR.moveTo(i,25);
       if (j%10 == 0) {
         this.ctxR.lineWidth = 1;
-        this.ctxR.font = "16px sans-serif";
-        this.ctxR.strokeText((new Date(firstTime + i*this.scale)).getMinutes() + "  " +
-                             (new Date(firstTime + i*this.scale)).getSeconds(), i - 22, 12);
+        this.ctxR.strokeText((new Date(this.firstVisibleTime + i*this.scale)).getMinutes() + "  " +
+                             (new Date(this.firstVisibleTime + i*this.scale)).getSeconds(), i - 22, 12);
         this.ctxR.lineWidth = 2;
         this.ctxR.lineTo(i,5);
       }
@@ -506,28 +506,34 @@ CanvasManager.prototype = {
     this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
     this.ctxD.shadowBlur = 2;
 
-    if (this.scrollOffset > 0 || this.scrollStartTime != null) {
-      this.ctxD.clearRect(0,0,this.width,this.height);
+    for each (let {x,y} in this.dirtyDots) {
+      this.ctxD.clearRect(x-7,y-7,14,20);
     }
-    else {
-      this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
-                          ((new Date()).getTime() - this.currentTime)/this.scale
-                          :this.scrollOffset/this.scale) + 10,this.height);
-    }
+    this.dirtyDots = [];
+    // if (this.scrollOffset > 0 || this.scrollStartTime != null) {
+      // this.ctxD.clearRect(0,0,this.width,this.height);
+    // }
+    // else {
+      // this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
+                          // ((new Date()).getTime() - this.currentTime)/this.scale
+                          // :this.scrollOffset/this.scale) + 10,this.height);
+    // }
     // getting the current time, which will be at the center of the canvas.
+    let i;
     if (!this.scrolling) {
       this.currentTime = (new Date()).getTime() - this.scrollOffset;
+      i = this.globalTiming.length - 1;
+      this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
     }
     else if (this.acceleration != 0) {
       this.currentTime = this.nonScrollingTimeGap +
         this.scrollStartTime - this.acceleration * ((new Date()).getTime() - this.scrollStartTime -
                                                     this.nonScrollingTimeGap) / 100;
+      this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
+      i = this.searchIndexForTime(this.lastVisibleTime);
     }
-    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
-    this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
+    this.firstVisibleTime = this.lastVisibleTime - this.width*this.scale;
 
-    let i = this.scrolling?this.searchIndexForTime(this.lastVisibleTime)
-                          :this.globalTiming.length - 1;
     for (; i >= 0; i--) {
       if (this.globalTiming[i] >= this.firstVisibleTime) {
         this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
@@ -535,7 +541,7 @@ CanvasManager.prototype = {
                      this.groupedData[this.globalGroup[i]].id);
         objectsDrawn++;
       }
-      // No need of going down further as time is lready below visible state.
+      // No need of going down further as time is already below visible state.
       else {
         break;
       }
@@ -684,6 +690,7 @@ TimelineView.prototype = {
     this.currentTimeButton = this.$("current");
     this.producersPane = this.$("producers-pane");
     // Attaching events.
+    this._frameDoc.defaultView.onresize = this.onFrameResize.bind(this);
     this.producersPane.onscroll = this.onProducersScroll.bind(this);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
@@ -907,6 +914,15 @@ TimelineView.prototype = {
     }
   },
 
+  onFrameResize: function TV_onFrameResize()
+  {
+    if (this.canvasStarted) {
+      if (Math.abs(this.producersPane.scrollHeight - this._canvas.height) > 50) {
+        this._canvas.height = this.producersPane.scrollHeight;
+      }
+    }
+  },
+
   /**
    * Toggles the Producers Pane.
    */
@@ -1068,7 +1084,7 @@ TimelineView.prototype = {
       producerBox.setAttribute("visible", true);
     }
     if (this.canvasStarted) {
-      this._canvas.updateGroupOffset();
+      this._frameDoc.defaultView.setTimeout(this._canvas.updateGroupOffset, 300);
     }
   },
 
