@@ -76,13 +76,13 @@
   }
 
   to {
-    max-height: 500px;
+    max-height: 10000px;
   }
 }
 
 @-moz-keyframes hideblock {
   from {
-    max-height: 500px;
+    max-height: 10000px;
   }
 
   to {
@@ -143,20 +143,36 @@
  */
 
 #producers-pane {
-  width: 200px;
+  max-width: 600px;
+  min-width: 200px;
+  width: 250px;
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
   overflow: auto;
 }
 
+#stack-panes-splitter {
+  z-index: 20;
+}
+
 .producer-box {
+  margin: 0px !important;
+  padding: 0px !important;
   display: block;
-  max-height: 0px !important;
   width: 100%;
 }
 
+.producer-box:not([visible=true]) {
+  max-height: 0px !important;
+}
+
+.producer-box[visible=true] {
+  max-height: 10000;
+}
+
 .producer-name-box {
-  height: 25px;
+  min-height: 25px;
+  max-height: 25px;
   width: 100%;
   background-image: -moz-linear-gradient(bottom, rgb(78,93,109) 0px, rgb(72,87,103) 1px, rgb(89,108,127) 100%);
   border-top: 1px solid rgb(85,103,123);
@@ -206,9 +222,8 @@
  */
 
 .producer-feature-box {
-  max-height: 500px;
-  overflow: hidden;
   width: 100%;
+  overflow: hidden;
   margin: 0px !important;
   padding: 0px !important;
 }
@@ -233,20 +248,56 @@
   color: rgba(207,218,230,0.5) !important;
 }
 
+.producer-feature-box > label {
+  width: 100%;
+  color: rgb(207,218,230) !important;
+  min-height: 24px;
+  border-bottom: 1px solid rgb(19,29,40);
+  border-top: 1px solid rgb(33,44,55);
+  padding: 4px 2px 4px 5px;
+  margin: 0px !important;
+}
+
+.producer-feature-box > label:last-of-type {
+  border-bottom: 1px solid rgba(0,0,0,0) !important;
+}
+
+.producer-feature-box > label:first-of-type {
+  border-top: 1px solid rgba(0,0,0,0) !important;
+}
+
 .producer-box[visible=true] > .producer-feature-box {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: showblock;
-  max-height: 500px;
+  max-height: 10000px;
 }
 
 .producer-box:not([visible=true]) > .producer-feature-box {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: hideblock;
-  max-height: 0px;
+  max-height: 0px !important;
+}
+
+.timeline-groupbox {
+  color: rgb(207,218,230) !important;
+  min-height: 24px;
+  padding: 0px;
+  margin: 0px;
+  border-bottom: 1px solid rgb(19,29,40);
+  border-top: 1px solid rgb(33,44,55);
+}
+
+.timeline-groupbox:last-of-type {
+  border-bottom: 1px solid rgba(0,0,0,0) !important;
+}
+
+.timeline-groupbox:first-of-type {
+  border-top: 1px solid rgba(0,0,0,0) !important;
 }
 
 #timeline-container {
   background: rgb(53,67,82);
+  overflow: hidden;
 }
 
 .absolute {

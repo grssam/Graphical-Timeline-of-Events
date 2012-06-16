@@ -135,6 +135,7 @@ function CanvasManager(aDoc) {
   this.pushData = this.pushData.bind(this);
   this.drawDot = this.drawDot.bind(this);
   this.drawLine = this.drawLine.bind(this);
+  this.hasGroup = this.hasGroup.bind(this);
   this.getOffsetForGroup = this.getOffsetForGroup.bind(this);
   this.updateGroupOffset = this.updateGroupOffset.bind(this);
   this.stopRendering = this.stopRendering.bind(this);
@@ -177,6 +178,35 @@ CanvasManager.prototype = {
     this.canvasLines.height = this.canvasDots.height = val;
   },
 
+  hasGroup: function CM_hasGroup(aGroupId, producerId)
+  {
+    let temp = false;
+    if (this.doc.getElementById("producers-pane").collapsed == true) {
+      this.doc.getElementById("producers-pane").collapsed = false;
+      temp = true;
+    }
+    let producerBox = this.doc.getElementById(producerId + "-box");
+
+    if (!producerBox) {
+      return false;
+    }
+
+    let feature = producerBox.firstChild.nextSibling.firstChild;
+    while (feature) {
+      if (feature.getAttribute("groupId") == aGroupId) {
+        if (temp) {
+          this.doc.getElementById("producers-pane").collapsed = true;
+        }
+        return true;
+      }
+      feature = feature.nextSibling;
+    }
+    if (temp) {
+      this.doc.getElementById("producers-pane").collapsed = true;
+    }
+    return false;
+  },
+
   /**
    * Gets the Y offset of the group residing in the Producers Pane.
    *
@@ -203,7 +233,7 @@ CanvasManager.prototype = {
         continue;
       }
 
-      if (producerBox.getAttribute("visible") == "false" || id =="NetworkProducer") {
+      if (producerBox.getAttribute("visible") == "false") {
         return (producerBox.firstChild.boxObject.y +
                 producerBox.firstChild.boxObject.height/2 - 32);
       }
@@ -446,7 +476,7 @@ CanvasManager.prototype = {
       if (j%10 == 0) {
         this.ctxR.lineWidth = 1;
         this.ctxR.font = "16px sans-serif";
-        this.ctxR.strokeText((new Date(firstTime)).getMinutes() + "  " +
+        this.ctxR.strokeText((new Date(firstTime + i*this.scale)).getMinutes() + "  " +
                              (new Date(firstTime + i*this.scale)).getSeconds(), i - 22, 12);
         this.ctxR.lineWidth = 2;
         this.ctxR.lineTo(i,5);
@@ -622,6 +652,7 @@ function TimelineView(aChromeWindow) {
   this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
+  this.addGroupBox = this.addGroupBox.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.closeUI = this.closeUI.bind(this);
   this.$ = this.$.bind(this);
@@ -653,6 +684,7 @@ TimelineView.prototype = {
     this.currentTimeButton = this.$("current");
     this.producersPane = this.$("producers-pane");
     // Attaching events.
+    this.producersPane.onscroll = this.onProducersScroll.bind(this);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
@@ -713,6 +745,22 @@ TimelineView.prototype = {
     // Updating the prefenreces.
     TimelinePreferences.activeFeatures = enabledFeatures;
     TimelinePreferences.activeProducers = enabledProducers;
+  },
+
+  addGroupBox: function TV_addGroupBox(aData)
+  {
+    let producerBox = this.$(aData.producer + "-box");
+    if (!producerBox) {
+      return;
+    }
+    let request = aData.details.log.entries[0].request;
+    let featureBox = producerBox.firstChild.nextSibling;
+    let urlLabel = this._frameDoc.createElement("label");
+    urlLabel.setAttribute("groupId", aData.groupID);
+    urlLabel.setAttribute("value", request.method.toUpperCase() + " " + request.url);
+    urlLabel.setAttribute("flex", "0");
+    urlLabel.setAttribute("crop", "center");
+    featureBox.appendChild(urlLabel);
   },
 
   /**
@@ -994,6 +1042,13 @@ TimelineView.prototype = {
     }
   },
 
+  onProducersScroll: function TV_onProducersScroll(aEvent)
+  {
+    if (aEvent.target.scrollTop) {
+      this._canvas.offsetTop = aEvent.target.scrollTop;
+    }
+  },
+
   /**
    * Toggles the producer box.
    *
@@ -1025,6 +1080,10 @@ TimelineView.prototype = {
    */
   displayData: function NV_displayData(aData)
   {
+    if (!this._canvas.hasGroup(aData.groupID, aData.producer)) {
+      this.addGroupBox(aData);
+      this._canvas.updateGroupOffset();
+    }
     this._canvas.pushData(aData);
   },
 
