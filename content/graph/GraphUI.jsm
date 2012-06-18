@@ -105,7 +105,7 @@ function CanvasManager(aDoc) {
   this.globalGroup = [];
 
   // How many milli seconds per pixel.
-  this.scale = 5;
+  this.scale = 1;
 
   this.id = 0;
   this.waitForLineData = false;
@@ -168,20 +168,30 @@ CanvasManager.prototype = {
     this.canvasLines.height = this.canvasDots.height = val;
   },
 
-  hasGroup: function CM_hasGroup(aGroupId, producerId)
+  hasGroup: function CM_hasGroup(aData)
   {
     let temp = false;
     if (this.doc.getElementById("producers-pane").collapsed == true) {
       this.doc.getElementById("producers-pane").collapsed = false;
       temp = true;
     }
-    let groupBox = this.doc.getElementById(aGroupId + "-groupbox");
+    let groupBox = null;
+    switch (aData.type) {
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
+        groupBox = this.doc.getElementById(aData.name.replace(" ", "_") + "-groupbox");
+        break;
+
+      default:
+        groupBox = this.doc.getElementById(aData.groupID + "-groupbox");
+    }
 
     if (temp) {
       this.doc.getElementById("producers-pane").collapsed = true;
     }
 
-    if (groupBox && groupBox.parentNode.getAttribute{"producerId") == producerId) {
+    if (groupBox && groupBox.parentNode.getAttribute("producerId") == aData.producer) {
       return true;
     }
     else {
@@ -194,7 +204,6 @@ CanvasManager.prototype = {
    *
    * @param string aGroupId
    *        Id of the group to obtain the Y offset.
-   *
    * @param string producerId
    *        Id of the producer, the group belongs to.
    *
@@ -243,8 +252,15 @@ CanvasManager.prototype = {
   updateGroupOffset: function CM_updateGroupOffset()
   {
     for (groupId in this.groupedData) {
-      this.groupedData[groupId].y =
-        this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
+      if (this.groupedData[groupId].type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START) {
+        this.groupedData[groupId].y =
+          this.getOffsetForGroup(this.groupedData[groupId].name.replace(" ", "_"),
+                                 this.groupedData[groupId].producerId);
+      }
+      else {
+        this.groupedData[groupId].y =
+          this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
+      }
     }
   },
 
@@ -275,6 +291,35 @@ CanvasManager.prototype = {
     return left;
   },
 
+  insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
+  {
+    let {length} = this.globalTiming;
+    if (this.globalTiming[length - 1] < aTime) {
+      this.globalGroup.push(aGroupId);
+      this.globalTiming.push(aTime);
+      return;
+    }
+    let left = 0, right = length - 1,mid, i = null;
+    while (right - left > 1) {
+      mid = Math.floor((left + right)/2);
+      if (this.globalTiming[mid] > aTime) {
+        right = mid;
+      }
+      else if (this.globalTiming[mid] < aTime) {
+        left = mid;
+      }
+      else {
+        i = mid;
+        break;
+      }
+    }
+    if (i == null) {
+      i = left;
+    }
+    this.globalGroup.splice(i,0,aGroupId);
+    this.globalTiming.splice(i,0,aTime);
+  },
+
   /**
    * Gets the message and puts it into the groupedData.
    *
@@ -285,12 +330,12 @@ CanvasManager.prototype = {
   {
     let groupId = aData.groupID;
 
-    this.globalGroup.push(groupId);
-    this.globalTiming.push(aData.time);
+    this.insertAtCorrectPosition(aData.time, groupId);
     switch (aData.type) {
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
         this.groupedData[groupId] = {
           id: this.id,
+          name: aData.name,
           y: this.getOffsetForGroup(groupId, aData.producer),
           type: NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START,
           producerId: aData.producer,
@@ -319,6 +364,59 @@ CanvasManager.prototype = {
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
         this.groupedData[groupId].timestamps.push(aData.time);
+        this.groupedData[groupId].active = false;
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
+        if (this.waitForLineData) {
+          this.waitForLineData = false;
+          this.renderLines();
+        }
+        break;
+
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
+        if (!this.groupedData[groupId]) {
+          this.groupedData[groupId] = {
+            id: this.id,
+            name: aData.name,
+            y: this.getOffsetForGroup(aData.name.replace(" ", "_"), aData.producer),
+            type: NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START,
+            producerId: aData.producer,
+            active: true,
+            timestamps: [[aData.time]],
+          };
+          this.id++;
+        }
+        else {
+          this.groupedData[groupId].timestamps.push([aData.time]);
+        }
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
+        if (this.waitForLineData) {
+          this.waitForLineData = false;
+          this.renderLines();
+        }
+        break;
+
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
+        this.groupedData[groupId].timestamps[
+          this.groupedData[groupId].timestamps.length - 1
+        ].push(aData.time);
+        this.id++;
+        if (this.waitForDotData) {
+          this.waitForDotData = false;
+          this.renderDots();
+        }
+        break;
+
+      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
+        this.groupedData[groupId].timestamps[
+          this.groupedData[groupId].timestamps.length - 1
+        ].push(aData.time);
         this.groupedData[groupId].active = false;
         this.id++;
         if (this.waitForDotData) {
@@ -573,10 +671,10 @@ CanvasManager.prototype = {
       if (group.active && group.timestamps[group.timestamps.length - 1] < this.firstVisibleTime) {
         this.drawLine(0, group.y, group.id, this.currentWidth);
       }
-      else if (group.timestamps[group.timestamps.length - 1] > this.firstVisibleTime &&
-               (group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
+      else if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
                 group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
-                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID)) {
+                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID) &&
+               group.timestamps[group.timestamps.length - 1] > this.firstVisibleTime) {
         x = (Math.max(group.timestamps[0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
         if (!group.active) {
           endx = Math.min((group.timestamps[group.timestamps.length - 1] -
@@ -586,6 +684,23 @@ CanvasManager.prototype = {
           endx = this.currentWidth;
         }
         this.drawLine(x,group.y,group.id,endx);
+      }
+      else if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP ||
+               group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
+               group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID) {
+        for (let i = 0; i < group.timestamps.length; i++) {
+          if (group.timestamps[i][group.timestamps[i].length - 1] > this.firstVisibleTime) {
+            x = (Math.max(group.timestamps[i][0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+            if (!group.active || i < group.timestamps.length - 1) {
+              endx = Math.min((group.timestamps[i][group.timestamps[i].length - 1] -
+                              this.firstVisibleTime)/this.scale, this.currentWidth);
+            }
+            else {
+              endx = this.currentWidth;
+            }
+            this.drawLine(x,group.y,group.id,endx);
+          }
+        }
       }
     }
 
@@ -748,7 +863,7 @@ TimelineView.prototype = {
     let request = aData.details.log.entries[0].request;
     let featureBox = producerBox.firstChild.nextSibling;
     let urlLabel = this._frameDoc.createElement("label");
-    urlLabel.setAttribute("id", aData.groupID + "-groupbox");
+    urlLabel.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
     urlLabel.setAttribute("groupId", aData.groupID);
     urlLabel.setAttribute("value", request.method.toUpperCase() + " " + request.url);
     urlLabel.setAttribute("flex", "0");
@@ -833,11 +948,11 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       for each (let feature in producer.features) {
         let featureCheckbox = this._frameDoc.createElement("checkbox");
-        featureCheckbox.setAttribute("id", feature + "-groupbox");
+        featureCheckbox.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
         featureCheckbox.setAttribute("class", "devtools-checkbox");
         featureCheckbox.setAttribute("flex", "1");
         featureCheckbox.setAttribute("label", feature);
-        featureCheckbox.setAttribute("groupId", feature);
+        featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
         featureCheckbox.addEventListener("command", this.toggleFeature, true);
         if (TimelinePreferences.activeFeatures
                                .indexOf(producer.id + ":" + feature) == -1) {
@@ -1099,7 +1214,7 @@ TimelineView.prototype = {
     }
     if (this.canvasStarted) {
       this._frameDoc.defaultView.setTimeout(function() {
-        this._canvas.scrollOffset = this.producersPane.scrollTop;
+        this._canvas.offsetTop = this.producersPane.scrollTop;
         this._canvas.updateGroupOffset();
         if (this._canvas.waitForLineData) {
           this._canvas.waitForLineData = false;
@@ -1121,7 +1236,7 @@ TimelineView.prototype = {
    */
   displayData: function NV_displayData(aData)
   {
-    if (!this._canvas.hasGroup(aData.groupID, aData.producer)) {
+    if (!this._canvas.hasGroup(aData)) {
       this.addGroupBox(aData);
       this._canvas.updateGroupOffset();
     }

@@ -11,9 +11,16 @@ Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
 var EXPORTED_SYMBOLS = ["MemoryProducer"];
 
 /**
+ * Memory Producer to record CC, GC and memory statistics.
  */
 let MemoryProducer =
 {
+  _sequence: 0,
+
+  /**
+   * Getter for a unique ID for the Memory Producer.
+   */
+  get sequenceId() "MemoryProducer-" + (++this._sequence),
 
   get enabledFeatures() this.enabledEvents,
 
@@ -23,13 +30,15 @@ let MemoryProducer =
   // List of enabled Events.
   enabledEvents: null,
 
+  disablePrefOnUnload: false,
+
   /**
    * Events observed through system observer.
    */
   observedEvents: {
     "Cycle Collection":   ["cycle-collection-statistics"],
     "Garbage Collection": ["garbage-collection-statistics"],
-    "Memory Statistics":  ["memory-reporter-statistics"],
+    //"Memory Statistics":  ["memory-reporter-statistics"],
   },
 
   /**
@@ -47,6 +56,12 @@ let MemoryProducer =
 
     if (aEnabledEvents == null || aEnabledEvents.length == 0) {
       aEnabledEvents = this.defaultEvents;
+    }
+
+    // set javascript.options.mem.log to true to record CC/GC/Resident notifications.
+    if (!Services.prefs.getBoolPref("javascript.options.mem.log")) {
+      this.disablePrefOnUnload = true;
+      Services.prefs.setBoolPref("javascript.options.mem.log", true);
     }
 
     this.enableFeatures(aEnabledEvents);
@@ -110,15 +125,6 @@ let MemoryProducer =
   observeEvents: {
     observe: function MP_OE_observe(aSubject, aTopic, aData)
     {
-      let groupId = "";
-      for each (let eventTypeName in MemoryProducer.enabledEvents) {
-        if (MemoryProducer.observedEvents[eventTypeName] && 
-            MemoryProducer.observedEvents[eventTypeName].indexOf(aTopic) >= 0) {
-          groupId = eventTypeName;
-          break;
-        }
-      }
-
       let data = JSON.parse(aData);
  
       // Use milliseconds instead of microseconds for the timestamp
@@ -126,15 +132,64 @@ let MemoryProducer =
         data['timestamp'] = Math.round(data['timestamp'] / 1000);
       }
 
-      DataSink.addEvent("MemoryProducer", {
-        type: DataSink.NormalizedEventType.POINT_EVENT,
-        name: aTopic,
-        groupID: groupId,
-        time: data['timestamp'],
-        details: {
-          data: data,
+      let startingTime = data['timestamp'];
+      let groupId = MemoryProducer.sequenceId;
+
+      if (aTopic == "cycle-collection-statistics") {
+        data['timestamp'] -= (data['duration'] || 0);
+        // Sending two events, one for start, and one for end of CC
+        DataSink.addEvent("MemoryProducer", {
+          type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
+          name: "Cycle Collection",
+          groupID: groupId,
+          time: data['timestamp'],
+          details: data,
+        });
+        DataSink.addEvent("MemoryProducer", {
+          type: DataSink.NormalizedEventType.REPEATING_EVENT_STOP,
+          name: "Cycle Collection",
+          groupID: groupId,
+          time: data['timestamp'] + (data['duration'] || 0),
+          details: data,
+        });
+      }
+      else if (aTopic == "garbage-collection-statistics") {
+        // Reconstruct the data to be less of a clutter and more meaningful.
+        let slices = data['slices'];
+        startingTime -= slices[slices.length - 1].when;
+        data = {
+          timestamp: startingTime,
+          total_time: data['total_time'],
+          compartments_collected: data['compartments_collected'],
+          total_compartments: data['total_compartments'],
+          mmu_20ms: data['mmu_20ms'],
+          mmu_50ms: data['mmu_50ms'],
+          max_pause: data['max_pause'],
+          nonincremental_reason: data['nonincremental_reason'],
+          allocated: data['allocated'],
+          added_chunks: data['added_chunks'],
+          removed_chunks: data['removed_chunks'],
+        };
+        for (let i = 0; i < slices.length; i++) {
+          data['duration'] = slices[i].pause;
+          data['timestamp'] = startingTime + slices[i].when - slices[i].pause;
+          // Send 2 notification for each slice
+          DataSink.addEvent("MemoryProducer", {
+            type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
+            name: "Garbage Collection",
+            groupID: groupId,
+            time: data['timestamp'],
+            details: data,
+          });
+          DataSink.addEvent("MemoryProducer", {
+            type: DataSink.NormalizedEventType.REPEATING_EVENT_STOP,
+            name: "Garbage Collection",
+            groupID: groupId,
+            time: data['timestamp'] + slices[i].pause,
+            details: data,
+          });
         }
-      });
+      }
     },
   },
 
@@ -144,6 +199,11 @@ let MemoryProducer =
   destroy: function MP_destroy()
   {
     this.disableFeatures(this.enabledEvents);
+
+    if (this.disablePrefOnUnload) {
+      Services.prefs.setBoolPref("javascript.options.mem.log", false);
+    }
+
     this.enabledEvents = null;
   },
 };
@@ -157,10 +217,10 @@ let producerInfo = {
   // Name of the producer.
   name: "Memory Producer",
   // Type of events that this producer listens to (one type per producer).
-  type: DataSink.NormalizedEventType.POINT_EVENT,
+  type: DataSink.NormalizedEventType.REPEATING_EVENT_MID,
   // Features of this producer that can be turned on or off.
   // For this producer, its the list of observedEvents
-  features: ["Cycle Collection", "Garbage Collection", "Memory Statistics"],
+  features: ["Cycle Collection", "Garbage Collection"/*, "Memory Statistics"*/],
 };
 
 // Register this producer to Data Sink
