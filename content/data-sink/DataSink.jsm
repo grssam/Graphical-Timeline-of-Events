@@ -269,7 +269,7 @@ let DataSink = {
     if (this.registeredUI.indexOf(id) == -1) {
       this.registeredUI.push(id);
       if (this.databaseName == "") {
-        this.databaseName = "timeline-database-" + (new Date()).getTime();
+        this.databaseName = "timeline-database-" + Date.now();
       }
       aMessage.databaseName = this.databaseName;
       aMessage.producerInfoList = this._producerInfoList;

@@ -312,7 +312,7 @@ let PageEventsProducer =
         type: DataSink.NormalizedEventType.POINT_EVENT,
         name: aTopic,
         groupID: groupId,
-        time: (new Date()).getTime(),
+        time: Date.now(),
         details: {
           tabID: tabId,
         }
@@ -398,7 +398,7 @@ let PageEventsProducer =
       type: DataSink.NormalizedEventType.POINT_EVENT,
       name: aEvent.type,
       groupID: groupId,
-      time: (new Date()).getTime(),
+      time: Date.now(),
       details: {
         tabID: tabId,
         detail: eventDetail,

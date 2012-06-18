@@ -70,15 +70,17 @@ function addToolbarButton(window) {
     if (GraphUI.UIOpened != true) {
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
       GraphUI.init(function () { // temporary function to be called at destroy
                                  // This is done to avoide memory leak while closing via close button
         global.DataSink.removeRemoteListener(window);
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+        Cu.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
         Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-        global.DataSink = global.NetworkProducer = global.PageEventsProducer = null;
+        global.DataSink = global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer = null;
       }.bind(global));
     }
     else {
@@ -154,10 +156,12 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
       try {
         Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+        global.DataSink = global.NetworkProducer = global.PageEventsProducer = global.MemoryProducer = null;
       }
       catch (e) {}
-      global.GraphUI = global.DataSink = global.NetworkProducer = null;
+      global.GraphUI = null;
     });
   }
   reload = function() {
