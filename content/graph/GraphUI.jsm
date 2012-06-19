@@ -71,16 +71,8 @@ function CanvasManager(aDoc) {
   this.scrolling = false;
   this.offsetTime = 0;
   this.acceleration = 0;
-  this.lastWidth = 0;
   this.dirtyDots = [];
   this.dirtyZone = [];
-  // this.imageList = [];
-
-  // for (let i = 0; i < COLOR_LIST.length; i++) {
-    // this.imageList[i] = new aDoc.defaultView.Image();
-    // this.imageList[i].src = "chrome://graphical-timeline/content/graph/images/dots/" +
-                            // COLOR_LIST[i].replace("#", "") + ".png";
-  // }
 
   /**
    *  This will be the storage for the timestamp of events occuring ina group.
@@ -706,7 +698,6 @@ CanvasManager.prototype = {
         continue;
       }
       if (group.active && group.timestamps[group.timestamps.length - 1] <= this.firstVisibleTime) {
-        if (this.timeFrozen)
         this.drawLine(0, group.y, group.id, this.currentWidth);
       }
       else if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||

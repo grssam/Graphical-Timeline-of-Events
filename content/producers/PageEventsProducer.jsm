@@ -41,11 +41,11 @@ let PageEventsProducer =
     KeyboardEvent: ["keydown", "keypress", "keyup"],
     DragEvent:     ["drag", "dragend", "dragenter", "dragleave", "dragover",
                     "dragstart", "drop"],
-    FocusEvent:    ["focus", "blur"],
-    UIEvent:       ["select", "abort", "error"],
-    FormEvent:     ["submit", "reset", "input", "change", "invalid"],
-    MenuEvent:     ["show", "contextmenu"],
-    MiscEvent:     ["mozfullscreenchange", "offline", "online"],
+    //FocusEvent:    ["focus", "blur"],
+    //UIEvent:       ["select", "abort", "error"],
+    //FormEvent:     ["submit", "reset", "input", "change", "invalid"],
+    //MenuEvent:     ["show", "contextmenu"],
+    //MiscEvent:     ["mozfullscreenchange", "offline", "online"],
   },
 
   /**
@@ -442,8 +442,8 @@ let producerInfo = {
   // Features of this producer that can be turned on or off.
   // For this producer, its the list of eventsTypes.
   features: ["MouseEvent", "PageEvent", "PaintEvent", "KeyboardEvent",
-             "DragEvent", "FocusEvent", "UIEvent", "FormEvent",
-             "MenuEvent", "MiscEvent"],
+             "DragEvent", /*"FocusEvent", "UIEvent", "FormEvent",
+             "MenuEvent", "MiscEvent"*/],
 };
 
 // Register this producer to Data Sink

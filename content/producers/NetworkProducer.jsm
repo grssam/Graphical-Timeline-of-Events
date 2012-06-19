@@ -18,9 +18,6 @@ XPCOMUtils.defineLazyServiceGetter(this, "activityDistributor",
 // The maximum uint32 value.
 const PR_UINT32_MAX = 4294967295;
 
-// The pref prefix for network producer filters.
-const PREFS_PREFIX = "devtools.graphical_timeline.producers.network.";
-
 /**
  * The network response listener implements the nsIStreamListener and
  * nsIRequestObserver interface. Used within the HS_httpObserverFactory function
@@ -172,9 +169,9 @@ NetworkResponseListener.prototype =
     logResponse.httpVersion = openResponse.httpVersion;
     logResponse.status = openResponse.status;
     logResponse.statusText = openResponse.statusText;
-    if (openResponse.cookies) {
-      logResponse.cookies = openResponse.cookies;
-    }
+    // if (openResponse.cookies) {
+      // logResponse.cookies = openResponse.cookies;
+    // }
     if (openResponse.contentType) {
       logResponse.contentType = openResponse.contentType;
     }
@@ -355,81 +352,6 @@ let NetworkProducer =
   },
 
   /**
-   * Parse a raw Cookie header value.
-   *
-   * @param string aHeader
-   *        The raw Cookie header value.
-   * @return array
-   *         Array holding an object for each cookie. Each object holds the
-   *         following properties: name and value.
-   */
-  parseCookieHeader: function NP_parseCookieHeader(aHeader)
-  {
-    let cookies = aHeader.split(";");
-    let result = [];
-
-    cookies.forEach(function(aCookie) {
-      let [name, value] = aCookie.split("=");
-      result.push({name: unescape(name.trim()),
-      value: unescape(value.trim())});
-    });
-
-    return result;
-  },
-  
-  /**
-   * Parse a raw Set-Cookie header value.
-   *
-   * @param string aHeader
-   *        The raw Set-Cookie header value.
-   * @return array
-   *         Array holding an object for each cookie. Each object holds the
-   *         following properties: name, value, secure (boolean), httpOnly
-   *         (boolean), path, domain and expires (ISO date string).
-   */
-  parseSetCookieHeader: function NP_parseSetCookieHeader(aHeader)
-  {
-    let rawCookies = aHeader.split(/\r\n|\n|\r/);
-    let cookies = [];
-
-    rawCookies.forEach(function(aCookie) {
-      let name = unescape(aCookie.substr(0, aCookie.indexOf("=")).trim());
-      let parts = aCookie.substr(aCookie.indexOf("=") + 1).split(";");
-      let value = unescape(parts.shift().trim());
-
-      let cookie = {name: name, value: value};
-
-      parts.forEach(function(aPart) {
-        let part = aPart.trim();
-        if (part.toLowerCase() == "secure") {
-          cookie.secure = true;
-        }
-        else if (part.toLowerCase() == "httponly") {
-          cookie.httpOnly = true;
-        }
-        else if (part.indexOf("=") > -1) {
-          let pair = part.split("=");
-          pair[0] = pair[0].toLowerCase();
-          if (pair[0] == "path" || pair[0] == "domain") {
-            cookie[pair[0]] = pair[1];
-          }
-          else if (pair[0] == "expires") {
-            try {
-              pair[1] = pair[1].replace(/-/g, ' ');
-              cookie.expires = new Date(pair[1]).toISOString();
-            }
-            catch (ex) { }
-          }
-        }
-      });
-
-      cookies.push(cookie);
-    });
-
-    return cookies;
-  },
-
-  /**
    * Reads the posted text from aRequest.
    *
    * @param nsIHttpChannel aRequest
@@ -500,19 +422,13 @@ let NetworkProducer =
       id: NetworkProducer.sequenceId,
       channel: channel,
       headers: [],
-      cookies: [],
     };
 
-    let setCookieHeader = null;
     let contentType = null;
 
     channel.visitResponseHeaders({
       visitHeader: function NP_visitHeader(aName, aValue) {
-        let lowerName = aName.toLowerCase();
-        if (lowerName == "set-cookie") {
-          setCookieHeader = aValue;
-        }
-        else if (lowerName == "content-type") {
+        if (aName.toLowerCase() == "content-type") {
           contentType = aValue;
         }
         response.headers.push({ name: aName, value: aValue });
@@ -523,9 +439,6 @@ let NetworkProducer =
       return; // No need to continue.
     }
 
-    if (setCookieHeader) {
-      response.cookies = NetworkProducer.parseSetCookieHeader(setCookieHeader);
-    }
     if (contentType) {
       response.contentType = contentType;
     }
@@ -664,22 +577,13 @@ let NetworkProducer =
 
     let request = httpActivity.log.entries[0].request;
 
-    let cookieHeader = null;
-
     // Copy the request header data.
     aChannel.visitRequestHeaders({
       visitHeader: function NP__visitHeader(aName, aValue)
       {
-        if (aName == "Cookie") {
-          cookieHeader = aValue;
-        }
         request.headers.push({ name: aName, value: aValue });
       }
     });
-
-    if (cookieHeader) {
-      request.cookies = this.parseCookieHeader(cookieHeader);
-    }
 
     // Determine the HTTP version.
     let httpVersionMaj = {};
@@ -740,7 +644,6 @@ let NetworkProducer =
             url: aChannel.URI.spec,
             httpVersion: "", // see NP__onRequestHeader()
             headers: [], // see NP__onRequestHeader()
-            cookies: [], // see NP__onRequestHeader()
             queryString: [], // never set
             headersSize: -1, // see NP__onRequestHeader()
             bodySize: -1, // see NP__onRequestBodySent()
@@ -751,7 +654,6 @@ let NetworkProducer =
             statusText: "", // see NP__onResponseHeader()
             httpVersion: "", // see NP__onResponseHeader()
             headers: [], // see NP_httpResponseExaminer()
-            cookies: [], // see NP_httpResponseExaminer()
             content: null, // see NNRL_onStreamClose()
             redirectURL: "", // never set
             headersSize: -1, // see NP__onResponseHeader()
