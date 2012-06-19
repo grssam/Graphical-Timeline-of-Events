@@ -69,12 +69,9 @@ function CanvasManager(aDoc) {
   this.lastVisibleTime = null;
   this.offsetTop = 0;
   this.scrolling = false;
-  this.scrollStartTime = null;
-  this.scrollOffset = 0;
+  this.offsetTime = 0;
   this.acceleration = 0;
-  this.nonScrollingTimeGap = 0;
   this.lastWidth = 0;
-  this.lastScrollStopTime = null;
   this.dirtyDots = [];
   this.dirtyZone = [];
   // this.imageList = [];
@@ -105,7 +102,7 @@ function CanvasManager(aDoc) {
   this.globalGroup = [];
 
   // How many milli seconds per pixel.
-  this.scale = 1;
+  this.scale = 5;
 
   this.id = 0;
   this.waitForLineData = false;
@@ -130,10 +127,13 @@ function CanvasManager(aDoc) {
   this.updateGroupOffset = this.updateGroupOffset.bind(this);
   this.stopRendering = this.stopRendering.bind(this);
   this.startRendering = this.startRendering.bind(this);
+  this.freezeCanvas = this.freezeCanvas.bind(this);
+  this.unfreezeCanvas = this.unfreezeCanvas.bind(this);
   this.searchIndexForTime = this.searchIndexForTime.bind(this);
   this.stopScrolling = this.stopScrolling.bind(this);
 
   this.isRendering = true;
+  this.timeFrozen = false;
   this.renderDots();
   this.renderLines();
   this.renderRuler();
@@ -465,7 +465,7 @@ CanvasManager.prototype = {
     this.ctxD.beginPath();
     this.ctxD.fillStyle = COLOR_LIST[id%12];
     this.dirtyDots.push({x:x,y:y-this.offsetTop});
-    this.ctxD.arc(x,y - this.offsetTop -0.5, 5, 0, 6.2842,true);
+    this.ctxD.arc(x,y - this.offsetTop -0.5, 3, 0, 6.2842,true);
     this.ctxD.fill();
     this.dotsDrawn++;
   },
@@ -479,12 +479,31 @@ CanvasManager.prototype = {
       return;
     }
     this.ctxL.fillStyle = COLOR_LIST[id%12];
-    this.ctxL.fillRect(x, y - 2.5 - this.offsetTop, endx-x, 4);
+    this.ctxL.fillRect(x, y - 1.5 - this.offsetTop, endx-x, 2);
     this.linesDrawn++;
     this.dirtyZone[0] = Math.min(this.dirtyZone[0],x);
     this.dirtyZone[1] = Math.max(this.dirtyZone[1],endx);
-    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 2 - this.offsetTop);
-    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 2 - this.offsetTop);
+    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 1 - this.offsetTop);
+    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 1 - this.offsetTop);
+  },
+
+  freezeCanvas: function CM_freezeCanvas()
+  {
+    this.frozenTime = this.currentTime;
+    this.timeFrozen = true;
+    if (this.waitForDotData) {
+      this.waitForDotData = false;
+      this.renderDots();
+    }
+    if (this.waitForLineData) {
+      this.waitForLineData = false;
+      this.renderLines();
+    }
+  },
+
+  unfreezeCanvas: function CM_unfreezeCanvas()
+  {
+    this.timeFrozen = false;
   },
 
   startRendering: function CM_startRendering()
@@ -500,17 +519,20 @@ CanvasManager.prototype = {
   stopRendering: function CM_stopRendering()
   {
     this.isRendering = false;
+    this.ctxL.clearRect(0,0,this.width,this.height);
+    this.ctxD.clearRect(0,0,this.width,this.height);
+    this.ctxR.clearRect(0,0,this.width,25);
+    this.groupedData = {};
+    this.globalTiming = [];
+    this.globalGroup = [];
+    this.dirtyDots = [];
+    this.dirtyZone = [];
+    this.waitForDotData = this.waitForLineData = false;
+    this.id = 0;
   },
 
   startScrolling: function CM_startScrolling()
   {
-    if (!this.scrollStartTime) {
-      this.scrollStartTime = Date.now();
-      this.scrollOffset = 0;
-    }
-    if (!this.scrolling && this.lastScrollStopTime != null) {
-      this.nonScrollingTimeGap += (Date.now() - this.lastScrollStopTime);
-    }
     this.scrolling = true;
     if (this.waitForDotData) {
       this.waitForDotData = false;
@@ -525,8 +547,7 @@ CanvasManager.prototype = {
   stopScrolling: function CM_stopScrolling()
   {
     this.acceleration = 0;
-    this.lastScrollStopTime = Date.now();
-    this.scrollOffset = this.lastScrollStopTime - this.currentTime;
+    this.offsetTime = this.frozenTime - this.currentTime;
     this.scrolling = false;
   },
 
@@ -540,15 +561,19 @@ CanvasManager.prototype = {
     }
     this.ctxR.clearRect(0,0,this.width,25);
     // getting the current time, which will be at the center of the canvas.
-    if (!this.scrolling) {
-      this.currentTime = Date.now() - this.scrollOffset;
+    if (this.timeFrozen) {
+      if (!this.scrolling) {
+        this.currentTime = this.frozenTime - this.offsetTime;
+      }
+      else if (this.acceleration != 0) {
+        this.currentTime = this.frozenTime - this.offsetTime -
+                           this.acceleration * (Date.now() - this.frozenTime) / 100;
+      }
     }
-    else if (this.acceleration != 0) {
-      this.currentTime = this.nonScrollingTimeGap +
-        this.scrollStartTime - this.acceleration * (Date.now() - this.scrollStartTime -
-                                                    this.nonScrollingTimeGap) / 100;
+    else {
+      this.currentTime = Date.now() - this.offsetTime;
     }
-    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
+    this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
     this.ctxR.strokeStyle = "rgb(3,101,151)";
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
@@ -562,13 +587,13 @@ CanvasManager.prototype = {
       if (j%10 == 0) {
         this.ctxR.strokeText((new Date(this.firstVisibleTime + i*this.scale)).getMinutes() + "  " +
                              (new Date(this.firstVisibleTime + i*this.scale)).getSeconds(), i - 22, 12);
-        this.ctxR.fillRect(i,5,2,20);
+        this.ctxR.fillRect(i+0.5,5,1,20);
       }
       else if (j%5 == 0) {
-        this.ctxR.fillRect(i,10,2,15);
+        this.ctxR.fillRect(i+0.5,10,1,15);
       }
       else {
-        this.ctxR.fillRect(i,15,2,10);
+        this.ctxR.fillRect(i+0.5,15,1,10);
       }
     }
     this.doc.defaultView.mozRequestAnimationFrame(this.renderRuler);
@@ -589,27 +614,31 @@ CanvasManager.prototype = {
     this.ctxD.shadowBlur = 2;
 
     for each (let {x,y} in this.dirtyDots) {
-      this.ctxD.clearRect(x-8,y-7,16,20);
+      this.ctxD.clearRect(x-6,y-5,14,18);
     }
     this.dirtyDots = [];
-    // if (this.scrollOffset > 0 || this.scrollStartTime != null) {
+    // if (this.offsetTime > 0 || this.scrollStartTime != null) {
       // this.ctxD.clearRect(0,0,this.width,this.height);
     // }
     // else {
       // this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
                           // (Date.now() - this.currentTime)/this.scale
-                          // :this.scrollOffset/this.scale) + 10,this.height);
+                          // :this.offsetTime/this.scale) + 10,this.height);
     // }
     // getting the current time, which will be at the center of the canvas.
-    if (!this.scrolling) {
-      this.currentTime = Date.now() - this.scrollOffset;
+    if (this.timeFrozen) {
+      if (!this.scrolling) {
+        this.currentTime = this.frozenTime - this.offsetTime;
+      }
+      else if (this.acceleration != 0) {
+        this.currentTime = this.frozenTime - this.offsetTime -
+                           this.acceleration * (Date.now() - this.frozenTime) / 100;
+      }
     }
-    else if (this.acceleration != 0) {
-      this.currentTime = this.nonScrollingTimeGap +
-        this.scrollStartTime - this.acceleration * (Date.now() - this.scrollStartTime -
-                                                    this.nonScrollingTimeGap) / 100;
+    else {
+      this.currentTime = Date.now() - this.offsetTime;
     }
-    this.lastVisibleTime = this.currentTime + 0.5*this.width*this.scale;
+    this.lastVisibleTime = this.currentTime + 0.2*this.width*this.scale;
     this.firstVisibleTime = this.lastVisibleTime - this.width*this.scale;
 
     let i = this.searchIndexForTime(this.lastVisibleTime);
@@ -625,7 +654,7 @@ CanvasManager.prototype = {
       }
     }
 
-    if (this.dotsDrawn == 0 && !this.scrolling && this.scrollOffset == 0) {
+    if (this.dotsDrawn == 0 && !this.scrolling && this.offsetTime == 0) {
       this.waitForDotData = true;
     }
     else {
@@ -642,9 +671,6 @@ CanvasManager.prototype = {
       return;
     }
     this.linesDrawn = 0;
-    this.currentWidth = Math.min(0.5*this.width + (this.scrolling? (Date.now() -
-                                 this.currentTime)/this.scale
-                                 :this.scrollOffset/this.scale), this.width);
 
     let ([x,endx,y,endy,v] = this.dirtyZone) {
       this.ctxL.clearRect(x-1,y-1,endx-x+12,endy-y+2);
@@ -653,28 +679,41 @@ CanvasManager.prototype = {
     }
     //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
     // getting the current time, which will be at the center of the canvas.
-    if (!this.scrolling) {
-      this.currentTime = Date.now() - this.scrollOffset;
+    let date = Date.now();
+    if (this.timeFrozen) {
+      if (!this.scrolling) {
+        this.currentTime = this.frozenTime - this.offsetTime;
+      }
+      else if (this.acceleration != 0) {
+        this.currentTime = this.frozenTime - this.offsetTime -
+                           this.acceleration * (date - this.frozenTime) / 100;
+      }
     }
-    else if (this.acceleration != 0) {
-      this.currentTime = this.nonScrollingTimeGap +
-        this.scrollStartTime - this.acceleration * (Date.now() - this.scrollStartTime -
-                                                    this.nonScrollingTimeGap) / 100;
+    else {
+      this.currentTime = date - this.offsetTime;
     }
-    this.firstVisibleTime = this.currentTime - 0.5*this.width*this.scale;
+    this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
+    this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
+
+    this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
+                                 this.currentTime)/this.scale:(this.timeFrozen?
+                                  (date - this.frozenTime + this.offsetTime)/this.scale
+                                 :this.offsetTime/this.scale)), this.width);
 
     let endx,x;
     for each (group in this.groupedData) {
       if (group.y < this.offsetTop || group.y - this.offsetTop > this.width) {
         continue;
       }
-      if (group.active && group.timestamps[group.timestamps.length - 1] < this.firstVisibleTime) {
+      if (group.active && group.timestamps[group.timestamps.length - 1] <= this.firstVisibleTime) {
+        if (this.timeFrozen)
         this.drawLine(0, group.y, group.id, this.currentWidth);
       }
       else if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
                 group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
                 group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID) &&
-               group.timestamps[group.timestamps.length - 1] > this.firstVisibleTime) {
+               group.timestamps[group.timestamps.length - 1] >= this.firstVisibleTime &&
+               group.timestamps[0] <= this.lastVisibleTime) {
         x = (Math.max(group.timestamps[0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
         if (!group.active) {
           endx = Math.min((group.timestamps[group.timestamps.length - 1] -
@@ -689,7 +728,8 @@ CanvasManager.prototype = {
                group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
                group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID) {
         for (let i = 0; i < group.timestamps.length; i++) {
-          if (group.timestamps[i][group.timestamps[i].length - 1] > this.firstVisibleTime) {
+          if (group.timestamps[i][group.timestamps[i].length - 1] >= this.firstVisibleTime &&
+              group.timestamps[i][0] <= this.lastVisibleTime) {
             x = (Math.max(group.timestamps[i][0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
             if (!group.active || i < group.timestamps.length - 1) {
               endx = Math.min((group.timestamps[i][group.timestamps[i].length - 1] -
@@ -705,13 +745,10 @@ CanvasManager.prototype = {
     }
 
     // Drawing one vertical line at end to represent current time.
-    if (this.scrollOffset != 0 || this.scrolling) {
-      this.ctxL.fillStyle = "rgba(3,101,151,0.75)";
-      this.ctxL.fillRect(this.currentWidth, 0, 2, this.height);
-      this.dirtyZone[4] = this.currentWidth;
-    }
+    this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
 
-    if (this.linesDrawn == 0 && !this.scrolling) {
+    if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
+        !this.timeFrozen) {
       this.waitForLineData = true;
     }
     else {
@@ -738,7 +775,7 @@ function TimelineView(aChromeWindow) {
   this.canvasStarted = false;
   this.recording = false;
   this.producersPaneOpened = false;
-  this.startingScrollOffset = null;
+  this.startingoffsetTime = null;
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -751,6 +788,7 @@ function TimelineView(aChromeWindow) {
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
+  this.toggleMovement = this.toggleMovement.bind(this);
   this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
@@ -785,17 +823,17 @@ TimelineView.prototype = {
     this._frameDoc = this._frame.contentDocument;
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
+    this.playButton = this.$("play");
     this.producersButton = this.$("producers");
-    this.currentTimeButton = this.$("current");
     this.producersPane = this.$("producers-pane");
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("canvas-container").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
+    this.playButton.addEventListener("command", this.toggleMovement, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
-    this.currentTimeButton.addEventListener("command", this.moveToCurrentTime, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
@@ -973,23 +1011,37 @@ TimelineView.prototype = {
   },
 
   /**
+   * Stops the timeline view to current time frame.
+   */
+  toggleMovement: function TV_toggleMovement()
+  {
+    if (!this._canvas.timeFrozen) {
+      this._canvas.freezeCanvas();
+      try {
+        this.playButton.removeAttribute("checked");
+      } catch (ex) {}
+    }
+    else {
+      this._canvas.unfreezeCanvas();
+      this.playButton.setAttribute("checked", true);
+      this.moveToCurrentTime();
+    }
+  },
+
+  /**
    * Moves the view to current time.
    */
   moveToCurrentTime: function TV_moveToCurrentTime()
   {
-    if (this._canvas.scrollOffset == 0) {
-      this.startingScrollOffset = null;
-      this.$("timeline-current-time").style.MozTransition = "background 250ms linear 0s, left 10ms ease-in 0s";
-      this.currentTimeButton.setAttribute("checked", true);
-      this._canvas.scrollStartTime = this._canvas.lastScrollStopTime = null;
-      this._canvas.nonScrollingTimeGap = 0;
+    if (this._canvas.offsetTime == 0) {
+      this.startingoffsetTime = null;
     }
-    else if ((this._canvas.scrollOffset >= 0 &&
-             this._canvas.scrollOffset < this.startingScrollOffset/30) ||
-            (this._canvas.scrollOffset < 0 &&
-             this._canvas.scrollOffset > this.startingScrollOffset/30)) {
-      this._canvas.nonScrollingTimeGap = this._canvas.scrollOffset = 0;
-      this._frameDoc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
+    else if ((this._canvas.offsetTime >= 0 &&
+             this._canvas.offsetTime < this.startingoffsetTime/30) ||
+            (this._canvas.offsetTime < 0 &&
+             this._canvas.offsetTime > this.startingoffsetTime/30)) {
+      this._canvas.offsetTime = 0;
+      this.startingoffsetTime = null;
       if (this._canvas.waitForLineData) {
         this._canvas.waitForLineData = false;
         this._canvas.renderLines();
@@ -1000,12 +1052,10 @@ TimelineView.prototype = {
       }
     }
     else {
-      if (this.startingScrollOffset == null) {
-        this.startingScrollOffset = this._canvas.scrollOffset;
+      if (this.startingoffsetTime == null) {
+        this.startingoffsetTime = this._canvas.offsetTime;
       }
-      this._canvas.scrollOffset -= this.startingScrollOffset/30;
-      this.$("timeline-current-time").style.MozTransition = "left 500ms ease-in 0s";
-      this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
+      this._canvas.offsetTime -= this.startingoffsetTime/30;
       this._frameDoc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
       if (this._canvas.waitForLineData) {
         this._canvas.waitForLineData = false;
@@ -1087,8 +1137,8 @@ TimelineView.prototype = {
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc);
         this._canvas.width = this.$("timeline-content").boxObject.width;
-        this.currentTimeButton.setAttribute("checked", true);
-        this.$("timeline-current-time").style.left = this._canvas.width*0.5 + "px"
+        this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
+        this.playButton.setAttribute("checked", true);
         this._canvas.height = this.$("canvas-container").boxObject.height;
         this.canvasStarted = true;
         this.handleScroll();
@@ -1244,39 +1294,33 @@ TimelineView.prototype = {
   },
 
   _onDragStart: function TV__onDragStart(aEvent)
-  {
-    this.$("timeline-current-time").removeEventListener("mousedown",
-                                                        this._onDragStart, true);
-    this.$("canvas-container").addEventListener("mousemove",
-                                                this._onDrag, true);
-    this._frameDoc.addEventListener("mouseup",
-                                    this._onDragEnd, true);
-    this._frameDoc.addEventListener("click",
-                                    this._onDragEnd, true);
+  { 
+    this.scrollStartX = aEvent.clientX;
+    this.$("timeline-ruler").removeEventListener("mousedown", this._onDragStart, true);
+    if (!this._canvas.timeFrozen) {
+      this._canvas.freezeCanvas();
+    }
+    this._canvas.startScrolling();
+    this.$("canvas-container").addEventListener("mousemove", this._onDrag, true);
+    this._frameDoc.addEventListener("mouseup", this._onDragEnd, true);
+    this._frameDoc.addEventListener("click", this._onDragEnd, true);
   },
 
   _onDrag: function TV__onDrag(aEvent)
   {
-    this._canvas.startScrolling();
     try {
-      this.currentTimeButton.removeAttribute("checked");
+      this.playButton.removeAttribute("checked");
     } catch (ex) {}
 
-    this.$("timeline-current-time").style.left =
-      (aEvent.clientX - this.$("canvas-container").boxObject.x) + "px";
-    this._canvas.acceleration = this._canvas.width/2 - aEvent.clientX +
-                                this.$("canvas-container").boxObject.x;
+    this._canvas.acceleration = this.scrollStartX - aEvent.clientX;
   },
 
   _onDragEnd: function TV__onDragEnd(aEvent)
   {
     this._canvas.stopScrolling();
-    this.$("canvas-container").removeEventListener("mousemove",
-                                                   this._onDrag, true);
-    this._frameDoc.removeEventListener("mouseup",
-                                       this._onDragEnd, true);
-    this._frameDoc.removeEventListener("click",
-                                       this._onDragEnd, true);
+    this.$("canvas-container").removeEventListener("mousemove", this._onDrag, true);
+    this._frameDoc.removeEventListener("mouseup", this._onDragEnd, true);
+    this._frameDoc.removeEventListener("click", this._onDragEnd, true);
     this.handleScroll();
   },
 
@@ -1285,8 +1329,7 @@ TimelineView.prototype = {
    */
   handleScroll: function TV_handleScroll()
   {
-    this.$("timeline-current-time").addEventListener("mousedown",
-                                                     this._onDragStart, true);
+    this.$("timeline-ruler").addEventListener("mousedown", this._onDragStart, true);
   },
 
   /**

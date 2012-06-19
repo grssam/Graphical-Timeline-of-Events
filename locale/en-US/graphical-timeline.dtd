@@ -31,10 +31,6 @@
   -  label for the button that toggles the Producers Pane in the timeline UI. -->
 <!ENTITY timelineUI.toggleProducersButton.label        "Producers">
 
-<!-- LOCALIZATION NOTE (timelineUI.currentTime.label): This is the
-  -  label for the button that brings the current time back in view. -->
-<!ENTITY timelineUI.currentTime.label        "Current">
-
 <!-- LOCALIZATION NOTE (timelineUI.emptyFilterText): This is the placeholder text
   -  for the search bar in the timeline UI. -->
 <!ENTITY timelineUI.emptyFilterText        "Click to Search">
