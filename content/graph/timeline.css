@@ -264,7 +264,7 @@
   color: rgba(207,218,230,0.5) !important;
 }
 
-.producer-feature-box > label {
+.timeline-groubox {
   width: 100%;
   color: rgb(207,218,230) !important;
   min-height: 24px;
@@ -272,14 +272,27 @@
   border-top: 1px solid rgb(33,44,55);
   padding: 4px 2px 4px 5px;
   margin: 0px !important;
+  -moz-user-focus: normal;
 }
 
-.producer-feature-box > label:last-of-type {
+.timeline-groubox:last-of-type {
   border-bottom: 1px solid rgba(0,0,0,0) !important;
 }
 
-.producer-feature-box > label:first-of-type {
+.timeline-groubox:first-of-type {
   border-top: 1px solid rgba(0,0,0,0) !important;
+}
+
+.timeline-groubox:hover {
+  border-bottom: 1px dashed rgba(10,92,133,0.75);
+  border-top: 1px dashed rgba(29,126,176,0.75);
+  background: rgba(29,126,176,0.50);
+}
+
+.timeline-groubox:focus {
+  border-bottom: 1px solid rgb(10,92,133);
+  border-top: 1px solid rgb(29,126,176);
+  background-image: -moz-linear-gradient(top, rgb(0,110,165), rgb(0,86,129) 100%);
 }
 
 .producer-box[visible=true] > .producer-feature-box {

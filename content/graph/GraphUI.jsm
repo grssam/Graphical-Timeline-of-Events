@@ -53,6 +53,12 @@ const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
 };
 
+const CANVAS_POSITION = {
+  START: 0, // Represents the starting of the view
+  CENTER: 1, // Represents center of view.
+  END: 2, // Represents end of view.
+};
+
 const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f7ff",
                     "#f9b4ff", "#f770ff", "#ff0000", "#ff61fd", "#ffaf60", "#fffc04"];
 
@@ -121,6 +127,9 @@ function CanvasManager(aDoc) {
   this.startRendering = this.startRendering.bind(this);
   this.freezeCanvas = this.freezeCanvas.bind(this);
   this.unfreezeCanvas = this.unfreezeCanvas.bind(this);
+  this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
+  this.moveToTime = this.moveToTime.bind(this);
+  this.moveGroupInView = this.moveGroupInView.bind(this);
   this.searchIndexForTime = this.searchIndexForTime.bind(this);
   this.stopScrolling = this.stopScrolling.bind(this);
 
@@ -444,45 +453,13 @@ CanvasManager.prototype = {
     }
   },
 
-  /**
-   * Draws a dot to represnt an event at the x,y.
-   */
-  drawDot: function CM_drawDot(x, y, id)
-  {
-    if (this.offsetTop > y || y - this.offsetTop > this.height ||
-        x < 0 || x > this.width) {
-      return;
-    }
-    //this.ctx.drawImage(this.imageList[id%12],x - 5,y - 6 - this.offsetTop,10,12);
-    this.ctxD.beginPath();
-    this.ctxD.fillStyle = COLOR_LIST[id%12];
-    this.dirtyDots.push({x:x,y:y-this.offsetTop});
-    this.ctxD.arc(x,y - this.offsetTop -0.5, 3, 0, 6.2842,true);
-    this.ctxD.fill();
-    this.dotsDrawn++;
-  },
-
-  /**
-   * Draws a horizontal line from x,y to endx,y.
-   */
-  drawLine: function CM_drawLine(x, y, id, endx)
-  {
-    if (this.offsetTop > y || y - this.offsetTop > this.height) {
-      return;
-    }
-    this.ctxL.fillStyle = COLOR_LIST[id%12];
-    this.ctxL.fillRect(x, y - 1.5 - this.offsetTop, endx-x, 2);
-    this.linesDrawn++;
-    this.dirtyZone[0] = Math.min(this.dirtyZone[0],x);
-    this.dirtyZone[1] = Math.max(this.dirtyZone[1],endx);
-    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 1 - this.offsetTop);
-    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 1 - this.offsetTop);
-  },
-
   freezeCanvas: function CM_freezeCanvas()
   {
     this.frozenTime = this.currentTime;
     this.timeFrozen = true;
+    try {
+      this.doc.getElementById("play").removeAttribute("checked");
+    } catch(e) {}
     if (this.waitForDotData) {
       this.waitForDotData = false;
       this.renderDots();
@@ -496,6 +473,176 @@ CanvasManager.prototype = {
   unfreezeCanvas: function CM_unfreezeCanvas()
   {
     this.timeFrozen = false;
+  },
+
+  /**
+   * Moves the view to current time.
+   *
+   * @param boolean aAnimate
+   *        If true, the view will rapidly scroll towards the current time.
+   *        (true by default)
+   */
+  moveToCurrentTime: function TV_moveToCurrentTime(aAnimate)
+  {
+    if (aAnimate != null && aAnimate == false) {
+      this.stopScrolling();
+      this.unfreezeCanvas();
+      this.offsetTime = 0;
+      return;
+    }
+    if (this.offsetTime == 0 && !this.timeFrozen) {
+      this.startingoffsetTime = null;
+      this.movingView = false;
+    }
+    else if (!this.timeFrozen &&
+             ((this.offsetTime >= 0 &&
+               this.offsetTime < this.startingoffsetTime/30) ||
+              (this.offsetTime < 0 &&
+               this.offsetTime > this.startingoffsetTime/30))) {
+      this.offsetTime = 0;
+      this.startingoffsetTime = null;
+      this.movingView = false;
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+    else {
+      if (this.startingoffsetTime == null) {
+        if (this.movingView) {
+          return;
+        }
+        this.movingView = true;
+        this.offsetTime += Date.now() - this.frozenTime;
+        this.frozenTime = Date.now();
+        this.unfreezeCanvas();
+        this.startingoffsetTime = this.offsetTime;
+      }
+      this.offsetTime -= this.startingoffsetTime/30;
+      this.doc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+  },
+
+  /**
+   * Moves the view to the provided time.
+   *
+   * @param nummber aTime
+   *        The time to move to.
+   * @param number aPosition
+   *        One of CANVAS_POSITION. (default CANVAS_POSITION.CENTER)
+   * @param boolean aAnimate
+   *        If true, view will rapidly animate to the provided time.
+   *        (true by default)
+   */
+  moveToTime: function CM_moveToTime(aTime, aPosition, aAnimate)
+  {
+    switch(aPosition) {
+      case CANVAS_POSITION.START:
+        this.finalFrozenTime = aTime + 0.8*this.width*this.scale;
+        break;
+
+      case CANVAS_POSITION.END:
+        this.finalFrozenTime = aTime - 0.2*this.width*this.scale;
+        break;
+
+      default:
+        aPosition = CANVAS_POSITION.CENTER;
+        this.finalFrozenTime = aTime + 0.3*this.width*this.scale;
+        break;
+    }
+    if (aAnimate != null && aAnimate == false) {
+      this.freezeCanvas();
+      this.frozenTime = this.finalFrozenTime;
+      this.offsetTime = 0;
+      return;
+    }
+    if (this.initialFrozenTime == null) {
+      if (!this.timeFrozen) {
+        this.freezeCanvas();
+      }
+      else {
+        this.frozenTime -= this.offsetTime;
+        this.offsetTime = 0;
+      }
+      this.initialFrozenTime = this.frozenTime;
+    }
+    if ((this.finalFrozenTime - this.frozenTime >= 0 &&
+         this.finalFrozenTime - this.frozenTime <= 0.05*(this.initialFrozenTime - this.finalFrozenTime)) ||
+        (this.finalFrozenTime - this.frozenTime < 0 &&
+         this.finalFrozenTime - this.frozenTime >= 0.05*(this.initialFrozenTime - this.finalFrozenTime))) {
+      this.freezeCanvas();
+      this.frozenTime = this.finalFrozenTime;
+      this.finalFrozenTime = this.initialFrozenTime = null;
+      this.movingView = false;
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+    else {
+      this.movingView = true;
+      this.frozenTime -= 0.05*(this.initialFrozenTime - this.finalFrozenTime);
+      this.doc.defaultView
+          .mozRequestAnimationFrame(function() {
+        this.moveToTime(aTime, aPosition, true);
+      }.bind(this));
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+  },
+
+  moveGroupInView: function moveGroupInView(aGroupId)
+  {
+    if (this.movingView) {
+      return;
+    }
+    if (this.groupedData[aGroupId]) {
+      let group = this.groupedData[aGroupId];
+      let time = null;
+      switch (group.type) {
+        case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
+        case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
+        case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
+          time = group.timestamps[group.timestamps.length - 1][0];
+          break;
+
+        case NORMALIZED_EVENT_TYPE.POINT_EVENT:
+          time = group.timestamps[group.timestamps.length - 1];
+          break;
+
+        case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
+        case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
+        case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
+          time = group.timestamps[0];
+          break;
+
+        default:
+          return;
+      }
+      this.moveToTime(time);
+    }
   },
 
   startRendering: function CM_startRendering()
@@ -541,6 +688,41 @@ CanvasManager.prototype = {
     this.acceleration = 0;
     this.offsetTime = this.frozenTime - this.currentTime;
     this.scrolling = false;
+  },
+
+  /**
+   * Draws a dot to represnt an event at the x,y.
+   */
+  drawDot: function CM_drawDot(x, y, id)
+  {
+    if (this.offsetTop > y || y - this.offsetTop > this.height ||
+        x < 0 || x > this.width) {
+      return;
+    }
+    //this.ctx.drawImage(this.imageList[id%12],x - 5,y - 6 - this.offsetTop,10,12);
+    this.ctxD.beginPath();
+    this.ctxD.fillStyle = COLOR_LIST[id%12];
+    this.dirtyDots.push({x:x,y:y-this.offsetTop});
+    this.ctxD.arc(x,y - this.offsetTop -0.5, 3, 0, 6.2842,true);
+    this.ctxD.fill();
+    this.dotsDrawn++;
+  },
+
+  /**
+   * Draws a horizontal line from x,y to endx,y.
+   */
+  drawLine: function CM_drawLine(x, y, id, endx)
+  {
+    if (this.offsetTop > y || y - this.offsetTop > this.height) {
+      return;
+    }
+    this.ctxL.fillStyle = COLOR_LIST[id%12];
+    this.ctxL.fillRect(x, y - 1.5 - this.offsetTop, endx-x, 2);
+    this.linesDrawn++;
+    this.dirtyZone[0] = Math.min(this.dirtyZone[0],x);
+    this.dirtyZone[1] = Math.max(this.dirtyZone[1],endx);
+    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 1 - this.offsetTop);
+    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 1 - this.offsetTop);
   },
 
   /**
@@ -735,7 +917,7 @@ CanvasManager.prototype = {
       }
     }
 
-    // Drawing one vertical line at end to represent current time.
+    // Moving the current time needle to appropriate position.
     this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
 
     if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
@@ -780,14 +962,15 @@ function TimelineView(aChromeWindow) {
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
   this.toggleMovement = this.toggleMovement.bind(this);
-  this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.addGroupBox = this.addGroupBox.bind(this);
+  this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
+  this.cleanUI = this.cleanUI.bind(this);
   this.closeUI = this.closeUI.bind(this);
   this.$ = this.$.bind(this);
   this._showProducersPane = this._showProducersPane.bind(this);
@@ -893,7 +1076,9 @@ TimelineView.prototype = {
     let featureBox = producerBox.firstChild.nextSibling;
     let urlLabel = this._frameDoc.createElement("label");
     urlLabel.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
+    urlLabel.setAttribute("class", "timeline-groubox");
     urlLabel.setAttribute("groupId", aData.groupID);
+    urlLabel.setAttribute("shouldDelete", true);
     urlLabel.setAttribute("value", request.method.toUpperCase() + " " + request.url);
     urlLabel.setAttribute("flex", "0");
     urlLabel.setAttribute("crop", "center");
@@ -975,6 +1160,7 @@ TimelineView.prototype = {
       let featureBox = this._frameDoc.createElement("vbox");
       featureBox.setAttribute("class", "producer-feature-box");
       featureBox.setAttribute("producerId", producer.id);
+      featureBox.addEventListener("click", this.handleGroupClick, true);
       for each (let feature in producer.features) {
         let featureCheckbox = this._frameDoc.createElement("checkbox");
         featureCheckbox.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
@@ -1002,60 +1188,39 @@ TimelineView.prototype = {
   },
 
   /**
+   * Cleans the UI and brings it to initial state, removing every group box
+   * added dynamically during this recording.
+   */
+  cleanUI: function TV_cleanUI()
+  {
+    let producerBox = this.producersPane.firstChild;
+    while (producerBox) {
+      let feature = producerBox.firstChild.nextSibling.firstChild;
+      while (feature) {
+        if (feature.hasAttribute("shouldDelete")) {
+          let temp = feature;
+          feature = temp.nextSibling;
+          temp.parentNode.removeChild(temp);
+        }
+        else {
+          feature = feature.nextSibling;
+        }
+      }
+      producerBox = producerBox.nextSibling;
+    }
+  },
+
+  /**
    * Stops the timeline view to current time frame.
    */
   toggleMovement: function TV_toggleMovement()
   {
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
-      try {
-        this.playButton.removeAttribute("checked");
-      } catch (ex) {}
     }
     else {
-      this._canvas.unfreezeCanvas();
       this.playButton.setAttribute("checked", true);
-      this.moveToCurrentTime();
-    }
-  },
-
-  /**
-   * Moves the view to current time.
-   */
-  moveToCurrentTime: function TV_moveToCurrentTime()
-  {
-    if (this._canvas.offsetTime == 0) {
-      this.startingoffsetTime = null;
-    }
-    else if ((this._canvas.offsetTime >= 0 &&
-             this._canvas.offsetTime < this.startingoffsetTime/30) ||
-            (this._canvas.offsetTime < 0 &&
-             this._canvas.offsetTime > this.startingoffsetTime/30)) {
-      this._canvas.offsetTime = 0;
-      this.startingoffsetTime = null;
-      if (this._canvas.waitForLineData) {
-        this._canvas.waitForLineData = false;
-        this._canvas.renderLines();
-      }
-      if (this._canvas.waitForDotData) {
-        this._canvas.waitForDotData = false;
-        this._canvas.renderDots();
-      }
-    }
-    else {
-      if (this.startingoffsetTime == null) {
-        this.startingoffsetTime = this._canvas.offsetTime;
-      }
-      this._canvas.offsetTime -= this.startingoffsetTime/30;
-      this._frameDoc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
-      if (this._canvas.waitForLineData) {
-        this._canvas.waitForLineData = false;
-        this._canvas.renderLines();
-      }
-      if (this._canvas.waitForDotData) {
-        this._canvas.waitForDotData = false;
-        this._canvas.renderDots();
-      }
+      this._canvas.moveToCurrentTime();
     }
   },
 
@@ -1089,6 +1254,11 @@ TimelineView.prototype = {
     this.producersPaneOpened = true;
     this.producersPane.setAttribute("visible", true);
     this.producersPane.collapsed = false;
+    if (this.canvasStarted) {
+      this._canvas.height = this.$("canvas-container").boxObject.height;
+      this._canvas.width = this.$("timeline-content").boxObject.width -
+                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+    }
   },
 
   _hideProducersPane: function TV__hideProducersPane()
@@ -1096,6 +1266,11 @@ TimelineView.prototype = {
     this.producersPaneOpened = false;
     this.producersPane.setAttribute("visible", false);
     this.producersPane.collapsed = true;
+    if (this.canvasStarted) {
+      this._canvas.height = this.$("canvas-container").boxObject.height;
+      this._canvas.width = this.$("timeline-content").boxObject.width -
+                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+    }
   },
 
   /**
@@ -1124,23 +1299,31 @@ TimelineView.prototype = {
         }
       }
       GraphUI.startListening(message);
+      this.playButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc);
-        this._canvas.width = this.$("timeline-content").boxObject.width;
-        this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
-        this.playButton.setAttribute("checked", true);
         this._canvas.height = this.$("canvas-container").boxObject.height;
+        this._canvas.width = this.$("timeline-content").boxObject.width -
+                             (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+        this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
         this.canvasStarted = true;
         this.handleScroll();
       }
       else {
+        this._canvas.height = this.$("canvas-container").boxObject.height;
+        this._canvas.width = this.$("timeline-content").boxObject.width -
+                             (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.startRendering();
       }
     }
     else {
       GraphUI.stopListening({timelineUIId: GraphUI.id});
       this._canvas.stopRendering();
+      try {
+        this.playButton.removeAttribute("checked");
+      } catch(e) {}
+      this.cleanUI();
     }
     this.recording = !this.recording;
   },
@@ -1266,6 +1449,14 @@ TimelineView.prototype = {
           this._canvas.renderDots();
         }
       }.bind(this), 500);
+    }
+  },
+
+  handleGroupClick: function handleGroupClick(aEvent)
+  {
+    let group = aEvent.originalTarget;
+    if (group.localName == "label" && group.hasAttribute("groupId")) {
+      this._canvas.moveGroupInView(group.getAttribute("groupId"));
     }
   },
 
