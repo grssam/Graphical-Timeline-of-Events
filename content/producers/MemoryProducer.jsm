@@ -173,7 +173,7 @@ let MemoryProducer =
         };
         for (let i = 0; i < slices.length; i++) {
           data['duration'] = slices[i].pause;
-          data['timestamp'] = startingTime + slices[i].when - slices[i].pause;
+          data['timestamp'] = startingTime + slices[i].when;
           // Send 2 notification for each slice
           DataSink.addEvent("MemoryProducer", {
             type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
