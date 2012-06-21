@@ -541,6 +541,79 @@ CanvasManager.prototype = {
   /**
    * Moves the view to the provided time.
    *
+   * @param nummber aY
+   *        The vertical offset to move to.
+   * @param number aPosition
+   *        One of CANVAS_POSITION. (default CANVAS_POSITION.CENTER)
+   * @param boolean aAnimate
+   *        If true, view will rapidly animate to the provided time.
+   *        (true by default)
+   */
+  moveTopOffsetTo: function CM_moveTopOffsetTo(aY, aPosition, aAnimate)
+  {
+    switch(aPosition) {
+      case CANVAS_POSITION.START:
+        this.finalOffset = Math.max(aY - 2, 0);
+        break;
+
+      case CANVAS_POSITION.END:
+        this.finalOffset = aY + 2;
+        break;
+
+      default:
+        aPosition = CANVAS_POSITION.CENTER;
+        this.finalOffset = Math.max(aY - this.height*0.5 - 2, 0);
+        break;
+    }
+    if (aAnimate != null && aAnimate == false) {
+      this.freezeCanvas();
+      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop = this.finalOffset;
+      this.offsetTime = 0;
+      return;
+    }
+    if (this.initialOffset == null) {
+      if (!this.timeFrozen) {
+        this.freezeCanvas();
+      }
+      this.initialOffset = this.offsetTop;
+    }
+    if ((this.finalOffset - this.offsetTop >= 0 &&
+         this.finalOffset - this.offsetTop <= 0.05*(this.initialOffset - this.finalOffset)) ||
+        (this.finalOffset - this.offsetTop < 0 &&
+         this.finalOffset - this.offsetTop >= 0.05*(this.initialOffset - this.finalOffset))) {
+      this.freezeCanvas();
+      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop = this.finalOffset;
+      this.finalOffset = this.initialOffset = null;
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+    else {
+      this.offsetTop -= 0.05*(this.initialOffset - this.finalOffset);
+      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop;
+      this.doc.defaultView
+          .mozRequestAnimationFrame(function() {
+        this.moveTopOffsetTo(aY, aPosition, true);
+      }.bind(this));
+      if (this.waitForLineData) {
+        this.waitForLineData = false;
+        this.renderLines();
+      }
+      if (this.waitForDotData) {
+        this.waitForDotData = false;
+        this.renderDots();
+      }
+    }
+  },
+
+  /**
+   * Moves the view to the provided time.
+   *
    * @param nummber aTime
    *        The time to move to.
    * @param number aPosition
@@ -616,7 +689,15 @@ CanvasManager.prototype = {
     }
   },
 
-  moveGroupInView: function moveGroupInView(aGroupId)
+  /**
+   * Moves the event represented by the groupId into the view.
+   *
+   * @param string aGroupId
+   *        The group to move to.
+   * @param boolean aVertical
+   *        True to move vertically also.
+   */
+  moveGroupInView: function moveGroupInView(aGroupId, aVertical)
   {
     if (this.movingView) {
       return;
@@ -624,6 +705,7 @@ CanvasManager.prototype = {
     if (this.groupedData[aGroupId]) {
       let group = this.groupedData[aGroupId];
       let time = null;
+      let y = group.y;
       switch (group.type) {
         case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
         case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
@@ -645,12 +727,25 @@ CanvasManager.prototype = {
           return;
       }
       this.moveToTime(time);
+      if (aVertical) {
+        this.moveTopOffsetTo(y);
+      }
     }
   },
 
   startRendering: function CM_startRendering()
   {
     if (!this.isRendering) {
+      this.ctxL.clearRect(0,0,this.width,this.height);
+      this.ctxD.clearRect(0,0,this.width,this.height);
+      this.ctxR.clearRect(0,0,this.width,25);
+      this.groupedData = {};
+      this.globalTiming = [];
+      this.globalGroup = [];
+      this.dirtyDots = [];
+      this.dirtyZone = [];
+      this.waitForDotData = this.waitForLineData = false;
+      this.id = 0;
       this.isRendering = true;
       this.renderDots();
       this.renderLines();
@@ -661,16 +756,6 @@ CanvasManager.prototype = {
   stopRendering: function CM_stopRendering()
   {
     this.isRendering = false;
-    this.ctxL.clearRect(0,0,this.width,this.height);
-    this.ctxD.clearRect(0,0,this.width,this.height);
-    this.ctxR.clearRect(0,0,this.width,25);
-    this.groupedData = {};
-    this.globalTiming = [];
-    this.globalGroup = [];
-    this.dirtyDots = [];
-    this.dirtyZone = [];
-    this.waitForDotData = this.waitForLineData = false;
-    this.id = 0;
   },
 
   startScrolling: function CM_startScrolling()
@@ -1013,7 +1098,7 @@ TimelineView.prototype = {
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
-    this.$("canvas-container").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
+    this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
@@ -1339,6 +1424,7 @@ TimelineView.prototype = {
           }
         }
       }
+      this.cleanUI();
       GraphUI.startListening(message);
       this.playButton.setAttribute("checked", true);
       // Starting the canvas.
@@ -1364,7 +1450,6 @@ TimelineView.prototype = {
       try {
         this.playButton.removeAttribute("checked");
       } catch(e) {}
-      this.cleanUI();
     }
     this.recording = !this.recording;
   },
@@ -1463,6 +1548,7 @@ TimelineView.prototype = {
   {
     if (aEvent.detail) {
       aEvent.preventDefault();
+      aEvent.stopPropagation();
       this.infoBox.scrollTop = Math.max(0, this.infoBox.scrollTop + aEvent.detail);
     }
   },
@@ -1516,7 +1602,7 @@ TimelineView.prototype = {
       group = group.parentNode;
     }
     if (group.hasAttribute("groupId")) {
-      this._canvas.moveGroupInView(group.getAttribute("groupId"));
+      this._canvas.moveGroupInView(group.getAttribute("groupId"), true);
     }
   },
 
@@ -1537,8 +1623,15 @@ TimelineView.prototype = {
         this.tickerGroups.indexOf(aData.groupID) != -1) {
       return;
     }
+    let scrollTop = this.infoBox.scrollTop;
     let feedItem = this._frameDoc.createElement("vbox");
-    feedItem.setAttribute("class", "ticker-feed");
+    if (scrollTop == 0) {
+      // Animate in
+      feedItem.setAttribute("class", "ticker-feed animate-in");
+    }
+    else {
+      feedItem.setAttribute("class", "ticker-feed");
+    }
     feedItem.setAttribute("groupId", aData.groupID);
     // The only hard coded part of the code.
     let label1 = this._frameDoc.createElement("label");
@@ -1594,6 +1687,9 @@ TimelineView.prototype = {
     }
     else {
       this.infoBox.insertBefore(feedItem, this.infoBox.firstChild);
+    }
+    if (scrollTop != 0) {
+      this.infoBox.scrollTop += feedItem.boxObject.height;
     }
   },
 

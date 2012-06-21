@@ -473,9 +473,12 @@
   top: -400px;
 }
 
-.ticker-feed {
+.animate-in {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: addfeed;
+}
+
+.ticker-feed {
   width: 100%;
   display: block;
   min-height: 20px;
