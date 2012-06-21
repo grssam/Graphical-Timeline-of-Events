@@ -481,6 +481,12 @@
   min-height: 20px;
   overflow: hidden;
   border-bottom: 1px solid rgb(183,193,205);
+  -moz-user-focus: normal;
+}
+
+.ticker-feed:focus {
+  border-bottom: 1px solid rgb(10,92,133);
+  background-image: -moz-linear-gradient(top, rgb(0,110,165), rgb(0,86,129) 100%);
 }
 
 .ticker-feed > label {

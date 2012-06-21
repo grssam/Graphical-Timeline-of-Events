@@ -453,6 +453,7 @@ CanvasManager.prototype = {
         }
         break;
     }
+    return this.groupedData[groupId].id;
   },
 
   freezeCanvas: function CM_freezeCanvas()
@@ -971,6 +972,8 @@ function TimelineView(aChromeWindow) {
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.addGroupBox = this.addGroupBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
+  this.handleTickerClick = this.handleTickerClick.bind(this);
+  this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
@@ -1012,6 +1015,8 @@ TimelineView.prototype = {
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("canvas-container").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
+    this.infoBox.addEventListener("click", this.handleTickerClick, true);
+    this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
     this.playButton.addEventListener("command", this.toggleMovement, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
@@ -1454,6 +1459,14 @@ TimelineView.prototype = {
     }
   },
 
+  onTickerScroll: function TV_onTickerScroll(aEvent)
+  {
+    if (aEvent.detail) {
+      aEvent.preventDefault();
+      this.infoBox.scrollTop = Math.max(0, this.infoBox.scrollTop + aEvent.detail);
+    }
+  },
+
   /**
    * Toggles the producer box.
    *
@@ -1488,10 +1501,21 @@ TimelineView.prototype = {
     }
   },
 
-  handleGroupClick: function handleGroupClick(aEvent)
+  handleGroupClick: function TV_handleGroupClick(aEvent)
   {
     let group = aEvent.originalTarget;
     if (group.localName == "label" && group.hasAttribute("groupId")) {
+      this._canvas.moveGroupInView(group.getAttribute("groupId"));
+    }
+  },
+
+  handleTickerClick: function TV_handleTickerClick(aEvent)
+  {
+    let group = aEvent.originalTarget;
+    if (group.localName == "label") {
+      group = group.parentNode;
+    }
+    if (group.hasAttribute("groupId")) {
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
     }
   },
@@ -1501,8 +1525,10 @@ TimelineView.prototype = {
    *
    * @param object aData
    *        Normalized event data.
+   * @param number aId
+   *        used to identify the color of text.
    */
-  addToTicker: function TV_addToTicker(aData)
+  addToTicker: function TV_addToTicker(aData, aId)
   {
     if (this.infoBoxHidden) {
       return;
@@ -1516,7 +1542,9 @@ TimelineView.prototype = {
     feedItem.setAttribute("groupId", aData.groupID);
     // The only hard coded part of the code.
     let label1 = this._frameDoc.createElement("label");
+    label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let label2 = this._frameDoc.createElement("label");
+    label2.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let dateString =  (new Date(aData.time)).getHours() + ":" +
                       (new Date(aData.time)).getMinutes() + ":" +
                       (new Date(aData.time)).getSeconds();
@@ -1581,8 +1609,8 @@ TimelineView.prototype = {
       this.addGroupBox(aData);
       this._canvas.updateGroupOffset();
     }
-    this._canvas.pushData(aData);
-    this.addToTicker(aData);
+    let id = this._canvas.pushData(aData);
+    this.addToTicker(aData, id);
   },
 
   _onDragStart: function TV__onDragStart(aEvent)
