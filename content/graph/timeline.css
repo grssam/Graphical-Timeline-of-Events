@@ -78,22 +78,79 @@
  */
 
 @-moz-keyframes showblock {
-  from {
+  0% {
     max-height: 0px;
   }
 
-  to {
-    max-height: 10000px;
+  20% {
+    max-height: 50px;
+  }
+
+  50% {
+    max-height: 150px;
+  }
+
+  100% {
+    max-height: 500px;
   }
 }
 
 @-moz-keyframes hideblock {
+  0% {
+    max-height: 500px;
+  }
+
+  50% {
+    max-height: 150px;
+  }
+
+  80% {
+    max-height: 50px;
+  }
+
+  100% {
+    max-height: 0px;
+  }
+}
+
+@-moz-keyframes slideup {
   from {
-    max-height: 10000px;
+    top: 50px;
+    opacity: 0;
   }
 
   to {
+    top: 25px;
+    opacity: 1;
+  }
+}
+
+@-moz-keyframes slidedown {
+  from {
+    top: 25px;
+    opacity: 1;
+  }
+
+  to {
+    top: 50px;
+    opacity: 0;
+  }
+}
+
+@-moz-keyframes addfeed {
+  0% {
     max-height: 0px;
+    opacity: 0;
+  }
+
+  50% {
+    max-height: 50px;
+    opacity: 0;
+  }
+
+  100% {
+    max-height: 50px;
+    opacity: 1;
   }
 }
 
@@ -175,15 +232,8 @@
   margin: 0px !important;
   padding: 0px !important;
   display: block;
+  min-height: 0px;
   width: 100%;
-}
-
-.producer-box:not([visible=true]) {
-  max-height: 0px !important;
-}
-
-.producer-box[visible=true] {
-  max-height: 10000;
 }
 
 .producer-name-box {
@@ -240,6 +290,7 @@
 .producer-feature-box {
   width: 100%;
   overflow: hidden;
+  display: block;
   margin: 0px !important;
   padding: 0px !important;
 }
@@ -296,15 +347,15 @@
 }
 
 .producer-box[visible=true] > .producer-feature-box {
-  -moz-animation-duration: 0.25s;
   -moz-animation-name: showblock;
+  -moz-animation-duration: 0.25s;
   max-height: 10000px;
 }
 
 .producer-box:not([visible=true]) > .producer-feature-box {
-  -moz-animation-duration: 0.25s;
   -moz-animation-name: hideblock;
-  max-height: 0px !important;
+  -moz-animation-duration: 0.25s;
+  max-height: 0px;
 }
 
 .timeline-groupbox {
@@ -388,4 +439,58 @@
   background: -moz-linear-gradient(left, transparent 5px, rgba(27,25,40,0.5) 8px,
                                                rgb(3,101,151) 9px, rgb(3,101,151) 11px,
                                                rgba(27,25,40,0.5) 12px, transparent 15px);
+}
+
+/**
+ * Info box
+ */
+
+#timeline-infobox {
+  background-color: rgb(22,33,43);
+  box-shadow: 0px 0px 8px 8px rgba(0,0,0,0.75), inset 0px 0px 1px 1px rgba(80,80,80,0.35);
+  color: rgb(183,193,205);
+  width: 200px;
+  height: 200px;
+  max-height: 300px;
+  overflow: hidden;
+  z-index: 20;
+  right: 25px;
+  top: -400px;
+  opacity: 0;
+}
+
+#timeline-infobox[visible=true] {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: slideup;
+  opacity: 1;
+  top: 25px;
+}
+
+#timeline-infobox:not([visible=true]) {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: slidedown;
+  opacity: 0;
+  top: -400px;
+}
+
+.ticker-feed {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: addfeed;
+  width: 100%;
+  display: block;
+  min-height: 20px;
+  overflow: hidden;
+  border-bottom: 1px solid rgb(183,193,205);
+}
+
+.ticker-feed > label {
+  display: block;
+  color: rgb(183,193,205);
+  font-size: 12px;
+  padding: 4px 5px;
+  margin: 0px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }

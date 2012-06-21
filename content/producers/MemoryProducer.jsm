@@ -159,6 +159,7 @@ let MemoryProducer =
         startingTime -= slices[slices.length - 1].when;
         data = {
           timestamp: startingTime,
+          total_slices: slices.length,
           total_time: data['total_time'],
           compartments_collected: data['compartments_collected'],
           total_compartments: data['total_compartments'],

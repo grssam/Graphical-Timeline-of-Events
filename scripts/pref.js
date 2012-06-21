@@ -61,7 +61,7 @@ pref.defaults = {
   activeProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
   activeFeatures: JSON.stringify(["PageEventsProducer:LoadEvents",
                                     "PageEventsProducer:MouseEvents"]),
-  visiblePanes: JSON.stringify(["producers"]),
+  visiblePanes: JSON.stringify(["producers", "infobox"]),
   visibleProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
 };
 

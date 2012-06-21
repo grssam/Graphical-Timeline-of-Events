@@ -31,6 +31,10 @@
   -  label for the button that toggles the Producers Pane in the timeline UI. -->
 <!ENTITY timelineUI.toggleProducersButton.label        "Producers">
 
+<!-- LOCALIZATION NOTE (timelineUI.toggleInfoBoxButton.label): This is the
+  -  label for the button that toggles the Info Box displaying the ticker feed. -->
+<!ENTITY timelineUI.toggleInfoBoxButton.label        "Ticker">
+
 <!-- LOCALIZATION NOTE (timelineUI.emptyFilterText): This is the placeholder text
   -  for the search bar in the timeline UI. -->
 <!ENTITY timelineUI.emptyFilterText        "Click to Search">

@@ -25,12 +25,17 @@
         <toolbarbutton id="play"
                        class="devtools-toolbarbutton"
                        type="checkbox"
-                       tabindex="0"/>
+                       tabindex="1"/>
         <toolbarbutton id="producers"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleProducersButton.label;"
-                       tabindex="1"/>
+                       tabindex="2"/>
+        <toolbarbutton id="infobox"
+                       class="devtools-toolbarbutton"
+                       type="checkbox"
+                       label="&timelineUI.toggleInfoBoxButton.label;"
+                       tabindex="3"/>
 
       </hbox>
       <textbox id="search-bar" type="search"
@@ -42,11 +47,11 @@
                      class="devtools-closebutton"/>
     </toolbar>
     <hbox id="timeline-content" flex="1">
-      <vbox id="producers-pane"/>
-      <splitter id="stack-panes-splitter" class="devtools-side-splitter"/>
+      <vbox id="producers-pane" />
+      <splitter id="stack-panes-splitter" class="devtools-side-splitter" />
       <vbox id="timeline-container" flex="1">
         <hbox id="canvas-container" flex="1">
-          <html:div id="timeline-current-time" class="absolute"/>
+          <html:div id="timeline-current-time" class="absolute" />
           <html:canvas id="timeline-canvas-dots" class="absolute" height="100%" width="100%">
           </html:canvas>
           <html:canvas id="timeline-canvas-lines" class="absolute" height="100%" width="100%">
@@ -55,6 +60,7 @@
             <html:canvas id="ruler-canvas" height="25" width="100%">
             </html:canvas>
           </html:div>
+          <html:div id="timeline-infobox" class="absolute" />
         </hbox>
       </vbox>
     </hbox>

@@ -62,6 +62,8 @@ const CANVAS_POSITION = {
 const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f7ff",
                     "#f9b4ff", "#f770ff", "#ff0000", "#ff61fd", "#ffaf60", "#fffc04"];
 
+const HTML = "http://www.w3.org/1999/xhtml";
+
 /**
  * Canvas Content Handler.
  * Manages the canvas and draws anything on it when required.
@@ -949,6 +951,8 @@ function TimelineView(aChromeWindow) {
   this.recording = false;
   this.producersPaneOpened = false;
   this.startingoffsetTime = null;
+  this.infoBoxHidden = false;
+  this.tickerGroups = [];
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -959,6 +963,7 @@ function TimelineView(aChromeWindow) {
 
   this.createProducersPane = this.createProducersPane.bind(this);
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
+  this.toggleInfoBox = this.toggleInfoBox.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
   this.toggleMovement = this.toggleMovement.bind(this);
@@ -998,7 +1003,9 @@ TimelineView.prototype = {
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
     this.playButton = this.$("play");
+    this.infoBox = this.$("timeline-infobox");
     this.producersButton = this.$("producers");
+    this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
@@ -1008,6 +1015,7 @@ TimelineView.prototype = {
     this.playButton.addEventListener("command", this.toggleMovement, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
+    this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
@@ -1021,6 +1029,16 @@ TimelineView.prototype = {
       this.producersPaneOpened = true;
       this.producersButton.checked = true;
       this.producersPane.collapsed = false;
+    }
+    if (TimelinePreferences.visiblePanes.indexOf("infobox") == -1) {
+      this.infoBox.setAttribute("visible", false);
+      this.infoBoxHidden = true;
+      this.infoBoxButton.checked = false;
+    }
+    else {
+      this.infoBox.setAttribute("visible", true);
+      this.infoBoxHidden = false;
+      this.infoBoxButton.checked = true;
     }
   },
 
@@ -1273,6 +1291,18 @@ TimelineView.prototype = {
     }
   },
 
+  toggleInfoBox: function TV_toggleInfoBox()
+  {
+    if (!this.infoBoxHidden) {
+      this.infoBox.setAttribute("visible", false);
+      this.infoBoxHidden = true;
+    }
+    else {
+      this.infoBox.setAttribute("visible", true);
+      this.infoBoxHidden = false;
+    }
+  },
+
   /**
    * Starts and stops the listening of Data.
    */
@@ -1461,6 +1491,79 @@ TimelineView.prototype = {
   },
 
   /**
+   * Adds a short summary of the event in the ticker box.
+   *
+   * @param object aData
+   *        Normalized event data.
+   */
+  addToTicker: function TV_addToTicker(aData)
+  {
+    if (this.infoBoxHidden) {
+      return;
+    }
+    if (aData.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
+        this.tickerGroups.indexOf(aData.groupID) != -1) {
+      return;
+    }
+    let feedItem = this._frameDoc.createElement("vbox");
+    feedItem.setAttribute("class", "ticker-feed");
+    feedItem.setAttribute("groupId", aData.groupID);
+    // The only hard coded part of the code.
+    let label1 = this._frameDoc.createElement("label");
+    let label2 = this._frameDoc.createElement("label");
+    let dateString =  (new Date(aData.time)).getHours() + ":" +
+                      (new Date(aData.time)).getMinutes() + ":" +
+                      (new Date(aData.time)).getSeconds();
+    switch (aData.producer) {
+      case "NetworkProducer":
+        let request = aData.details.log.entries[0].request;
+        label1.setAttribute("value", request.method.toUpperCase() + " " + request.url);
+        feedItem.appendChild(label1);
+        label2.setAttribute("value", aData.name + " at " + dateString);
+        feedItem.appendChild(label2);
+        break;
+
+      case "PageEventsProducer":
+        if (aData.groupID == "MouseEvent") {
+          label1.setAttribute("value", aData.name + " at (" +
+                                       aData.details.screenX + "," +
+                                       aData.details.screenY + ")");
+        }
+        else if (aData.groupID == "KeyboardEvent") {
+          label1.setAttribute("value", aData.name + ", Key " + aData.details.keyCode);
+        }
+        else {
+          label1.setAttribute("value", aData.name + " at " + dateString)
+        }
+        feedItem.appendChild(label1);
+        if (aData.groupID == "MouseEvent") {
+          label2.setAttribute("value", "on Id " + aData.details.target + " at " + dateString);
+          feedItem.appendChild(label2);
+        }
+        else if (aData.groupID == "KeyboardEvent") {
+          label2.setAttribute("value", "on Id " + aData.details.target + " at " + dateString);
+          feedItem.appendChild(label2);
+        }
+        break;
+
+      case "MemoryProducer":
+        label1.setAttribute("value", aData.name + " at " + dateString);
+        feedItem.appendChild(label1);
+        break;
+
+      default:
+        return;
+    }
+    this.tickerGroups.push(aData.groupID);
+    if (!this.infoBox.firstChild) {
+      this.infoBox.appendChild(feedItem);
+    }
+    else {
+      this.infoBox.insertBefore(feedItem, this.infoBox.firstChild);
+    }
+  },
+
+  /**
    * Gets the data and sends it to the canvas to display
    *
    * @param object aData
@@ -1473,6 +1576,7 @@ TimelineView.prototype = {
       this._canvas.updateGroupOffset();
     }
     this._canvas.pushData(aData);
+    this.addToTicker(aData);
   },
 
   _onDragStart: function TV__onDragStart(aEvent)
@@ -1526,12 +1630,14 @@ TimelineView.prototype = {
 
     // Updating the preferences.
     TimelinePreferences.height = this._frame.height;
+    let visiblePanes = [];
     if (this.producersPane.getAttribute("visible") == "true") {
-      TimelinePreferences.visiblePanes = ["producers"];
+      visiblePanes.push("producers");
     }
-    else {
-      TimelinePreferences.visiblePanes = [];
+    if (this.infoBox.getAttribute("visible") == "true") {
+      visiblePanes.push("infobox");
     }
+    TimelinePreferences.visiblePanes = visiblePanes;
     let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
     let visibleProducers = [], activeFeatures = [], activeProducers = [];
     for (let i = 0; i < producerBoxes.length; i++) {
