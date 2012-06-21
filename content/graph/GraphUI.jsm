@@ -1226,6 +1226,12 @@ TimelineView.prototype = {
       }
       producerBox = producerBox.nextSibling;
     }
+    let feed = this.infoBox.firstChild;
+    while (feed) {
+      let temp = feed;
+      feed = temp.nextSibling;
+      this.infoBox.removeChild(temp);
+    }
   },
 
   /**
