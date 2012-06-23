@@ -14,6 +14,9 @@ var EXPORTED_SYMBOLS = ["PageEventsProducer"];
  */
 let PageEventsProducer =
 {
+  _sequenceId: 0,
+
+  get sequenceId() "PageEventsProducer-" + (++this._sequenceId),
   /**
    * List of content windows that this producer is listening to.
    */
@@ -360,6 +363,7 @@ let PageEventsProducer =
 
     let eventDetail = {
       target: aEvent.target.id || null,
+      eventName: aEvent.name,
     };
 
     let groupId = "";

@@ -201,6 +201,7 @@
 }
 
 #timeline-content {
+  background: rgb(22,33,43);
   border-top: 1px solid rgb(20,30,39);
   padding: 0px !important;
   margin: 0px !important;
@@ -222,6 +223,7 @@
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
   overflow: auto;
+  margin-bottom: 26px;
 }
 
 #stack-panes-splitter {
@@ -502,4 +504,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+}
+
+/**
+ * Overview.
+ */
+
+#timeline-overview {
+  height: 50px;
+  max-height: 75px;
+  overflow: hidden;
+  display: none;
 }

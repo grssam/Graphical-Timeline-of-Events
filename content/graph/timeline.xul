@@ -46,6 +46,14 @@
                      tooltiptext="&timelineUI.closeButton.tooltip;"
                      class="devtools-closebutton"/>
     </toolbar>
+    <hbox id="timeline-overview">
+      <vbox id="overview-producers-pane" />
+      <vbox id="overview-canvas-container" flex="1">
+        <html:div id="overview-timeline-window" class="absolute" />
+        <html:canvas id="timeline-overview-canvas" class="absolute" height="100%" width="100%">
+        </html:canvas>
+      </vbox>
+    </hbox>
     <hbox id="timeline-content" flex="1">
       <vbox id="producers-pane" />
       <splitter id="stack-panes-splitter" class="devtools-side-splitter" />

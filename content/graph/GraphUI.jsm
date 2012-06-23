@@ -171,6 +171,14 @@ CanvasManager.prototype = {
     this.canvasLines.height = this.canvasDots.height = val;
   },
 
+  get paneHeight()
+  {
+    if (this._paneHeight === undefined) {
+      this._paneHeight = this.doc.getElementById("producers-pane").scrollHeight;
+    }
+    return this._paneHeight;
+  },
+
   hasGroup: function CM_hasGroup(aData)
   {
     let temp = false;
@@ -553,16 +561,16 @@ CanvasManager.prototype = {
   {
     switch(aPosition) {
       case CANVAS_POSITION.START:
-        this.finalOffset = Math.max(aY - 2, 0);
+        this.finalOffset = Math.max(aY, 0);
         break;
 
       case CANVAS_POSITION.END:
-        this.finalOffset = aY + 2;
+        this.finalOffset = Math.max(aY - this.height, 0);
         break;
 
       default:
         aPosition = CANVAS_POSITION.CENTER;
-        this.finalOffset = Math.max(aY - this.height*0.5 - 2, 0);
+        this.finalOffset = Math.max(aY - this.height*0.5, 0);
         break;
     }
     if (aAnimate != null && aAnimate == false) {
@@ -577,12 +585,14 @@ CanvasManager.prototype = {
       }
       this.initialOffset = this.offsetTop;
     }
-    if ((this.finalOffset - this.offsetTop >= 0 &&
+    if ((this.finalOffset == this.offsetTop) ||
+        (this.finalOffset - this.offsetTop >= 0 &&
          this.finalOffset - this.offsetTop <= 0.05*(this.initialOffset - this.finalOffset)) ||
         (this.finalOffset - this.offsetTop < 0 &&
          this.finalOffset - this.offsetTop >= 0.05*(this.initialOffset - this.finalOffset))) {
       this.freezeCanvas();
-      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop = this.finalOffset;
+      this.doc.getElementById("producers-pane").scrollTop = this.finalOffset;
+      this.offsetTop = this.doc.getElementById("producers-pane").scrollTop;
       this.finalOffset = this.initialOffset = null;
       if (this.waitForLineData) {
         this.waitForLineData = false;
@@ -594,8 +604,17 @@ CanvasManager.prototype = {
       }
     }
     else {
-      this.offsetTop -= 0.05*(this.initialOffset - this.finalOffset);
-      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop;
+      let initial = this.doc.getElementById("producers-pane").scrollTop*1;
+      this.doc.getElementById("producers-pane").scrollTop -=
+        0.05*(this.initialOffset - this.finalOffset);
+      if (initial == this.doc.getElementById("producers-pane").scrollTop) {
+        // Destination is already reached, no need to go any further.
+        aY -= (this.finalOffset - initial);
+        this.offsetTop = initial;
+      }
+      else {
+        this.offsetTop = this.doc.getElementById("producers-pane").scrollTop;
+      }
       this.doc.defaultView
           .mozRequestAnimationFrame(function() {
         this.moveTopOffsetTo(aY, aPosition, true);
@@ -809,8 +828,8 @@ CanvasManager.prototype = {
     this.linesDrawn++;
     this.dirtyZone[0] = Math.min(this.dirtyZone[0],x);
     this.dirtyZone[1] = Math.max(this.dirtyZone[1],endx);
-    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 1 - this.offsetTop);
-    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 1 - this.offsetTop);
+    this.dirtyZone[2] = Math.min(this.dirtyZone[2],y - 2 - this.offsetTop);
+    this.dirtyZone[3] = Math.max(this.dirtyZone[3],y + 2 - this.offsetTop);
   },
 
   /**
@@ -1331,18 +1350,20 @@ TimelineView.prototype = {
   {
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
+      this.freezeTicker();
     }
     else {
       this.playButton.setAttribute("checked", true);
       this._canvas.moveToCurrentTime();
+      this.unfreezeTicker();
     }
   },
 
   onFrameResize: function TV_onFrameResize()
   {
     if (this.canvasStarted) {
-      if (Math.abs(this.producersPane.scrollHeight - this._canvas.height) > 50) {
-        this._canvas.height = this.producersPane.scrollHeight;
+      if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 50) {
+        this._canvas.height = this.producersPane.clientHeight;
       }
     }
   },
@@ -1369,7 +1390,7 @@ TimelineView.prototype = {
     this.producersPane.setAttribute("visible", true);
     this.producersPane.collapsed = false;
     if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
     }
@@ -1381,7 +1402,7 @@ TimelineView.prototype = {
     this.producersPane.setAttribute("visible", false);
     this.producersPane.collapsed = true;
     if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
     }
@@ -1430,7 +1451,7 @@ TimelineView.prototype = {
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc);
-        this._canvas.height = this.$("canvas-container").boxObject.height;
+        this._canvas.height = this.$("canvas-container").boxObject.height - 25;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
@@ -1438,7 +1459,7 @@ TimelineView.prototype = {
         this.handleScroll();
       }
       else {
-        this._canvas.height = this.$("canvas-container").boxObject.height;
+        this._canvas.height = this.$("canvas-container").boxObject.height - 25;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.startRendering();
@@ -1447,6 +1468,7 @@ TimelineView.prototype = {
     else {
       GraphUI.stopListening({timelineUIId: GraphUI.id});
       this._canvas.stopRendering();
+      this._canvas.unfreezeCanvas();
       try {
         this.playButton.removeAttribute("checked");
       } catch(e) {}
@@ -1553,6 +1575,34 @@ TimelineView.prototype = {
     }
   },
 
+  freezeTicker: function TV_freezeTicker()
+  {
+    this.infoBox.scrollTop = 1;
+  },
+
+  unfreezeTicker: function TV_unfreezeTicker()
+  {
+    this.infoBox.scrollTop = 0;
+  },
+
+  moveTickerToTime: function TV_moveTickerToTime(aTime)
+  {
+    try {
+      if (this.infoBox.firstChild.getAttribute("timestamp")*1 < aTime) {
+        return;
+      }
+      let child = this.infoBox.firstChild, height = 0;
+      while(child) {
+        if (child.getAttribute("timestamp")*1 < aTime) {
+          this.infoBox.scrollTop = height;
+          break;
+        }
+        height += child.boxObject.height;
+        child = child.nextSibling;
+      }
+    } catch (ex) {}
+  },
+
   /**
    * Toggles the producer box.
    *
@@ -1592,6 +1642,8 @@ TimelineView.prototype = {
     let group = aEvent.originalTarget;
     if (group.localName == "label" && group.hasAttribute("groupId")) {
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
+      this.moveTickerToTime(this._canvas.groupedData[
+        group.getAttribute("groupId")].timestamps[0]);
     }
   },
 
@@ -1601,8 +1653,10 @@ TimelineView.prototype = {
     if (group.localName == "label") {
       group = group.parentNode;
     }
-    if (group.hasAttribute("groupId")) {
-      this._canvas.moveGroupInView(group.getAttribute("groupId"), true);
+    if (group.hasAttribute("timestamp")) {
+      this._canvas.moveToTime(group.getAttribute("timestamp")*1);
+      this._canvas.moveTopOffsetTo(this._canvas
+          .groupedData[group.getAttribute("groupId")].y);
     }
   },
 
@@ -1633,6 +1687,7 @@ TimelineView.prototype = {
       feedItem.setAttribute("class", "ticker-feed");
     }
     feedItem.setAttribute("groupId", aData.groupID);
+    feedItem.setAttribute("timestamp", aData.time);
     // The only hard coded part of the code.
     let label1 = this._frameDoc.createElement("label");
     label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
@@ -1737,6 +1792,7 @@ TimelineView.prototype = {
     this.$("canvas-container").removeEventListener("mousemove", this._onDrag, true);
     this._frameDoc.removeEventListener("mouseup", this._onDragEnd, true);
     this._frameDoc.removeEventListener("click", this._onDragEnd, true);
+    this.moveTickerToTime(this._canvas.lastVisibleTime);
     this.handleScroll();
   },
 

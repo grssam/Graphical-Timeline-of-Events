@@ -156,7 +156,7 @@ let MemoryProducer =
       else if (aTopic == "garbage-collection-statistics") {
         // Reconstruct the data to be less of a clutter and more meaningful.
         let slices = data['slices'];
-        startingTime -= slices[slices.length - 1].when;
+        startingTime -= (slices[slices.length - 1].when + slices[slices.length - 1].pause);
         data = {
           timestamp: startingTime,
           total_slices: slices.length,
@@ -199,11 +199,10 @@ let MemoryProducer =
    */
   destroy: function MP_destroy()
   {
-    this.disableFeatures(this.enabledEvents);
-
     if (this.disablePrefOnUnload) {
       Services.prefs.setBoolPref("javascript.options.mem.log", false);
     }
+    this.disableFeatures(this.enabledEvents);
 
     this.enabledEvents = null;
   },
