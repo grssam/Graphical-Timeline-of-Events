@@ -26,16 +26,21 @@
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        tabindex="1"/>
+        <toolbarbutton id="overview"
+                       class="devtools-toolbarbutton"
+                       type="checkbox"
+                       label="&timelineUI.toggleOverviewButton.label;"
+                       tabindex="2"/>
         <toolbarbutton id="producers"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleProducersButton.label;"
-                       tabindex="2"/>
+                       tabindex="3"/>
         <toolbarbutton id="infobox"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleInfoBoxButton.label;"
-                       tabindex="3"/>
+                       tabindex="4"/>
 
       </hbox>
       <textbox id="search-bar" type="search"
@@ -46,14 +51,6 @@
                      tooltiptext="&timelineUI.closeButton.tooltip;"
                      class="devtools-closebutton"/>
     </toolbar>
-    <hbox id="timeline-overview">
-      <vbox id="overview-producers-pane" />
-      <vbox id="overview-canvas-container" flex="1">
-        <html:div id="overview-timeline-window" class="absolute" />
-        <html:canvas id="timeline-overview-canvas" class="absolute" height="100%" width="100%">
-        </html:canvas>
-      </vbox>
-    </hbox>
     <hbox id="timeline-content" flex="1">
       <vbox id="producers-pane" />
       <splitter id="stack-panes-splitter" class="devtools-side-splitter" />

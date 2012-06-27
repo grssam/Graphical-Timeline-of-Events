@@ -38,13 +38,14 @@
 
 .devtools-checkbox > .checkbox-check {
   -moz-appearance: none;
-  display: none;
+  list-style-image: url("images/devtools-checkbox.png");
+  -moz-image-region: rect(0px, 15px, 14px, 0px);
+  background: none;
+  border: 0px;
 }
 
 .devtools-checkbox {
   -moz-appearance: none;
-  list-style-image: url("images/devtools-checkbox.png");
-  -moz-image-region: rect(0px, 15px, 14px, 0px);
   min-width: 78px;
   min-height: 18px;
   margin: 0;
@@ -60,12 +61,15 @@
   min-width: 22px;
 }
 
-.devtools-checkbox:not([checked=true]):hover:active {
+.devtools-checkbox:not([checked=true]):hover:active > .checkbox-check {
   -moz-image-region: rect(0px, 15px, 14px, 0px);
+}
+
+.devtools-checkbox:not([checked=true]):hover:active {
   background-color: hsla(210,18%,9%,.1);
 }
 
-.devtools-checkbox[checked=true] {
+.devtools-checkbox[checked=true] > .checkbox-check {
   -moz-image-region: rect(0px, 30px, 14px, 15px);
 }
 
@@ -504,15 +508,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
-}
-
-/**
- * Overview.
- */
-
-#timeline-overview {
-  height: 50px;
-  max-height: 75px;
-  overflow: hidden;
-  display: none;
 }
