@@ -201,6 +201,9 @@ CanvasManager.prototype = {
       }
 
       if (producerBox.getAttribute("visible") == "false") {
+        if (temp) {
+          this.doc.getElementById("producers-pane").collapsed = true;
+        }
         return (producerBox.firstChild.boxObject.y +
                 producerBox.firstChild.boxObject.height/2 - 32);
       }
@@ -265,6 +268,17 @@ CanvasManager.prototype = {
         return mid;
     }
     return left;
+  },
+
+  /**
+   * Gets the corresponding time for the pixels in x direction.
+   *
+   * @param number aPixel
+   *        Number of pixels from start of timeline view.
+   */
+  getTimeForPixel: function CM_getTimeForPixel(aPixel)
+  {
+    return this.firstVisibleTime + aPixel*this.scale;
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
@@ -761,6 +775,19 @@ CanvasManager.prototype = {
     this.acceleration = 0;
     this.offsetTime = this.frozenTime - this.currentTime;
     this.scrolling = false;
+  },
+
+  startTimeWindow: function CM_startTimeWindow(left)
+  {
+    this.timeWindowLeft = this.getTimeForPixel(left);
+  },
+
+  stopTimeWindow: function CM_stopTimeWindow(right)
+  {
+    this.timeWindowRight = this.getTimeForPixel(right);
+    this.freezeCanvas();
+    this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
+    this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
   },
 
   /**

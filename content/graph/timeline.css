@@ -510,3 +510,37 @@
   text-overflow: ellipsis;
   text-align: center;
 }
+
+/**
+ * Time window.
+  */
+#timeline-time-window {
+  display: none;
+  border: 0px;
+  z-index: 20;
+}
+
+#timeline-time-window[selecting] {
+  display: -moz-box;
+  background-color: rgba(3,101,151,0.5);
+  border-left: 1px solid rgb(3,101,151) !important;
+  border-right: 1px solid rgb(3,101,151) !important;
+  top: 0px;
+  bottom: 25px;
+  height: -moz-calc(100% - 26px);
+}
+
+#timeline-time-window[selected] {
+  display: -moz-box;
+  -moz-transition-property: opacity, width, left;
+  -moz-transition-duration: 0.45s;
+  opacity: 0;
+  width: 100% !important;
+  left: 0px !important;
+  background-color: rgba(3,101,151,0.5);
+  border-left: 1px solid rgb(3,101,151) !important;
+  border-right: 1px solid rgb(3,101,151) !important;
+  top: 0px;
+  bottom: 25px;
+  height: -moz-calc(100% - 26px);
+}

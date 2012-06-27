@@ -101,6 +101,7 @@ function TimelineView(aChromeWindow) {
   this.handleTickerClick = this.handleTickerClick.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
+  this.handleTimeWindow = this.handleTimeWindow.bind(this);
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
@@ -113,6 +114,9 @@ function TimelineView(aChromeWindow) {
   this._onDragStart = this._onDragStart.bind(this);
   this._onDrag = this._onDrag.bind(this);
   this._onDragEnd = this._onDragEnd.bind(this);
+  this._onWindowStart = this._onWindowStart.bind(this);
+  this._onWindowSelect = this._onWindowSelect.bind(this);
+  this._onWindowEnd = this._onWindowEnd.bind(this);
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
@@ -136,6 +140,7 @@ TimelineView.prototype = {
     this.producersButton = this.$("producers");
     this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
+    this.timeWindow = this.$("timeline-time-window");
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
@@ -479,6 +484,7 @@ TimelineView.prototype = {
         this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
         this.canvasStarted = true;
         this.handleScroll();
+        this.handleTimeWindow();
       }
       else {
         this._canvas.height = this.$("canvas-container").boxObject.height - 25;
@@ -787,7 +793,7 @@ TimelineView.prototype = {
   },
 
   _onDragStart: function TV__onDragStart(aEvent)
-  { 
+  {
     this.scrollStartX = aEvent.clientX;
     this.$("timeline-ruler").removeEventListener("mousedown", this._onDragStart, true);
     if (!this._canvas.timeFrozen) {
@@ -826,6 +832,49 @@ TimelineView.prototype = {
     this.$("timeline-ruler").addEventListener("mousedown", this._onDragStart, true);
   },
 
+  _onWindowStart: function TV__onWindowStart(aEvent)
+  {
+    this.$("timeline-canvas-dots").removeEventListener("mousedown", this._onWindowStart, true);
+    this.timeWindow.setAttribute("selecting", true);
+    let left = aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width);
+    this.timeWindow.style.right = this.timeWindow.style.left = left + "px";
+    this.timeWindow.style.width = "0px";
+    this.$("canvas-container").addEventListener("mousemove", this._onWindowSelect, true);
+    this._frameDoc.addEventListener("mouseup", this._onWindowEnd, true);
+    this._frameDoc.addEventListener("click", this._onWindowEnd, true);
+    this._canvas.startTimeWindow(left);
+  },
+
+  _onWindowSelect: function TV__onWindowSelect(aEvent)
+  {
+    this.timeWindow.style.width = (aEvent.clientX -
+      (this.producersPane.collapsed?0:this.producersPane.boxObject.width) -
+      this.timeWindow.style.left.replace("px", "")*1) + "px";
+  },
+
+  _onWindowEnd: function TV__onWindowEnd(aEvent)
+  {
+    this.$("canvas-container").removeEventListener("mousemove", this._onWindowSelect, true);
+    this._frameDoc.removeEventListener("mouseup", this._onWindowEnd, true);
+    this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
+    this._canvas.stopTimeWindow(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width));
+    try {
+      this.timeWindow.removeAttribute("selecting");
+    } catch (ex) {}
+    this.timeWindow.setAttribute("selected", true);
+    this._frameDoc.defaultView.setTimeout(function() {
+      this.timeWindow.removeAttribute("selected");
+    }.bind(this), 500);
+    this.handleTimeWindow();
+  },
+
+  /**
+   * Handles dragging of the time window line to select a time range.
+   */
+  handleTimeWindow: function TV_handleTimeWindow()
+  {
+    this.$("timeline-canvas-dots").addEventListener("mousedown", this._onWindowStart, true);
+  },
   /**
    * Closes the UI, removes the frame and the splitter ans dispatches an
    * unloading event to tell the parent window.
