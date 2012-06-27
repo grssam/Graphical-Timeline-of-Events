@@ -101,6 +101,7 @@ function CanvasManager(aDoc) {
 
   this.isRendering = true;
   this.timeFrozen = false;
+  this.overview = true;
   this.renderDots();
   this.renderLines();
   this.renderRuler();
@@ -733,6 +734,7 @@ CanvasManager.prototype = {
       this.renderDots();
       this.renderLines();
       this.renderRuler();
+      this.startTime = Date.now();
     }
   },
 
@@ -823,15 +825,13 @@ CanvasManager.prototype = {
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
     this.ctxR.lineWidth = 1;
-    for (let i = -1*((this.firstVisibleTime/this.scale)%1000), j = 0;
+    for (let i = -((this.firstVisibleTime - this.startTime)%1000 + 1000)/this.scale,
+             j = 0;
          i < this.width;
          i += 100/this.scale, j++) {
-      if (i < 0) {
-        continue;
-      }
       if (j%10 == 0) {
-        this.ctxR.strokeText((new Date(this.firstVisibleTime + i*this.scale)).getMinutes() + "  " +
-                             (new Date(this.firstVisibleTime + i*this.scale)).getSeconds(), i - 22, 12);
+        this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                             i + 2, 12);
         this.ctxR.fillRect(i+0.5,5,1,20);
       }
       else if (j%5 == 0) {

@@ -304,7 +304,7 @@
 .producer-feature-box > checkbox {
   width: 100%;
   color: rgb(207,218,230) !important;
-  min-height: 24px;
+  min-height: 18px;
   border-bottom: 1px solid rgb(19,29,40);
   border-top: 1px solid rgb(33,44,55);
 }
@@ -324,10 +324,11 @@
 .timeline-groubox {
   width: 100%;
   color: rgb(207,218,230) !important;
-  min-height: 24px;
+  min-height: 18px;
+  max-height: 18px;
   border-bottom: 1px solid rgb(19,29,40);
   border-top: 1px solid rgb(33,44,55);
-  padding: 4px 2px 4px 5px;
+  padding: 1px 2px 1px 5px;
   margin: 0px !important;
   -moz-user-focus: normal;
 }
@@ -366,7 +367,7 @@
 
 .timeline-groupbox {
   color: rgb(207,218,230) !important;
-  min-height: 24px;
+  min-height: 18px;
   padding: 0px;
   margin: 0px;
   border-bottom: 1px solid rgb(19,29,40);
