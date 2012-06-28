@@ -811,7 +811,7 @@ TimelineView.prototype = {
       this.playButton.removeAttribute("checked");
     } catch (ex) {}
 
-    this._canvas.acceleration = this.scrollStartX - aEvent.clientX;
+    this._canvas.scrollDistance = this.scrollStartX - aEvent.clientX;
   },
 
   _onDragEnd: function TV__onDragEnd(aEvent)

@@ -42,7 +42,7 @@ function CanvasManager(aDoc) {
   this.offsetTop = 0;
   this.scrolling = false;
   this.offsetTime = 0;
-  this.acceleration = 0;
+  this.scrollDistance = 0;
   this.dirtyDots = [];
   this.dirtyZone = [];
 
@@ -66,7 +66,7 @@ function CanvasManager(aDoc) {
   this.globalGroup = [];
 
   // How many milli seconds per pixel.
-  this.scale = 5;
+  this.scale = 50;
 
   this.id = 0;
   this.waitForLineData = false;
@@ -278,7 +278,12 @@ CanvasManager.prototype = {
    */
   getTimeForPixel: function CM_getTimeForPixel(aPixel)
   {
-    return this.firstVisibleTime + aPixel*this.scale;
+    if (this.timeFrozen) {
+      return (this.frozenTime - this.offsetTime + (aPixel - 0.8*this.width)*this.scale);
+    }
+    else {
+      return (Date.now() - this.offsetTime + (aPixel - 0.8*this.width)*this.scale);
+    }
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
@@ -772,8 +777,8 @@ CanvasManager.prototype = {
 
   stopScrolling: function CM_stopScrolling()
   {
-    this.acceleration = 0;
     this.offsetTime = this.frozenTime - this.currentTime;
+    this.scrollDistance = 0;
     this.scrolling = false;
   },
 
@@ -787,7 +792,9 @@ CanvasManager.prototype = {
     this.timeWindowRight = this.getTimeForPixel(right);
     this.freezeCanvas();
     this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
+    this.offsetTime = 0;
     this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
+    this.timeWindowLeft = this.timeWindowRight = null;
   },
 
   /**
@@ -839,9 +846,9 @@ CanvasManager.prototype = {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
       }
-      else if (this.acceleration != 0) {
+      else if (this.scrollDistance != 0) {
         this.currentTime = this.frozenTime - this.offsetTime -
-                           this.acceleration * (Date.now() - this.frozenTime) / 100;
+                           this.scrollDistance * 5 * this.scale;
       }
     }
     else {
@@ -852,20 +859,94 @@ CanvasManager.prototype = {
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
     this.ctxR.lineWidth = 1;
-    for (let i = -((this.firstVisibleTime - this.startTime)%1000 + 1000)/this.scale,
-             j = 0;
-         i < this.width;
-         i += 100/this.scale, j++) {
-      if (j%10 == 0) {
-        this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                             i + 2, 12);
-        this.ctxR.fillRect(i+0.5,5,1,20);
+    if (this.scale > 50) {
+      for (let i = -((this.firstVisibleTime - this.startTime)%50000 + 50000)/this.scale,
+               j = 0;
+           i < this.width;
+           i += 5000/this.scale, j++) {
+        if (j%10 == 0) {
+          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                               i + 2, 12);
+          this.ctxR.fillRect(i+0.5,5,1,20);
+        }
+        else if (j%5 == 0) {
+          this.ctxR.fillRect(i+0.5,10,1,15);
+        }
+        else {
+          this.ctxR.fillRect(i+0.5,15,1,10);
+        }
       }
-      else if (j%5 == 0) {
-        this.ctxR.fillRect(i+0.5,10,1,15);
+    }
+    else if (this.scale > 20) {
+      for (let i = -((this.firstVisibleTime - this.startTime)%10000 + 10000)/this.scale,
+               j = 0;
+           i < this.width;
+           i += 1000/this.scale, j++) {
+        if (j%10 == 0) {
+          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                               i + 2, 12);
+          this.ctxR.fillRect(i+0.5,5,1,20);
+        }
+        else if (j%5 == 0) {
+          this.ctxR.fillRect(i+0.5,10,1,15);
+        }
+        else {
+          this.ctxR.fillRect(i+0.5,15,1,10);
+        }
       }
-      else {
-        this.ctxR.fillRect(i+0.5,15,1,10);
+    }
+    else if (this.scale > 1) {
+      for (let i = -((this.firstVisibleTime - this.startTime)%1000 + 1000)/this.scale,
+               j = 0;
+           i < this.width;
+           i += 100/this.scale, j++) {
+        if (j%10 == 0) {
+          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                               i + 2, 12);
+          this.ctxR.fillRect(i+0.5,5,1,20);
+        }
+        else if (j%5 == 0) {
+          this.ctxR.fillRect(i+0.5,10,1,15);
+        }
+        else {
+          this.ctxR.fillRect(i+0.5,15,1,10);
+        }
+      }
+    }
+    else if (this.scale > 0.1) {
+      for (let i = -((this.firstVisibleTime - this.startTime)%100 + 100)/this.scale,
+               j = 0;
+           i < this.width;
+           i += 10/this.scale, j++) {
+        if (j%10 == 0) {
+          this.ctxR.strokeText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+                               i + 2, 12);
+          this.ctxR.fillRect(i+0.5,5,1,20);
+        }
+        else if (j%5 == 0) {
+          this.ctxR.fillRect(i+0.5,10,1,15);
+        }
+        else {
+          this.ctxR.fillRect(i+0.5,15,1,10);
+        }
+      }
+    }
+    else {
+      for (let i = -((this.firstVisibleTime - this.startTime)%10 + 10)/this.scale,
+               j = 0;
+           i < this.width;
+           i += 1/this.scale, j++) {
+        if (j%10 == 0) {
+          this.ctxR.strokeText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+                               i + 2, 12);
+          this.ctxR.fillRect(i+0.5,5,1,20);
+        }
+        else if (j%5 == 0) {
+          this.ctxR.fillRect(i+0.5,10,1,15);
+        }
+        else {
+          this.ctxR.fillRect(i+0.5,15,1,10);
+        }
       }
     }
     this.doc.defaultView.mozRequestAnimationFrame(this.renderRuler);
@@ -902,9 +983,9 @@ CanvasManager.prototype = {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
       }
-      else if (this.acceleration != 0) {
+      else if (this.scrollDistance != 0) {
         this.currentTime = this.frozenTime - this.offsetTime -
-                           this.acceleration * (Date.now() - this.frozenTime) / 100;
+                           this.scrollDistance * 5 * this.scale;
       }
     }
     else {
@@ -956,9 +1037,9 @@ CanvasManager.prototype = {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
       }
-      else if (this.acceleration != 0) {
+      else if (this.scrollDistance != 0) {
         this.currentTime = this.frozenTime - this.offsetTime -
-                           this.acceleration * (date - this.frozenTime) / 100;
+                           this.scrollDistance * 5 * this.scale;
       }
     }
     else {
@@ -1017,6 +1098,14 @@ CanvasManager.prototype = {
 
     // Moving the current time needle to appropriate position.
     this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
+    // Move the left bar of the time window if the timeline is moving.
+    if (this.timeWindowLeft != null && !this.timeFrozen) {
+      let width_o = this.doc.getElementById("timeline-time-window").style.width.replace("px", "")*1;
+      let left_o = this.doc.getElementById("timeline-time-window").style.left.replace("px", "")*1;
+      let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+      this.doc.getElementById("timeline-time-window").style.width = (width_o + left_o - left) + "px";
+      this.doc.getElementById("timeline-time-window").style.left = left + "px";
+    }
 
     if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
         !this.timeFrozen) {
