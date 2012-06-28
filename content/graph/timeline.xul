@@ -26,16 +26,21 @@
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        tabindex="1"/>
+        <toolbarbutton id="overview"
+                       class="devtools-toolbarbutton"
+                       type="checkbox"
+                       label="&timelineUI.toggleOverviewButton.label;"
+                       tabindex="2"/>
         <toolbarbutton id="producers"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleProducersButton.label;"
-                       tabindex="2"/>
+                       tabindex="3"/>
         <toolbarbutton id="infobox"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleInfoBoxButton.label;"
-                       tabindex="3"/>
+                       tabindex="4"/>
 
       </hbox>
       <textbox id="search-bar" type="search"

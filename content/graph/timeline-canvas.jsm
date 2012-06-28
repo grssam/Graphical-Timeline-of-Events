@@ -738,8 +738,18 @@ CanvasManager.prototype = {
 
   moveToOverview: function CM_moveToOverview()
   {
+    this.unfreezeCanvas();
     this.overview = true;
     this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+  },
+
+  moveToLive: function CM_moveToLive()
+  {
+    this.overview = false;
+    if (!this.timeFrozen) {
+      this.scale = 5;
+      this.moveToCurrentTime();
+    }
   },
 
   startRendering: function CM_startRendering()
@@ -804,6 +814,9 @@ CanvasManager.prototype = {
       this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
       this.offsetTime = 0;
       this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
+      try {
+        this.doc.getElementById("overview").removeAttribute("checked");
+      } catch (ex) {}
     }
     this.leftWindowLine = this.timeWindowLeft = this.timeWindowRight = null;
   },

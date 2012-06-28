@@ -27,6 +27,10 @@
   -  the button that closes the timeline UI. -->
 <!ENTITY timelineUI.closeButton.tooltip        "Close">
 
+<!-- LOCALIZATION NOTE (timelineUI.toggleOverviewButton.label): This is the
+  -  label for the button that toggles the Overview mode in the timeline UI. -->
+<!ENTITY timelineUI.toggleOverviewButton.label        "Overview">
+
 <!-- LOCALIZATION NOTE (timelineUI.toggleProducersButton.label): This is the
   -  label for the button that toggles the Producers Pane in the timeline UI. -->
 <!ENTITY timelineUI.toggleProducersButton.label        "Producers">

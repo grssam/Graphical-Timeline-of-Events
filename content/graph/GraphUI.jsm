@@ -90,6 +90,7 @@ function TimelineView(aChromeWindow) {
 
   this.createProducersPane = this.createProducersPane.bind(this);
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
+  this.toggleOverview = this.toggleOverview.bind(this);
   this.toggleInfoBox = this.toggleInfoBox.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
@@ -136,6 +137,7 @@ TimelineView.prototype = {
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
     this.playButton = this.$("play");
+    this.overviewButton = this.$("overview");
     this.infoBox = this.$("timeline-infobox");
     this.producersButton = this.$("producers");
     this.infoBoxButton = this.$("infobox");
@@ -149,6 +151,7 @@ TimelineView.prototype = {
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
     this.playButton.addEventListener("command", this.toggleMovement, true);
+    this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
     this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
@@ -475,6 +478,7 @@ TimelineView.prototype = {
       this.cleanUI();
       GraphUI.startListening(message);
       this.playButton.setAttribute("checked", true);
+      this.overviewButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc);
@@ -499,9 +503,24 @@ TimelineView.prototype = {
       this._canvas.unfreezeCanvas();
       try {
         this.playButton.removeAttribute("checked");
+        this.overviewButton.removeAttribute("checked");
       } catch(e) {}
     }
     this.recording = !this.recording;
+  },
+
+  toggleOverview: function TV_toggleOverview()
+  {
+    if (!this.canvasStarted) {
+      return;
+    }
+    if (this.overviewButton.checked) {
+      this.playButton.setAttribute("checked", true);
+      this._canvas.moveToOverview();
+    }
+    else {
+      this._canvas.moveToLive();
+    }
   },
 
   /**
