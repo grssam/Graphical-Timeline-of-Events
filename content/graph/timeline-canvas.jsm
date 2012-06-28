@@ -736,6 +736,12 @@ CanvasManager.prototype = {
     }
   },
 
+  moveToOverview: function CM_moveToOverview()
+  {
+    this.overview = true;
+    this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+  },
+
   startRendering: function CM_startRendering()
   {
     if (!this.isRendering) {
@@ -785,16 +791,21 @@ CanvasManager.prototype = {
   startTimeWindow: function CM_startTimeWindow(left)
   {
     this.timeWindowLeft = this.getTimeForPixel(left);
+    this.leftWindowLine = left;
   },
 
   stopTimeWindow: function CM_stopTimeWindow(right)
   {
     this.timeWindowRight = this.getTimeForPixel(right);
-    this.freezeCanvas();
-    this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
-    this.offsetTime = 0;
-    this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
-    this.timeWindowLeft = this.timeWindowRight = null;
+    if (right - this.leftWindowLine > 3 ||
+        this.timeWindowRight - this.timeWindowLeft > 200) {
+      this.freezeCanvas();
+      this.overview = false;
+      this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
+      this.offsetTime = 0;
+      this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
+    }
+    this.leftWindowLine = this.timeWindowLeft = this.timeWindowRight = null;
   },
 
   /**
@@ -806,10 +817,15 @@ CanvasManager.prototype = {
         x < 0 || x > this.width) {
       return;
     }
-    //this.ctx.drawImage(this.imageList[id%12],x - 5,y - 6 - this.offsetTop,10,12);
+    if (this.dirtyDots.length > 0) {
+      let {lastX,lastY,lastId} = this.dirtyDots[this.dirtyDots.length - 1];
+      if (lastId == id && lasyY == y && Math.abs(x - lastX) < 4) {
+        return;
+      }
+    }
     this.ctxD.beginPath();
     this.ctxD.fillStyle = COLOR_LIST[id%12];
-    this.dirtyDots.push({x:x,y:y-this.offsetTop});
+    this.dirtyDots.push({x:x,y:y-this.offsetTop,id:id});
     this.ctxD.arc(x,y - this.offsetTop -0.5, 3, 0, 6.2842,true);
     this.ctxD.fill();
     this.dotsDrawn++;
@@ -850,6 +866,10 @@ CanvasManager.prototype = {
         this.currentTime = this.frozenTime - this.offsetTime -
                            this.scrollDistance * 5 * this.scale;
       }
+    }
+    else if (this.overview) {
+      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+      this.currentTime = Date.now();
     }
     else {
       this.currentTime = Date.now() - this.offsetTime;
@@ -966,7 +986,7 @@ CanvasManager.prototype = {
     this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
     this.ctxD.shadowBlur = 2;
 
-    for each (let {x,y} in this.dirtyDots) {
+    for each (let {x,y,id} in this.dirtyDots) {
       this.ctxD.clearRect(x-6,y-5,14,18);
     }
     this.dirtyDots = [];
@@ -987,6 +1007,10 @@ CanvasManager.prototype = {
         this.currentTime = this.frozenTime - this.offsetTime -
                            this.scrollDistance * 5 * this.scale;
       }
+    }
+    else if (this.overview) {
+      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+      this.currentTime = Date.now();
     }
     else {
       this.currentTime = Date.now() - this.offsetTime;
@@ -1041,6 +1065,10 @@ CanvasManager.prototype = {
         this.currentTime = this.frozenTime - this.offsetTime -
                            this.scrollDistance * 5 * this.scale;
       }
+    }
+    else if (this.overview) {
+      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+      this.currentTime = Date.now();
     }
     else {
       this.currentTime = date - this.offsetTime;
