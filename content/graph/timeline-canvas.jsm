@@ -741,6 +741,14 @@ CanvasManager.prototype = {
     this.unfreezeCanvas();
     this.overview = true;
     this.scale = (Date.now() - this.startTime)/(0.8*this.width);
+    if (this.waitForDotData) {
+      this.waitForDotData = false;
+      this.renderDots();
+    }
+    if (this.waitForLineData) {
+      this.waitForLineData = false;
+      this.renderLines();
+    }
   },
 
   moveToLive: function CM_moveToLive()

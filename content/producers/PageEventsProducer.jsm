@@ -384,7 +384,7 @@ let PageEventsProducer =
             break;
 
           case "KeyboardEvent":
-            eventDetail.keyCode = aEvent.keyCode;
+            eventDetail.charCode = aEvent.charCode || aEvent.keyCode;
             eventDetail.shiftKey = aEvent.shiftKey;
             eventDetail.altKey = aEvent.altKey;
             eventDetail.metaKey = aEvent.metaKey;

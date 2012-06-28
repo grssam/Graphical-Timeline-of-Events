@@ -755,11 +755,12 @@ TimelineView.prototype = {
       case "PageEventsProducer":
         if (aData.groupID == "MouseEvent") {
           label1.setAttribute("value", aData.name + " at (" +
-                                       aData.details.screenX + "," +
-                                       aData.details.screenY + ")");
+                                       aData.details.detail.screenX + "," +
+                                       aData.details.detail.screenY + ")");
         }
         else if (aData.groupID == "KeyboardEvent") {
-          label1.setAttribute("value", aData.name + ", Key " + aData.details.keyCode);
+          label1.setAttribute("value", aData.name + ", Key " +
+                              String.fromCharCode(aData.details.detail.charCode));
         }
         else {
           label1.setAttribute("value", aData.name + " at " + dateString)
@@ -778,6 +779,11 @@ TimelineView.prototype = {
       case "MemoryProducer":
         label1.setAttribute("value", aData.name + " at " + dateString);
         feedItem.appendChild(label1);
+        if (aData.name == "Garbage Collection") {
+          label2.setAttribute("value", "Total Slices: " + aData.details.total_slices +
+                                      ", Total Time: " + aData.details.total_time + "ms");
+          feedItem.appendChild(label2);
+        }
         break;
 
       default:
