@@ -544,3 +544,12 @@
   bottom: 25px;
   height: -moz-calc(100% - 26px);
 }
+
+/**
+ * Detail Box
+ */
+#timeline-detailbox {
+  opacity: 0px;
+  -moz-transition-property: left, top, width, height, opacity;
+  -moz-transition-duration: 0.25s;
+}

@@ -273,16 +273,84 @@ CanvasManager.prototype = {
   /**
    * Gets the corresponding time for the pixels in x direction.
    *
-   * @param number aPixel
+   * @param number aXPixel
    *        Number of pixels from start of timeline view.
    */
-  getTimeForPixel: function CM_getTimeForPixel(aPixel)
+  getTimeForXPixels: function CM_getTimeForXPixels(aXPixel)
   {
     if (this.timeFrozen) {
-      return (this.frozenTime - this.offsetTime + (aPixel - 0.8*this.width)*this.scale);
+      return (this.frozenTime - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
     }
     else {
-      return (Date.now() - this.offsetTime + (aPixel - 0.8*this.width)*this.scale);
+      return (Date.now() - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
+    }
+  },
+
+  /**
+   * Gets the corresponding groups for the pixels in y direction.
+   *
+   * @param number aYPixel
+   *        Number of pixels from top of timeline view.
+   */
+  getGroupsForYPixels: function CM_getGroupsForYPixels(aYPixel)
+  {
+    let matchedGroups = [];
+    for (groupId in this.groupedData) {
+      if (Math.abs(this.groupedData[groupId].y - this.offsetTop - aYPixel) < 7) {
+        matchedGroups.push(groupId);
+      }
+    }
+    return matchedGroups;
+  },
+
+  /**
+   * Handles mouse hover at (x, y) on the timeline view.
+   */
+  mouseHoverAt: function CM_mouseHoverAt(X,Y)
+  {
+    if (this.timeFrozen) {
+      let groupIds = this.getGroupsForYPixels(Y);
+      if (!groupIds) {
+        this.hideDetailedData();
+        return;
+      }
+      let time = this.getTimeForXPixels(X);
+      if (groupIds.length == 1) {
+        let group = this.groupedData[groupIds[0]];
+        // Continuous event type
+        if (group.timestamps[0].length == null &&
+            group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
+            time >= Math.max(this.firstVisibleTime, group.timestamps[0] - 10) &&
+            time <= (group.active? this.lastVisibleTime:
+                                   group.timestamps[group.timestamps.length - 1] + 10)) {
+          this.displayDetailedData(group.dataIds, X, Y);
+        }
+        // Point event type
+        else if (group.timestamps[0].length == null &&
+                 group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT) {
+          for (let i = 0; i < group.timestamps.length; i++) {
+            if (Math.abs(group.timestamps[i] - time) < 4) {
+              this.displayDetailedData([group.dataIds[i]], X, Y);
+              break;
+            }
+          }
+        }
+        // Repeating event type
+        else {
+          let timestamps = group.timestamps;
+          for (let i = 0; i < timestamps.length; i++) {
+            if (time >= Math.max(this.firstVisibleTime, timestamps[i][0]) &&
+                time <= Math.min(timestamps[i][timestamps[i].length - 1],
+                                 this.lastVisibleTime)) {
+              this.displayDetailedData([group.dataIds[i]], X, Y);
+              break;
+            }
+          }
+        }
+      }
+      else {
+        this.hideDetailedData();
+      }
     }
   },
 
@@ -336,6 +404,7 @@ CanvasManager.prototype = {
           producerId: aData.producer,
           active: true,
           timestamps: [aData.time],
+          dataIds: [aData.id],
         };
         this.id++;
         if (this.waitForDotData) {
@@ -350,6 +419,7 @@ CanvasManager.prototype = {
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
         this.groupedData[groupId].timestamps.push(aData.time);
+        this.groupedData[groupId].dataIds.push(aData.id);
         this.id++;
         if (this.waitForDotData) {
           this.waitForDotData = false;
@@ -359,6 +429,7 @@ CanvasManager.prototype = {
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
         this.groupedData[groupId].timestamps.push(aData.time);
+        this.groupedData[groupId].dataIds.push(aData.id);
         this.groupedData[groupId].active = false;
         this.id++;
         if (this.waitForDotData) {
@@ -381,11 +452,13 @@ CanvasManager.prototype = {
             producerId: aData.producer,
             active: true,
             timestamps: [[aData.time]],
+            dataIds: [aData.id],
           };
           this.id++;
         }
         else {
           this.groupedData[groupId].timestamps.push([aData.time]);
+          this.groupedData[groupId].dataIds.push(aData.id);
         }
         if (this.waitForDotData) {
           this.waitForDotData = false;
@@ -433,10 +506,12 @@ CanvasManager.prototype = {
             producerId: aData.producer,
             active: false,
             timestamps: [aData.time],
+            dataIds: [aData.id],
           };
         }
         else {
           this.groupedData[groupId].timestamps.push(aData.time);
+          this.groupedData[groupId].dataIds.push(aData.id);
         }
         this.id++;
         if (this.waitForDotData) {
@@ -806,15 +881,15 @@ CanvasManager.prototype = {
     this.scrolling = false;
   },
 
-  startTimeWindow: function CM_startTimeWindow(left)
+  startTimeWindowAt: function CM_startTimeWindowAt(left)
   {
-    this.timeWindowLeft = this.getTimeForPixel(left);
+    this.timeWindowLeft = this.getTimeForXPixels(left);
     this.leftWindowLine = left;
   },
 
-  stopTimeWindow: function CM_stopTimeWindow(right)
+  stopTimeWindowAt: function CM_stopTimeWindowAt(right)
   {
-    this.timeWindowRight = this.getTimeForPixel(right);
+    this.timeWindowRight = this.getTimeForXPixels(right);
     if (right - this.leftWindowLine > 3 ||
         this.timeWindowRight - this.timeWindowLeft > 200) {
       this.freezeCanvas();
@@ -829,6 +904,21 @@ CanvasManager.prototype = {
     this.leftWindowLine = this.timeWindowLeft = this.timeWindowRight = null;
   },
 
+  displayDetailedData: function CM_displayDetailedData(aDataIds, aLeft, aTop)
+  {
+    this.doc.getElementById("timeline-detailbox").style.opacity = 1;
+    this.doc.getElementById("timeline-detailbox").style.left = (aLeft + 10) + "px";
+    this.doc.getElementById("timeline-detailbox").style.top = (aTop + 10) + "px";
+    this.doc.getElementById("timeline-detailbox").style.height = "100px";
+    this.doc.getElementById("timeline-detailbox").style.weight = "100px";
+    this.doc.getElementById("timeline-detailbox").innerHTML = JSON.stringify(aDataIds);
+  },
+
+  hideDetailedData: function CM_hideDetailedData()
+  {
+    this.doc.getElementById("timeline-detailbox").style.opacity = 0;
+  },
+
   /**
    * Draws a dot to represnt an event at the x,y.
    */
@@ -840,7 +930,7 @@ CanvasManager.prototype = {
     }
     if (this.dirtyDots.length > 0) {
       let {lastX,lastY,lastId} = this.dirtyDots[this.dirtyDots.length - 1];
-      if (lastId == id && lasyY == y && Math.abs(x - lastX) < 4) {
+      if (lastId == id && lastY == (y - this.offsetTop) && Math.abs(x - lastX) < 3) {
         return;
       }
     }
@@ -899,7 +989,7 @@ CanvasManager.prototype = {
     this.ctxR.strokeStyle = "rgb(3,101,151)";
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
-    this.ctxR.lineWidth = 1;
+    this.ctxR.lineWidth = 0.5;
     if (this.scale > 50) {
       for (let i = -((this.firstVisibleTime - this.startTime)%50000 + 50000)/this.scale,
                j = 0;

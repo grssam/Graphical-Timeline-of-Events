@@ -100,6 +100,7 @@ function TimelineView(aChromeWindow) {
   this.addGroupBox = this.addGroupBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleTickerClick = this.handleTickerClick.bind(this);
+  this.handleMousemove = this.handleMousemove.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.handleTimeWindow = this.handleTimeWindow.bind(this);
@@ -147,6 +148,7 @@ TimelineView.prototype = {
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
+    this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
@@ -694,6 +696,14 @@ TimelineView.prototype = {
     }
   },
 
+  handleMousemove: function TV_handleMousemove(aEvent)
+  {
+    if (this.canvasStarted) {
+      this._canvas.mouseHoverAt(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width),
+                                aEvent.clientY - 32);
+    }
+  },
+
   handleTickerClick: function TV_handleTickerClick(aEvent)
   {
     let group = aEvent.originalTarget;
@@ -867,7 +877,7 @@ TimelineView.prototype = {
     this.$("canvas-container").addEventListener("mousemove", this._onWindowSelect, true);
     this._frameDoc.addEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.addEventListener("click", this._onWindowEnd, true);
-    this._canvas.startTimeWindow(left);
+    this._canvas.startTimeWindowAt(left);
   },
 
   _onWindowSelect: function TV__onWindowSelect(aEvent)
@@ -882,7 +892,12 @@ TimelineView.prototype = {
     this.$("canvas-container").removeEventListener("mousemove", this._onWindowSelect, true);
     this._frameDoc.removeEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
-    this._canvas.stopTimeWindow(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width));
+    this._canvas.stopTimeWindowAt(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width));
+    if (!this._canvas.overview) {
+      this._frameDoc.defaultView.setInterval(function() {
+        this.moveTickerToTime(this._canvas.lastVisibleTime);
+      }.bind(this), 50);
+    }
     try {
       this.timeWindow.removeAttribute("selecting");
     } catch (ex) {}
