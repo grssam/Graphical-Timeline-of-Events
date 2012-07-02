@@ -303,6 +303,39 @@ CanvasManager.prototype = {
     return matchedGroups;
   },
 
+  getGroupForTime: function CM_getGroupForTime(aGroupId, aTime)
+  {
+    let group = this.groupedData[aGroupId];
+    if (group.timestamps[0].length == null &&
+        group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
+        aTime >= Math.max(this.firstVisibleTime, group.timestamps[0] - 10) &&
+        aTime <= (group.active? this.lastVisibleTime:
+                                group.timestamps[group.timestamps.length - 1] + 10)) {
+      return group.dataIds;
+    }
+    // Point event type
+    else if (group.timestamps[0].length == null &&
+             group.type == NORMALIZED_EVENT_TYPE.POINT_EVENT) {
+      for (let i = 0; i < group.timestamps.length; i++) {
+        if (Math.abs(group.timestamps[i] - aTime) < 4) {
+          return [group.dataIds[i]];
+        }
+      }
+    }
+    // Repeating event type
+    else {
+      let timestamps = group.timestamps;
+      for (let i = 0; i < timestamps.length; i++) {
+        if (aTime >= Math.max(this.firstVisibleTime, timestamps[i][0]) &&
+            aTime <= Math.min(timestamps[i][timestamps[i].length - 1],
+                              this.lastVisibleTime)) {
+          return [group.dataIds[i]];
+        }
+      }
+    }
+    return null;
+  },
+
   /**
    * Handles mouse hover at (x, y) on the timeline view.
    */
@@ -316,42 +349,25 @@ CanvasManager.prototype = {
       }
       let time = this.getTimeForXPixels(X);
       if (groupIds.length == 1) {
-        let group = this.groupedData[groupIds[0]];
         // Continuous event type
-        if (group.timestamps[0].length == null &&
-            group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
-            time >= Math.max(this.firstVisibleTime, group.timestamps[0] - 10) &&
-            time <= (group.active? this.lastVisibleTime:
-                                   group.timestamps[group.timestamps.length - 1] + 10)) {
-          this.displayDetailedData(group.dataIds, X, Y);
-        }
-        // Point event type
-        else if (group.timestamps[0].length == null &&
-                 group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT) {
-          for (let i = 0; i < group.timestamps.length; i++) {
-            if (Math.abs(group.timestamps[i] - time) < 4) {
-              this.displayDetailedData([group.dataIds[i]], X, Y);
-              break;
-            }
-          }
-        }
-        // Repeating event type
-        else {
-          let timestamps = group.timestamps;
-          for (let i = 0; i < timestamps.length; i++) {
-            if (time >= Math.max(this.firstVisibleTime, timestamps[i][0]) &&
-                time <= Math.min(timestamps[i][timestamps[i].length - 1],
-                                 this.lastVisibleTime)) {
-              this.displayDetailedData([group.dataIds[i]], X, Y);
-              break;
-            }
-          }
+        let matchingGroupIds = this.getGroupForTime(groupIds[0], time);
+        if (matchingGroupIds) {
+          this.displayDetailedData(matchingGroupIds, X, Y);
+          return;
         }
       }
       else {
-        this.hideDetailedData();
+        for (let groupId of groupIds) {
+          let matchingGroupIds = this.getGroupForTime(groupId, time);
+          if (matchingGroupIds) {
+            this.displayDetailedData(matchingGroupIds, X, Y);
+            return;
+          }
+        }
       }
     }
+    // Hide the detailed view if nothing else matches.
+    this.hideDetailedData();
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
