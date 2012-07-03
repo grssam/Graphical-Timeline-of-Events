@@ -169,15 +169,6 @@
   -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 
-#play {
-  list-style-image: url("images/timeline-play.png");
-  -moz-image-region: rect(0px, 16px, 16px, 0px);
-}
-
-#play[checked=true] {
-  -moz-image-region: rect(0px, 32px, 16px, 16px);
-}
-
 #timeline-controls > toolbarbutton {
   border-width: 0;
   -moz-border-end-width: 1px;

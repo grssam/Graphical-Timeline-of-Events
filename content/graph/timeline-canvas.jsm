@@ -543,9 +543,6 @@ CanvasManager.prototype = {
   {
     this.frozenTime = this.currentTime;
     this.timeFrozen = true;
-    try {
-      this.doc.getElementById("play").removeAttribute("checked");
-    } catch(e) {}
     if (this.waitForDotData) {
       this.waitForDotData = false;
       this.renderDots();
@@ -582,9 +579,9 @@ CanvasManager.prototype = {
     }
     else if (!this.timeFrozen &&
              ((this.offsetTime >= 0 &&
-               this.offsetTime < this.startingoffsetTime/30) ||
+               this.offsetTime < this.startingoffsetTime/20) ||
               (this.offsetTime < 0 &&
-               this.offsetTime > this.startingoffsetTime/30))) {
+               this.offsetTime > this.startingoffsetTime/20))) {
       this.offsetTime = 0;
       this.startingoffsetTime = null;
       this.movingView = false;
@@ -608,7 +605,7 @@ CanvasManager.prototype = {
         this.unfreezeCanvas();
         this.startingoffsetTime = this.offsetTime;
       }
-      this.offsetTime -= this.startingoffsetTime/30;
+      this.offsetTime -= this.startingoffsetTime/20;
       this.doc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
       if (this.waitForLineData) {
         this.waitForLineData = false;

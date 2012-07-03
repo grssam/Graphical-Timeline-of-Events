@@ -126,7 +126,6 @@ TimelineView.prototype = {
     this._frameDoc = this._frame.contentDocument;
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
-    this.playButton = this.$("play");
     this.overviewButton = this.$("overview");
     this.infoBox = this.$("timeline-infobox");
     this.producersButton = this.$("producers");
@@ -141,7 +140,6 @@ TimelineView.prototype = {
     this.closeButton.addEventListener("command", GraphUI.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
-    this.playButton.addEventListener("command", this.toggleMovement, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
@@ -371,10 +369,10 @@ TimelineView.prototype = {
   {
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
+      this.overviewButton.setAttribute("checked", true);
       this.freezeTicker();
     }
     else {
-      this.playButton.setAttribute("checked", true);
       this._canvas.moveToCurrentTime();
       this.unfreezeTicker();
     }
@@ -468,7 +466,6 @@ TimelineView.prototype = {
       }
       this.cleanUI();
       GraphUI.startListening(message);
-      this.playButton.setAttribute("checked", true);
       this.overviewButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
@@ -493,7 +490,6 @@ TimelineView.prototype = {
       this._canvas.stopRendering();
       this._canvas.unfreezeCanvas();
       try {
-        this.playButton.removeAttribute("checked");
         this.overviewButton.removeAttribute("checked");
       } catch(e) {}
     }
@@ -506,7 +502,9 @@ TimelineView.prototype = {
       return;
     }
     if (this.overviewButton.checked) {
-      this.playButton.setAttribute("checked", true);
+      if (this._canvas.timeFrozen) {
+        this.toggleMovement();
+      }
       this._canvas.moveToOverview();
     }
     else {
@@ -822,6 +820,7 @@ TimelineView.prototype = {
     this.$("timeline-ruler").removeEventListener("mousedown", this._onDragStart, true);
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
+      this.overviewButton.setAttribute("checked", true);
     }
     this._canvas.startScrolling();
     this.$("canvas-container").addEventListener("mousemove", this._onDrag, true);
@@ -831,10 +830,6 @@ TimelineView.prototype = {
 
   _onDrag: function TV__onDrag(aEvent)
   {
-    try {
-      this.playButton.removeAttribute("checked");
-    } catch (ex) {}
-
     this._canvas.scrollDistance = this.scrollStartX - aEvent.clientX;
   },
 
