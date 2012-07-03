@@ -487,8 +487,6 @@ TimelineView.prototype = {
     }
     else {
       GraphUI.stopListening({timelineUIId: GraphUI.id});
-      this._canvas.stopRendering();
-      this._canvas.unfreezeCanvas();
       try {
         this.overviewButton.removeAttribute("checked");
       } catch(e) {}

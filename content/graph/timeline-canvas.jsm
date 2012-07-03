@@ -850,23 +850,21 @@ CanvasManager.prototype = {
 
   startRendering: function CM_startRendering()
   {
-    if (!this.isRendering) {
-      this.ctxL.clearRect(0,0,this.width,this.height);
-      this.ctxD.clearRect(0,0,this.width,this.height);
-      this.ctxR.clearRect(0,0,this.width,25);
-      this.groupedData = {};
-      this.globalTiming = [];
-      this.globalGroup = [];
-      this.dirtyDots = [];
-      this.dirtyZone = [];
-      this.waitForDotData = this.waitForLineData = false;
-      this.id = 0;
-      this.isRendering = true;
-      this.renderDots();
-      this.renderLines();
-      this.renderRuler();
-      this.startTime = Date.now();
-    }
+    this.ctxL.clearRect(0,0,this.width,this.height);
+    this.ctxD.clearRect(0,0,this.width,this.height);
+    this.ctxR.clearRect(0,0,this.width,25);
+    this.groupedData = {};
+    this.globalTiming = [];
+    this.globalGroup = [];
+    this.dirtyDots = [];
+    this.dirtyZone = [];
+    this.waitForDotData = this.waitForLineData = false;
+    this.id = 0;
+    this.isRendering = true;
+    this.renderDots();
+    this.renderLines();
+    this.renderRuler();
+    this.startTime = Date.now();
   },
 
   stopRendering: function CM_stopRendering()
