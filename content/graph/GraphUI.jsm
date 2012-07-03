@@ -39,17 +39,6 @@ const DataSinkEventMessageType = {
                 // reflected back to the UI.
 };
 
-const NORMALIZED_EVENT_TYPE = {
-  POINT_EVENT: 0, // An instantaneous event like a mouse click.
-  CONTINUOUS_EVENT_START: 1, // Start of a process like reloading of a page.
-  CONTINUOUS_EVENT_MID: 2, // End of a earlier started process.
-  CONTINUOUS_EVENT_END: 3, // End of a earlier started process.
-  REPEATING_EVENT_START: 4, // Start of a repeating event like a timer.
-  REPEATING_EVENT_MID: 5, // An entity of a repeating event which is neither
-                          // start nor end.
-  REPEATING_EVENT_STOP: 6, // End of a repeating event.
-};
-
 const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
 };

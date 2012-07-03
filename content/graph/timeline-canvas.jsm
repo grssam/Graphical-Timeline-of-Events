@@ -6,7 +6,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
 
-var EXPORTED_SYMBOLS = ["CanvasManager"];
+var EXPORTED_SYMBOLS = ["CanvasManager", "NORMALIZED_EVENT_TYPE"];
 
 const NORMALIZED_EVENT_TYPE = {
   POINT_EVENT: 0, // An instantaneous event like a mouse click.
