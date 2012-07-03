@@ -878,7 +878,7 @@ TimelineView.prototype = {
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
     this._canvas.stopTimeWindowAt(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width));
     if (!this._canvas.overview) {
-      this._frameDoc.defaultView.setInterval(function() {
+      this._frameDoc.defaultView.setTimeout(function() {
         this.moveTickerToTime(this._canvas.lastVisibleTime);
       }.bind(this), 50);
     }
