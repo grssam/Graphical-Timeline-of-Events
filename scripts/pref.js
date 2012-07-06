@@ -38,8 +38,6 @@ function pref(key, val) {
 // Set custom values for this add-on
 pref.root = "devtools.timeline.";
 pref.defaults = {
-  buttonParentID: "addon-bar",
-  buttonNextSiblingID: "",
   height: "300px",
   activeProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
   activeFeatures: JSON.stringify(["PageEventsProducer:LoadEvents",

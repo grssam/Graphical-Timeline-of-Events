@@ -99,7 +99,6 @@ function CanvasManager(aDoc) {
   this.searchIndexForTime = this.searchIndexForTime.bind(this);
   this.stopScrolling = this.stopScrolling.bind(this);
 
-  this.isRendering = true;
   this.timeFrozen = false;
   this.overview = true;
   this.renderDots();
@@ -860,7 +859,7 @@ CanvasManager.prototype = {
     this.dirtyZone = [];
     this.waitForDotData = this.waitForLineData = false;
     this.id = 0;
-    this.isRendering = true;
+    this.stopTime = null;
     this.renderDots();
     this.renderLines();
     this.renderRuler();
@@ -869,7 +868,7 @@ CanvasManager.prototype = {
 
   stopRendering: function CM_stopRendering()
   {
-    this.isRendering = false;
+    this.stopTime = Date.now();
   },
 
   startScrolling: function CM_startScrolling()
@@ -975,9 +974,6 @@ CanvasManager.prototype = {
    */
   renderRuler: function CM_renderRuler()
   {
-    if (!this.isRendering) {
-      return;
-    }
     this.ctxR.clearRect(0,0,this.width,25);
     // getting the current time, which will be at the center of the canvas.
     if (this.timeFrozen) {
@@ -1099,7 +1095,7 @@ CanvasManager.prototype = {
    */
   renderDots: function CM_renderDots()
   {
-    if (!this.isRendering || this.waitForDotData) {
+    if (this.waitForDotData) {
       return;
     }
     this.dotsDrawn = 0;
@@ -1131,11 +1127,12 @@ CanvasManager.prototype = {
       }
     }
     else if (this.overview) {
-      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
-      this.currentTime = Date.now();
+      let endTime = (this.stopTime? this.stopTime: Date.now());
+      this.scale = (endTime - this.startTime)/(0.8*this.width);
+      this.currentTime = endTime;
     }
     else {
-      this.currentTime = Date.now() - this.offsetTime;
+      this.currentTime = (this.stopTime? this.stopTime: Date.now()) - this.offsetTime;
     }
     this.lastVisibleTime = this.currentTime + 0.2*this.width*this.scale;
     this.firstVisibleTime = this.lastVisibleTime - this.width*this.scale;
@@ -1166,7 +1163,7 @@ CanvasManager.prototype = {
    */
   renderLines: function CM_renderLines()
   {
-    if (!this.isRendering || this.waitForLineData) {
+    if (this.waitForLineData) {
       return;
     }
     this.linesDrawn = 0;
@@ -1178,7 +1175,7 @@ CanvasManager.prototype = {
     }
     //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
     // getting the current time, which will be at the center of the canvas.
-    let date = Date.now();
+    let date = (this.stopTime? this.stopTime: Date.now());
     if (this.timeFrozen) {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
@@ -1189,8 +1186,8 @@ CanvasManager.prototype = {
       }
     }
     else if (this.overview) {
-      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
-      this.currentTime = Date.now();
+      this.scale = (date - this.startTime)/(0.8*this.width);
+      this.currentTime = date;
     }
     else {
       this.currentTime = date - this.offsetTime;

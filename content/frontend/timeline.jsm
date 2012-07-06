@@ -5,9 +5,9 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("chrome://graphical-timeline/content/graph/timeline-canvas.jsm");
+Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
 
-var EXPORTED_SYMBOLS = ["GraphUI"];
+var EXPORTED_SYMBOLS = ["Timeline"];
 
 /**
  * List of message types that the UI can send.
@@ -111,7 +111,7 @@ function TimelineView(aChromeWindow) {
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
-  this._frame.setAttribute("src", "chrome://graphical-timeline/content/graph/timeline.xul");
+  this._frame.setAttribute("src", "chrome://graphical-timeline/content/frontend/timeline.xul");
 }
 
 TimelineView.prototype = {
@@ -137,7 +137,7 @@ TimelineView.prototype = {
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
-    this.closeButton.addEventListener("command", GraphUI.destroy, true);
+    this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
@@ -447,7 +447,7 @@ TimelineView.prototype = {
     if (!this.recording) {
       let message = {
         enabledProducers: {},
-        timelineUIId: GraphUI.id,
+        timelineUIId: Timeline.id,
       };
       let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
       for (let i = 0; i < producerBoxes.length; i++) {
@@ -465,7 +465,7 @@ TimelineView.prototype = {
         }
       }
       this.cleanUI();
-      GraphUI.startListening(message);
+      Timeline.startListening(message);
       this.overviewButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
@@ -486,7 +486,8 @@ TimelineView.prototype = {
       }
     }
     else {
-      GraphUI.stopListening({timelineUIId: GraphUI.id});
+      this._canvas.stopRendering();
+      Timeline.stopListening({timelineUIId: Timeline.id});
       try {
         this.overviewButton.removeAttribute("checked");
       } catch(e) {}
@@ -525,10 +526,10 @@ TimelineView.prototype = {
     let linkedProducerId = target.parentNode.getAttribute("producerId");
     let feature = target.getAttribute("label");
     if (target.hasAttribute("checked")) {
-      GraphUI.enableFeatures(linkedProducerId, [feature]);
+      Timeline.enableFeatures(linkedProducerId, [feature]);
     }
     else {
-      GraphUI.disableFeatures(linkedProducerId, [feature]);
+      Timeline.disableFeatures(linkedProducerId, [feature]);
     }
   },
 
@@ -561,10 +562,10 @@ TimelineView.prototype = {
         }
         checkbox = checkbox.nextSibling;
       }
-      GraphUI.startProducer(producerId, features);
+      Timeline.startProducer(producerId, features);
     }
     else {
-      GraphUI.stopProducer(producerId);
+      Timeline.stopProducer(producerId);
     }
   },
 
@@ -965,7 +966,7 @@ TimelineView.prototype = {
 /**
  * The Timeline User Interface
  */
-let GraphUI = {
+let Timeline = {
 
   _view: null,
   _currentId: 1,
@@ -988,53 +989,53 @@ let GraphUI = {
    * Prepares the UI and sends ping to the Data Sink.
    */
   init: function GUI_init(aCallback) {
-    GraphUI.callback = aCallback;
-    GraphUI._window = Cc["@mozilla.org/appshell/window-mediator;1"]
+    Timeline.callback = aCallback;
+    Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
                         .getMostRecentWindow("navigator:browser");
-    //GraphUI._console = Cc["@mozilla.org/consoleservice;1"]
+    //Timeline._console = Cc["@mozilla.org/consoleservice;1"]
     //                     .getService(Ci.nsIConsoleService);
-    GraphUI.addRemoteListener(GraphUI._window);
-    if (!GraphUI.id) {
-      GraphUI.id = "timeline-ui-" + Date.now();
+    Timeline.addRemoteListener(Timeline._window);
+    if (!Timeline.id) {
+      Timeline.id = "timeline-ui-" + Date.now();
     }
-    GraphUI.pingSent = true;
-    GraphUI.sendMessage(UIEventMessageType.PING_HELLO,
-                        {timelineUIId: GraphUI.id});
+    Timeline.pingSent = true;
+    Timeline.sendMessage(UIEventMessageType.PING_HELLO,
+                        {timelineUIId: Timeline.id});
   },
 
   /**
    * Builds the UI in the Tab.
    */
   buildUI: function GUI_buildUI() {
-    if (!GraphUI._view) {
-      GraphUI._view = new TimelineView(GraphUI._window);
+    if (!Timeline._view) {
+      Timeline._view = new TimelineView(Timeline._window);
     }
-    GraphUI._view.createProducersPane(GraphUI.producerInfoList);
-    GraphUI.UIOpened = true;
+    Timeline._view.createProducersPane(Timeline.producerInfoList);
+    Timeline.UIOpened = true;
   },
 
   /**
    * Starts the Data Sink and all the producers.
    */
   startListening: function GUI_startListening(aMessage) {
-    //GraphUI.timer = GraphUI._window.setInterval(GraphUI.readData, 25);
-    GraphUI.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
-    GraphUI.listening = true;
-    GraphUI.shouldDeleteDatabaseItself = false;
+    //Timeline.timer = Timeline._window.setInterval(Timeline.readData, 25);
+    Timeline.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
+    Timeline.listening = true;
+    Timeline.shouldDeleteDatabaseItself = false;
   },
 
   /**
    * Stops the Data Sink and all the producers.
    */
   stopListening: function GUI_stopListening(aMessage) {
-    if (!GraphUI.listening) {
+    if (!Timeline.listening) {
       return;
     }
-    //GraphUI._window.clearInterval(GraphUI.timer);
-    //GraphUI.timer = null;
-    GraphUI.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
-    GraphUI.listening = false;
+    //Timeline._window.clearInterval(Timeline.timer);
+    //Timeline.timer = null;
+    Timeline.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
+    Timeline.listening = false;
   },
 
   /**
@@ -1045,7 +1046,7 @@ let GraphUI = {
    *        or the error on failure.
    */
   handlePingReply: function GUI_handlePingReply(aMessage) {
-    if (!aMessage || aMessage.timelineUIId != GraphUI.id || !GraphUI.pingSent) {
+    if (!aMessage || aMessage.timelineUIId != Timeline.id || !Timeline.pingSent) {
       return;
     }
     if (aMessage.error) {
@@ -1053,19 +1054,19 @@ let GraphUI = {
 
         case ERRORS.ID_TAKEN:
           // The id was already taken, generate a new id and send the ping again.
-          GraphUI.id = "timeline-ui-" + Date.now();
-          GraphUI.sendMessage(UIEventMessageType.PING_HELLO,
-                              {timelineUIId: GraphUI.id});
+          Timeline.id = "timeline-ui-" + Date.now();
+          Timeline.sendMessage(UIEventMessageType.PING_HELLO,
+                              {timelineUIId: Timeline.id});
           break;
       }
     }
     else {
-      GraphUI.databaseName = aMessage.databaseName;
-      GraphUI.producerInfoList = aMessage.producerInfoList;
+      Timeline.databaseName = aMessage.databaseName;
+      Timeline.producerInfoList = aMessage.producerInfoList;
       // Importing the Data Store and making a database
       //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-      //GraphUI.dataStore = new DataStore(GraphUI.databaseName);
-      GraphUI.buildUI();
+      //Timeline.dataStore = new DataStore(Timeline.databaseName);
+      Timeline.buildUI();
     }
   },
 
@@ -1080,11 +1081,11 @@ let GraphUI = {
   enableFeatures: function GUI_enableFeatures(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: GraphUI.id,
+      timelineUIId: Timeline.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    GraphUI.sendMessage(UIEventMessageType.ENABLE_FEATURES, message);
+    Timeline.sendMessage(UIEventMessageType.ENABLE_FEATURES, message);
   },
 
   /**
@@ -1098,11 +1099,11 @@ let GraphUI = {
   disableFeatures: function GUI_disableFeatures(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: GraphUI.id,
+      timelineUIId: Timeline.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    GraphUI.sendMessage(UIEventMessageType.DISABLE_FEATURES, message);
+    Timeline.sendMessage(UIEventMessageType.DISABLE_FEATURES, message);
   },
 
   /**
@@ -1116,11 +1117,11 @@ let GraphUI = {
   startProducer: function GUI_startProducer(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: GraphUI.id,
+      timelineUIId: Timeline.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    GraphUI.sendMessage(UIEventMessageType.START_PRODUCER, message);
+    Timeline.sendMessage(UIEventMessageType.START_PRODUCER, message);
   },
 
   /**
@@ -1132,19 +1133,19 @@ let GraphUI = {
   stopProducer: function GUI_stopProducer(aProducerId)
   {
     let message = {
-      timelineUIId: GraphUI.id,
+      timelineUIId: Timeline.id,
       producerId: aProducerId,
     };
-    GraphUI.sendMessage(UIEventMessageType.STOP_PRODUCER, message);
+    Timeline.sendMessage(UIEventMessageType.STOP_PRODUCER, message);
   },
 
   /**
    * Check for any pending data to read and sends a request to Data Store.
    */
   readData: function GUI_readData() {
-    if (GraphUI.newDataAvailable && !GraphUI.readingData) {
-      GraphUI.readingData = true;
-      //GraphUI.dataStore.getRangeById(GraphUI.processData, GraphUI._currentId);
+    if (Timeline.newDataAvailable && !Timeline.readingData) {
+      Timeline.readingData = true;
+      //Timeline.dataStore.getRangeById(Timeline.processData, Timeline._currentId);
     }
   },
 
@@ -1155,11 +1156,11 @@ let GraphUI = {
    *        Array of normalized data received from Data Store.
    */
   processData: function GUI_processData(aData) {
-    GraphUI.readingData = GraphUI.newDataAvailable = false;
-    GraphUI._currentId += aData.length;
+    Timeline.readingData = Timeline.newDataAvailable = false;
+    Timeline._currentId += aData.length;
     for (let i = 0; i < aData.length; i++) {
-      GraphUI._view.displayData(aData[i]);
-      // GraphUI._console
+      Timeline._view.displayData(aData[i]);
+      // Timeline._console
              // .logStringMessage("ID: " + aData[i].id +
                                // "; Producer: " + aData[i].producer +
                                // "; Name: " + aData[i].name +
@@ -1184,17 +1185,17 @@ let GraphUI = {
     switch(type) {
 
       case DataSinkEventMessageType.PING_BACK:
-        GraphUI.handlePingReply(message);
+        Timeline.handlePingReply(message);
         break;
 
       case DataSinkEventMessageType.NEW_DATA:
-        GraphUI.newDataAvailable = true;
-        GraphUI.processData([message]);
+        Timeline.newDataAvailable = true;
+        Timeline.processData([message]);
         break;
 
       case DataSinkEventMessageType.UPDATE_UI:
-        if (message.timelineUIId != GraphUI.id) {
-          GraphUI._view.updateUI(message);
+        if (message.timelineUIId != Timeline.id) {
+          Timeline._view.updateUI(message);
         }
         break;
     }
@@ -1209,7 +1210,7 @@ let GraphUI = {
    */
   addRemoteListener: function GUI_addRemoteListener(aChromeWindow) {
     aChromeWindow.addEventListener("GraphicalTimeline:DataSinkEvent",
-                                   GraphUI._remoteListener, true);
+                                   Timeline._remoteListener, true);
   },
 
   /**
@@ -1220,7 +1221,7 @@ let GraphUI = {
    */
   removeRemoteListener: function GUI_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListener("GraphicalTimeline:DataSinkEvent",
-                                      GraphUI._remoteListener, true);
+                                      Timeline._remoteListener, true);
   },
 
   /**
@@ -1240,37 +1241,37 @@ let GraphUI = {
                      },
                  };
     let customEvent =
-      new GraphUI._window.CustomEvent("GraphicalTimeline:UIEvent", detail)
-    GraphUI._window.dispatchEvent(customEvent);
+      new Timeline._window.CustomEvent("GraphicalTimeline:UIEvent", detail)
+    Timeline._window.dispatchEvent(customEvent);
   },
 
   /**
    * Stops the UI, Data Sink and Data Store.
    */
   destroy: function GUI_destroy() {
-    if (GraphUI.UIOpened == true) {
-      if (GraphUI.listening) {
-        //GraphUI._window.clearInterval(GraphUI.timer);
-        //GraphUI.timer = null;
+    if (Timeline.UIOpened == true) {
+      if (Timeline.listening) {
+        //Timeline._window.clearInterval(Timeline.timer);
+        //Timeline.timer = null;
       }
-      //GraphUI.dataStore.destroy(GraphUI.shouldDeleteDatabaseItself);
+      //Timeline.dataStore.destroy(Timeline.shouldDeleteDatabaseItself);
       try {
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       } catch (ex) {}
-      //DataStore = GraphUI.dataStore = null;
-      GraphUI.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
-                          {deleteDatabase: true, // true to delete the database
-                           timelineUIId: GraphUI.id, // to tell which UI is closing.
-                          });
-      GraphUI.shouldDeleteDatabaseItself = true;
-      GraphUI.pingSent = GraphUI.listening = false;
-      GraphUI.removeRemoteListener(GraphUI._window);
-      GraphUI._view.closeUI();
-      GraphUI._view = GraphUI.newDataAvailable = GraphUI.UIOpened =
-        GraphUI._currentId = GraphUI._window = null;
-      GraphUI.producerInfoList = null;
-      if (GraphUI.callback)
-        GraphUI.callback();
+      //DataStore = Timeline.dataStore = null;
+      Timeline.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
+                           {deleteDatabase: true, // true to delete the database
+                            timelineUIId: Timeline.id, // to tell which UI is closing.
+                           });
+      Timeline.shouldDeleteDatabaseItself = true;
+      Timeline.pingSent = Timeline.listening = false;
+      Timeline.removeRemoteListener(Timeline._window);
+      Timeline._view.closeUI();
+      Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
+        Timeline._currentId = Timeline._window = null;
+      Timeline.producerInfoList = null;
+      if (Timeline.callback)
+        Timeline.callback();
     }
   }
 };
