@@ -77,7 +77,6 @@ function TimelineView(aChromeWindow) {
   this._nbox.appendChild(this._frame);
   this._canvas = null;
 
-  this.createProducersPane = this.createProducersPane.bind(this);
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
   this.toggleOverview = this.toggleOverview.bind(this);
   this.toggleInfoBox = this.toggleInfoBox.bind(this);
@@ -86,7 +85,6 @@ function TimelineView(aChromeWindow) {
   this.toggleMovement = this.toggleMovement.bind(this);
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
-  this.addGroupBox = this.addGroupBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleTickerClick = this.handleTickerClick.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
@@ -96,11 +94,7 @@ function TimelineView(aChromeWindow) {
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
-  this.cleanUI = this.cleanUI.bind(this);
-  this.closeUI = this.closeUI.bind(this);
   this.$ = this.$.bind(this);
-  this._showProducersPane = this._showProducersPane.bind(this);
-  this._hideProducersPane = this._hideProducersPane.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
   this._onDrag = this._onDrag.bind(this);

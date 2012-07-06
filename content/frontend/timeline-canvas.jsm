@@ -83,21 +83,8 @@ function CanvasManager(aDoc) {
   this.renderDots = this.renderDots.bind(this);
   this.renderLines = this.renderLines.bind(this);
   this.renderRuler = this.renderRuler.bind(this);
-  this.pushData = this.pushData.bind(this);
-  this.drawDot = this.drawDot.bind(this);
-  this.drawLine = this.drawLine.bind(this);
-  this.hasGroup = this.hasGroup.bind(this);
-  this.getOffsetForGroup = this.getOffsetForGroup.bind(this);
-  this.updateGroupOffset = this.updateGroupOffset.bind(this);
-  this.stopRendering = this.stopRendering.bind(this);
-  this.startRendering = this.startRendering.bind(this);
-  this.freezeCanvas = this.freezeCanvas.bind(this);
-  this.unfreezeCanvas = this.unfreezeCanvas.bind(this);
   this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.moveToTime = this.moveToTime.bind(this);
-  this.moveGroupInView = this.moveGroupInView.bind(this);
-  this.searchIndexForTime = this.searchIndexForTime.bind(this);
-  this.stopScrolling = this.stopScrolling.bind(this);
 
   this.timeFrozen = false;
   this.overview = true;
@@ -542,6 +529,10 @@ CanvasManager.prototype = {
   {
     this.frozenTime = this.currentTime;
     this.timeFrozen = true;
+    this.overview = false;
+    try {
+      this.doc.getElementById("overview").removeAttribute("checked");
+    } catch (ex) {}
     if (this.waitForDotData) {
       this.waitForDotData = false;
       this.renderDots();
@@ -903,7 +894,6 @@ CanvasManager.prototype = {
     if (right - this.leftWindowLine > 3 ||
         this.timeWindowRight - this.timeWindowLeft > 200) {
       this.freezeCanvas();
-      this.overview = false;
       this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
       this.offsetTime = 0;
       this.frozenTime = this.timeWindowLeft + 0.8*this.width*this.scale;
