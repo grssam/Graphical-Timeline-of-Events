@@ -64,6 +64,7 @@ function CanvasManager(aDoc) {
 
   this.globalTiming = [];
   this.globalGroup = [];
+  this.activeGroups = [];
 
   // How many milli seconds per pixel.
   this.scale = 50;
@@ -264,7 +265,7 @@ CanvasManager.prototype = {
       return (this.frozenTime - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
     }
     else {
-      return (Date.now() - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
+      return (this.currentTime + (aXPixel - 0.8*this.width)*this.scale);
     }
   },
 
@@ -404,6 +405,7 @@ CanvasManager.prototype = {
           timestamps: [aData.time],
           dataIds: [aData.id],
         };
+        this.activeGroups.push(groupId);
         this.id++;
         this.waitForDotData = false;
         this.waitForLineData = false;
@@ -419,6 +421,7 @@ CanvasManager.prototype = {
         this.groupedData[groupId].timestamps.push(aData.time);
         this.groupedData[groupId].dataIds.push(aData.id);
         this.groupedData[groupId].active = false;
+        this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
         this.waitForDotData = false;
         this.waitForLineData = false;
         break;
@@ -441,6 +444,7 @@ CanvasManager.prototype = {
           this.groupedData[groupId].timestamps.push([aData.time]);
           this.groupedData[groupId].dataIds.push(aData.id);
         }
+        this.activeGroups.push(groupId);
         this.waitForDotData = false;
         this.waitForLineData = false;
         break;
@@ -457,6 +461,7 @@ CanvasManager.prototype = {
           this.groupedData[groupId].timestamps.length - 1
         ].push(aData.time);
         this.groupedData[groupId].active = false;
+        this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
         this.waitForDotData = false;
         this.waitForLineData = false;
         break;
@@ -755,6 +760,7 @@ CanvasManager.prototype = {
     this.ctxD.clearRect(0,0,this.width,this.height);
     this.ctxR.clearRect(0,0,this.width,25);
     this.groupedData = {};
+    this.activeGroups = [];
     this.globalTiming = [];
     this.globalGroup = [];
     this.dirtyDots = [];
@@ -863,7 +869,7 @@ CanvasManager.prototype = {
   },
 
   /**
-   * Renders the canvas lines and dots.
+   * Renders the canvas ruler, lines and dots.
    */
   render: function CM_render()
   {
@@ -879,8 +885,15 @@ CanvasManager.prototype = {
       }
     }
     else if (this.overview) {
-      this.scale = (date - this.startTime)/(0.8*this.width);
-      this.currentTime = date;
+      // Check if any continuous or repeating event is currently unfinished.
+      // If so, then draw full time width, else, draw to the max time of any event.
+      if (this.activeGroups.length == 0 && this.globalTiming.length > 0) {
+        this.currentTime = this.globalTiming[this.globalTiming.length - 1];
+      }
+      else {
+        this.currentTime = date;
+      }
+      this.scale = (this.currentTime - this.startTime)/(0.8*this.width);
     }
     else {
       this.currentTime = date - this.offsetTime;
@@ -966,7 +979,7 @@ CanvasManager.prototype = {
         }
       }
     }
-    else {
+    else if (this.scale > 0) {
       for (let i = -((this.firstVisibleTime - this.startTime)%10 + 10)/this.scale,
                j = 0;
            i < this.width;
@@ -996,7 +1009,8 @@ CanvasManager.prototype = {
       this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
                                    this.currentTime)/this.scale:(this.timeFrozen?
                                     (date - this.frozenTime + this.offsetTime)/this.scale
-                                   :this.offsetTime/this.scale)), this.width);
+                                   :(this.offsetTime + date - this.currentTime)/this.scale)),
+                                   this.width);
 
       let endx,x;
       for each (group in this.groupedData) {
