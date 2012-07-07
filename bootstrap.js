@@ -45,6 +45,10 @@ function addMenuItem(window) {
         Cu.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
         Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        try {
+          $(toolsMenuitemID).removeAttribute("checked");
+          $(appMenuitemID).removeAttribute("checked");
+        } catch (ex) {}
         global.DataSink = global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer = null;
       }.bind(global));
       $(toolsMenuitemID).setAttribute("checked", true);
@@ -52,8 +56,10 @@ function addMenuItem(window) {
     }
     else {
       Timeline.destroy();
-      $(toolsMenuitemID).removeAttribute("checked");
-      $(appMenuitemID).removeAttribute("checked");
+      try {
+        $(toolsMenuitemID).removeAttribute("checked");
+        $(appMenuitemID).removeAttribute("checked");
+      } catch (ex) {}
     }
   }
 
@@ -67,7 +73,7 @@ function addMenuItem(window) {
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
   let menuitem = window.document.createElementNS(XUL, "menuitem");
-  menuitem.setAttribute("id", appMenuitemID);
+  menuitem.setAttribute("id", toolsMenuitemID);
   menuitem.setAttribute("type", "checkbox");
   menuitem.setAttribute("label", "Graphical Timeline");
   menuitem.addEventListener("command", showHideUI);
