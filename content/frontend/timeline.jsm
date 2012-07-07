@@ -567,14 +567,8 @@ TimelineView.prototype = {
   {
     if (aEvent.target.scrollTop) {
       this._canvas.offsetTop = aEvent.target.scrollTop;
-      if (this._canvas.waitForLineData) {
-        this._canvas.waitForLineData = false;
-        this._canvas.renderLines();
-      }
-      if (this._canvas.waitForDotData) {
-        this._canvas.waitForDotData = false;
-        this._canvas.renderDots();
-      }
+      this._canvas.waitForLineData = false;
+      this._canvas.waitForDotData = false;
     }
   },
 
@@ -584,14 +578,8 @@ TimelineView.prototype = {
       aEvent.preventDefault();
       this.producersPane.scrollTop = Math.max(0, this._canvas.offsetTop + aEvent.detail);
       this._canvas.offsetTop = this.producersPane.scrollTop;
-      if (this._canvas.waitForLineData) {
-        this._canvas.waitForLineData = false;
-        this._canvas.renderLines();
-      }
-      if (this._canvas.waitForDotData) {
-        this._canvas.waitForDotData = false;
-        this._canvas.renderDots();
-      }
+      this._canvas.waitForLineData = false;
+      this._canvas.waitForDotData = false;
     }
   },
 
@@ -654,14 +642,8 @@ TimelineView.prototype = {
       this._frameDoc.defaultView.setTimeout(function() {
         this._canvas.offsetTop = this.producersPane.scrollTop;
         this._canvas.updateGroupOffset();
-        if (this._canvas.waitForLineData) {
-          this._canvas.waitForLineData = false;
-          this._canvas.renderLines();
-        }
-        if (this._canvas.waitForDotData) {
-          this._canvas.waitForDotData = false;
-          this._canvas.renderDots();
-        }
+        this._canvas.waitForLineData = false;
+        this._canvas.waitForDotData = false;
       }.bind(this), 500);
     }
   },

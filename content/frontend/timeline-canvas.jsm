@@ -80,17 +80,13 @@ function CanvasManager(aDoc) {
   this.ctxR = this.canvasRuler.getContext('2d');
 
   // Bind
-  this.renderDots = this.renderDots.bind(this);
-  this.renderLines = this.renderLines.bind(this);
-  this.renderRuler = this.renderRuler.bind(this);
+  this.render = this.render.bind(this);
   this.moveToCurrentTime = this.moveToCurrentTime.bind(this);
   this.moveToTime = this.moveToTime.bind(this);
 
   this.timeFrozen = false;
   this.overview = true;
-  this.renderDots();
-  this.renderLines();
-  this.renderRuler();
+  this.render();
 }
 
 CanvasManager.prototype = {
@@ -409,39 +405,22 @@ CanvasManager.prototype = {
           dataIds: [aData.id],
         };
         this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
-        if (this.waitForLineData) {
-          this.waitForLineData = false;
-          this.renderLines();
-        }
+        this.waitForDotData = false;
+        this.waitForLineData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
         this.groupedData[groupId].timestamps.push(aData.time);
         this.groupedData[groupId].dataIds.push(aData.id);
-        this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
+        this.waitForDotData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
         this.groupedData[groupId].timestamps.push(aData.time);
         this.groupedData[groupId].dataIds.push(aData.id);
         this.groupedData[groupId].active = false;
-        this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
-        if (this.waitForLineData) {
-          this.waitForLineData = false;
-          this.renderLines();
-        }
+        this.waitForDotData = false;
+        this.waitForLineData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
@@ -462,25 +441,15 @@ CanvasManager.prototype = {
           this.groupedData[groupId].timestamps.push([aData.time]);
           this.groupedData[groupId].dataIds.push(aData.id);
         }
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
-        if (this.waitForLineData) {
-          this.waitForLineData = false;
-          this.renderLines();
-        }
+        this.waitForDotData = false;
+        this.waitForLineData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
         this.groupedData[groupId].timestamps[
           this.groupedData[groupId].timestamps.length - 1
         ].push(aData.time);
-        this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
+        this.waitForDotData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
@@ -488,15 +457,8 @@ CanvasManager.prototype = {
           this.groupedData[groupId].timestamps.length - 1
         ].push(aData.time);
         this.groupedData[groupId].active = false;
-        this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
-        if (this.waitForLineData) {
-          this.waitForLineData = false;
-          this.renderLines();
-        }
+        this.waitForDotData = false;
+        this.waitForLineData = false;
         break;
 
       case NORMALIZED_EVENT_TYPE.POINT_EVENT:
@@ -510,16 +472,13 @@ CanvasManager.prototype = {
             timestamps: [aData.time],
             dataIds: [aData.id],
           };
+          this.id++;
         }
         else {
           this.groupedData[groupId].timestamps.push(aData.time);
           this.groupedData[groupId].dataIds.push(aData.id);
         }
-        this.id++;
-        if (this.waitForDotData) {
-          this.waitForDotData = false;
-          this.renderDots();
-        }
+        this.waitForDotData = false;
         break;
     }
     return this.groupedData[groupId].id;
@@ -533,14 +492,8 @@ CanvasManager.prototype = {
     try {
       this.doc.getElementById("overview").removeAttribute("checked");
     } catch (ex) {}
-    if (this.waitForDotData) {
-      this.waitForDotData = false;
-      this.renderDots();
-    }
-    if (this.waitForLineData) {
-      this.waitForLineData = false;
-      this.renderLines();
-    }
+    this.waitForDotData = false;
+    this.waitForLineData = false;
   },
 
   unfreezeCanvas: function CM_unfreezeCanvas()
@@ -575,14 +528,8 @@ CanvasManager.prototype = {
       this.offsetTime = 0;
       this.startingoffsetTime = null;
       this.movingView = false;
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
     else {
       if (this.startingoffsetTime == null) {
@@ -597,14 +544,8 @@ CanvasManager.prototype = {
       }
       this.offsetTime -= this.startingoffsetTime/20;
       this.doc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
   },
 
@@ -656,14 +597,8 @@ CanvasManager.prototype = {
       this.doc.getElementById("producers-pane").scrollTop = this.finalOffset;
       this.offsetTop = this.doc.getElementById("producers-pane").scrollTop;
       this.finalOffset = this.initialOffset = null;
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
     else {
       let initial = this.doc.getElementById("producers-pane").scrollTop*1;
@@ -681,14 +616,8 @@ CanvasManager.prototype = {
           .mozRequestAnimationFrame(function() {
         this.moveTopOffsetTo(aY, aPosition, true);
       }.bind(this));
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
   },
 
@@ -743,14 +672,8 @@ CanvasManager.prototype = {
       this.frozenTime = this.finalFrozenTime;
       this.finalFrozenTime = this.initialFrozenTime = null;
       this.movingView = false;
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
     else {
       this.movingView = true;
@@ -759,14 +682,8 @@ CanvasManager.prototype = {
           .mozRequestAnimationFrame(function() {
         this.moveToTime(aTime, aPosition, true);
       }.bind(this));
-      if (this.waitForLineData) {
-        this.waitForLineData = false;
-        this.renderLines();
-      }
-      if (this.waitForDotData) {
-        this.waitForDotData = false;
-        this.renderDots();
-      }
+      this.waitForLineData = false;
+      this.waitForDotData = false;
     }
   },
 
@@ -819,14 +736,8 @@ CanvasManager.prototype = {
     this.unfreezeCanvas();
     this.overview = true;
     this.scale = (Date.now() - this.startTime)/(0.8*this.width);
-    if (this.waitForDotData) {
-      this.waitForDotData = false;
-      this.renderDots();
-    }
-    if (this.waitForLineData) {
-      this.waitForLineData = false;
-      this.renderLines();
-    }
+    this.waitForDotData = false;
+    this.waitForLineData = false;
   },
 
   moveToLive: function CM_moveToLive()
@@ -851,9 +762,7 @@ CanvasManager.prototype = {
     this.waitForDotData = this.waitForLineData = false;
     this.id = 0;
     this.stopTime = null;
-    this.renderDots();
-    this.renderLines();
-    this.renderRuler();
+    this.render();
     this.startTime = Date.now();
   },
 
@@ -865,14 +774,8 @@ CanvasManager.prototype = {
   startScrolling: function CM_startScrolling()
   {
     this.scrolling = true;
-    if (this.waitForDotData) {
-      this.waitForDotData = false;
-      this.renderDots();
-    }
-    if (this.waitForLineData) {
-      this.waitForLineData = false;
-      this.renderLines();
-    }
+    this.waitForDotData = false;
+    this.waitForLineData = false;
   },
 
   stopScrolling: function CM_stopScrolling()
@@ -960,12 +863,12 @@ CanvasManager.prototype = {
   },
 
   /**
-   * Renders the canvas ruler.
+   * Renders the canvas lines and dots.
    */
-  renderRuler: function CM_renderRuler()
+  render: function CM_render()
   {
-    this.ctxR.clearRect(0,0,this.width,25);
     // getting the current time, which will be at the center of the canvas.
+    let date = (this.stopTime? this.stopTime: Date.now());
     if (this.timeFrozen) {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
@@ -976,13 +879,17 @@ CanvasManager.prototype = {
       }
     }
     else if (this.overview) {
-      this.scale = (Date.now() - this.startTime)/(0.8*this.width);
-      this.currentTime = Date.now();
+      this.scale = (date - this.startTime)/(0.8*this.width);
+      this.currentTime = date;
     }
     else {
-      this.currentTime = Date.now() - this.offsetTime;
+      this.currentTime = date - this.offsetTime;
     }
     this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
+    this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
+
+    // Drawing the time ruler.
+    this.ctxR.clearRect(0,0,this.width,25);
     this.ctxR.strokeStyle = "rgb(3,101,151)";
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
@@ -1077,179 +984,117 @@ CanvasManager.prototype = {
         }
       }
     }
-    this.doc.defaultView.mozRequestAnimationFrame(this.renderRuler);
-  },
+    if (!this.waitForLineData) {
+      this.linesDrawn = 0;
 
-  /**
-   * Renders the canvas dots.
-   */
-  renderDots: function CM_renderDots()
-  {
-    if (this.waitForDotData) {
-      return;
-    }
-    this.dotsDrawn = 0;
-
-    this.ctxD.shadowOffsetY = 2;
-    this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
-    this.ctxD.shadowBlur = 2;
-
-    for each (let {x,y,id} in this.dirtyDots) {
-      this.ctxD.clearRect(x-6,y-5,14,18);
-    }
-    this.dirtyDots = [];
-    // if (this.offsetTime > 0 || this.scrollStartTime != null) {
-      // this.ctxD.clearRect(0,0,this.width,this.height);
-    // }
-    // else {
-      // this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
-                          // (Date.now() - this.currentTime)/this.scale
-                          // :this.offsetTime/this.scale) + 10,this.height);
-    // }
-    // getting the current time, which will be at the center of the canvas.
-    if (this.timeFrozen) {
-      if (!this.scrolling) {
-        this.currentTime = this.frozenTime - this.offsetTime;
+      let ([x,endx,y,endy,v] = this.dirtyZone) {
+        this.ctxL.clearRect(x-1,y-1,endx-x+12,endy-y+2);
+        this.ctxL.clearRect(v - 10,0,20,this.height);
+        this.dirtyZone = [5000,0,5000,0,0];
       }
-      else if (this.scrollDistance != 0) {
-        this.currentTime = this.frozenTime - this.offsetTime -
-                           this.scrollDistance * 5 * this.scale;
-      }
-    }
-    else if (this.overview) {
-      let endTime = (this.stopTime? this.stopTime: Date.now());
-      this.scale = (endTime - this.startTime)/(0.8*this.width);
-      this.currentTime = endTime;
-    }
-    else {
-      this.currentTime = (this.stopTime? this.stopTime: Date.now()) - this.offsetTime;
-    }
-    this.lastVisibleTime = this.currentTime + 0.2*this.width*this.scale;
-    this.firstVisibleTime = this.lastVisibleTime - this.width*this.scale;
+      //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
+      this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
+                                   this.currentTime)/this.scale:(this.timeFrozen?
+                                    (date - this.frozenTime + this.offsetTime)/this.scale
+                                   :this.offsetTime/this.scale)), this.width);
 
-    let i = this.searchIndexForTime(this.lastVisibleTime);
-    for (; i >= 0; i--) {
-      if (this.globalTiming[i] >= this.firstVisibleTime) {
-        this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
-                     this.groupedData[this.globalGroup[i]].y,
-                     this.groupedData[this.globalGroup[i]].id);
-      }
-      // No need of going down further as time is already below visible state.
-      else {
-        break;
-      }
-    }
-
-    if (this.dotsDrawn == 0 && !this.scrolling && this.offsetTime == 0) {
-      this.waitForDotData = true;
-    }
-    else {
-      this.doc.defaultView.mozRequestAnimationFrame(this.renderDots);
-    }
-  },
-
-  /**
-   * Renders the canvas lines.
-   */
-  renderLines: function CM_renderLines()
-  {
-    if (this.waitForLineData) {
-      return;
-    }
-    this.linesDrawn = 0;
-
-    let ([x,endx,y,endy,v] = this.dirtyZone) {
-      this.ctxL.clearRect(x-1,y-1,endx-x+12,endy-y+2);
-      this.ctxL.clearRect(v - 10,0,20,this.height);
-      this.dirtyZone = [5000,0,5000,0,0];
-    }
-    //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
-    // getting the current time, which will be at the center of the canvas.
-    let date = (this.stopTime? this.stopTime: Date.now());
-    if (this.timeFrozen) {
-      if (!this.scrolling) {
-        this.currentTime = this.frozenTime - this.offsetTime;
-      }
-      else if (this.scrollDistance != 0) {
-        this.currentTime = this.frozenTime - this.offsetTime -
-                           this.scrollDistance * 5 * this.scale;
-      }
-    }
-    else if (this.overview) {
-      this.scale = (date - this.startTime)/(0.8*this.width);
-      this.currentTime = date;
-    }
-    else {
-      this.currentTime = date - this.offsetTime;
-    }
-    this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
-    this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
-
-    this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
-                                 this.currentTime)/this.scale:(this.timeFrozen?
-                                  (date - this.frozenTime + this.offsetTime)/this.scale
-                                 :this.offsetTime/this.scale)), this.width);
-
-    let endx,x;
-    for each (group in this.groupedData) {
-      if (group.y < this.offsetTop || group.y - this.offsetTop > this.width) {
-        continue;
-      }
-      if (group.active && group.timestamps[group.timestamps.length - 1] <= this.firstVisibleTime) {
-        this.drawLine(0, group.y, group.id, this.currentWidth);
-      }
-      else if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
-                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
-                group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID) &&
-               group.timestamps[group.timestamps.length - 1] >= this.firstVisibleTime &&
-               group.timestamps[0] <= this.lastVisibleTime) {
-        x = (Math.max(group.timestamps[0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
-        if (!group.active) {
-          endx = Math.min((group.timestamps[group.timestamps.length - 1] -
-                          this.firstVisibleTime)/this.scale, this.currentWidth);
+      let endx,x;
+      for each (group in this.groupedData) {
+        if (group.y < this.offsetTop || group.y - this.offsetTop > this.width) {
+          continue;
         }
-        else {
-          endx = this.currentWidth;
+        if (group.active && group.timestamps[group.timestamps.length - 1] <= this.firstVisibleTime) {
+          this.drawLine(0, group.y, group.id, this.currentWidth);
         }
-        this.drawLine(x,group.y,group.id,endx);
-      }
-      else if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP ||
-               group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
-               group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID) {
-        for (let i = 0; i < group.timestamps.length; i++) {
-          if (group.timestamps[i][group.timestamps[i].length - 1] >= this.firstVisibleTime &&
-              group.timestamps[i][0] <= this.lastVisibleTime) {
-            x = (Math.max(group.timestamps[i][0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
-            if (!group.active || i < group.timestamps.length - 1) {
-              endx = Math.min((group.timestamps[i][group.timestamps[i].length - 1] -
-                              this.firstVisibleTime)/this.scale, this.currentWidth);
+        else if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
+                  group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
+                  group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID) &&
+                 group.timestamps[group.timestamps.length - 1] >= this.firstVisibleTime &&
+                 group.timestamps[0] <= this.lastVisibleTime) {
+          x = (Math.max(group.timestamps[0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+          if (!group.active) {
+            endx = Math.min((group.timestamps[group.timestamps.length - 1] -
+                            this.firstVisibleTime)/this.scale, this.currentWidth);
+          }
+          else {
+            endx = this.currentWidth;
+          }
+          this.drawLine(x,group.y,group.id,endx);
+        }
+        else if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP ||
+                 group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
+                 group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID) {
+          for (let i = 0; i < group.timestamps.length; i++) {
+            if (group.timestamps[i][group.timestamps[i].length - 1] >= this.firstVisibleTime &&
+                group.timestamps[i][0] <= this.lastVisibleTime) {
+              x = (Math.max(group.timestamps[i][0], this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+              if (!group.active || i < group.timestamps.length - 1) {
+                endx = Math.min((group.timestamps[i][group.timestamps[i].length - 1] -
+                                this.firstVisibleTime)/this.scale, this.currentWidth);
+              }
+              else {
+                endx = this.currentWidth;
+              }
+              this.drawLine(x,group.y,group.id,endx);
             }
-            else {
-              endx = this.currentWidth;
-            }
-            this.drawLine(x,group.y,group.id,endx);
           }
         }
       }
-    }
 
-    // Moving the current time needle to appropriate position.
-    this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
-    // Move the left bar of the time window if the timeline is moving.
-    if (this.timeWindowLeft != null && !this.timeFrozen) {
-      let width_o = this.doc.getElementById("timeline-time-window").style.width.replace("px", "")*1;
-      let left_o = this.doc.getElementById("timeline-time-window").style.left.replace("px", "")*1;
-      let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
-      this.doc.getElementById("timeline-time-window").style.width = (width_o + left_o - left) + "px";
-      this.doc.getElementById("timeline-time-window").style.left = left + "px";
-    }
+      // Moving the current time needle to appropriate position.
+      this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
+      // Move the left bar of the time window if the timeline is moving.
+      if (this.timeWindowLeft != null && !this.timeFrozen) {
+        let width_o = this.doc.getElementById("timeline-time-window").style.width.replace("px", "")*1;
+        let left_o = this.doc.getElementById("timeline-time-window").style.left.replace("px", "")*1;
+        let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+        this.doc.getElementById("timeline-time-window").style.width = (width_o + left_o - left) + "px";
+        this.doc.getElementById("timeline-time-window").style.left = left + "px";
+      }
 
-    if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
-        !this.timeFrozen) {
-      this.waitForLineData = true;
+      if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
+          !this.timeFrozen) {
+        this.waitForLineData = true;
+      }
     }
-    else {
-      this.doc.defaultView.mozRequestAnimationFrame(this.renderLines);
+    if (!this.waitForDotData) {
+      this.dotsDrawn = 0;
+
+      this.ctxD.shadowOffsetY = 2;
+      this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
+      this.ctxD.shadowBlur = 2;
+
+      for each (let {x,y,id} in this.dirtyDots) {
+        this.ctxD.clearRect(x-6,y-5,14,18);
+      }
+      this.dirtyDots = [];
+      // if (this.offsetTime > 0 || this.scrollStartTime != null) {
+        // this.ctxD.clearRect(0,0,this.width,this.height);
+      // }
+      // else {
+        // this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
+                            // (Date.now() - this.currentTime)/this.scale
+                            // :this.offsetTime/this.scale) + 10,this.height);
+      // }
+      // getting the current time, which will be at the center of the canvas.
+
+      let i = this.searchIndexForTime(this.lastVisibleTime);
+      for (; i >= 0; i--) {
+        if (this.globalTiming[i] >= this.firstVisibleTime) {
+          this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
+                       this.groupedData[this.globalGroup[i]].y,
+                       this.groupedData[this.globalGroup[i]].id);
+        }
+        // No need of going down further as time is already below visible state.
+        else {
+          break;
+        }
+      }
+
+      if (this.dotsDrawn == 0 && !this.scrolling && this.offsetTime == 0) {
+        this.waitForDotData = true;
+      }
     }
+    this.doc.defaultView.mozRequestAnimationFrame(this.render);
   }
 };
