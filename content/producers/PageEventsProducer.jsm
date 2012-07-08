@@ -334,7 +334,7 @@ let PageEventsProducer =
    */
   listenEvents: function PEP_listenEvents(aEvent)
   {
-    let tabId = null;
+/*     let tabId = null;
     try {
       let window = null;
       if (aEvent.target instanceof Ci.nsIDOMWindow) {
@@ -359,7 +359,7 @@ let PageEventsProducer =
         .getBrowserIndexForDocument(window.document);
       // Get the unique tab id associated with the tab
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
-    } catch (ex) {}
+    } catch (ex) {} */
 
     let eventDetail = {
       target: aEvent.target.id || null,
@@ -403,10 +403,11 @@ let PageEventsProducer =
       name: aEvent.type,
       groupID: groupId,
       time: Date.now(),
-      details: {
+      /* details: {
         tabID: tabId,
         detail: eventDetail,
-      }
+      } */
+      details: eventDetail,
     });
   },
 

@@ -714,7 +714,7 @@ let NetworkProducer =
    */
   sendActivity: function NP_sendActivity(aHttpActivity)
   {
-    let tabId = null;
+    /* let tabId = null;
     let window = aHttpActivity.contentWindow;
     // Get the chrome window associated with the content window
     let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
@@ -728,7 +728,7 @@ let NetworkProducer =
     // Get the unique tab id associated with the tab
     try {
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
-    } catch (ex) {}
+    } catch (ex) {} */
 
     let currentStage =
       aHttpActivity.meta.stages[aHttpActivity.meta.stages.length - 1];
@@ -759,7 +759,7 @@ let NetworkProducer =
       groupID: aHttpActivity.id,
       time: time/1000, // Converting micro to milli seconds.
       details: {
-        tabID: tabId,
+        /* tabID: tabId, */
         meta: aHttpActivity.meta,
         log: aHttpActivity.log,
       }
