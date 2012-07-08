@@ -158,8 +158,8 @@ let MemoryProducer =
         let slices = data['slices'];
         startingTime -= (slices[slices.length - 1].when + slices[slices.length - 1].pause);
         data = {
-          timestamp: startingTime,
           total_slices: slices.length,
+          timestamp: startingTime,
           total_time: data['total_time'],
           compartments_collected: data['compartments_collected'],
           total_compartments: data['total_compartments'],
@@ -174,6 +174,7 @@ let MemoryProducer =
         for (let i = 0; i < slices.length; i++) {
           data['duration'] = slices[i].pause;
           data['timestamp'] = startingTime + slices[i].when;
+          data.slice_no = i;
           // Send 2 notification for each slice
           DataSink.addEvent("MemoryProducer", {
             type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
@@ -221,6 +222,24 @@ let producerInfo = {
   // Features of this producer that can be turned on or off.
   // For this producer, its the list of observedEvents
   features: ["Cycle Collection", "Garbage Collection"/*, "Memory Statistics"*/],
+    // detail view will show properties belonging represented by these names.
+  // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
+  details: {
+    timestamp: {name: "Time", type: "date"},
+    duration: {name: "Duration", type: "number"},
+    slice_no: {name: "Slice Number", type: "number"},
+    total_slices: {name: "Total Slices", type: "number"},
+    total_time: {name: "Total Time", type: "number"},
+    compartments_collected: {name: "Compartments Collected", type: "number"},
+    total_compartments: {name: "Total Compartments", type: "number"},
+    mmu_20ms: {name: "20ms MMU", type: "number"},
+    mmu_50ms: {name: "50 ms MMU", type: "number"},
+    max_pause: {name: "Max. Pause", type: "number"},
+    nonincremental_reason: {name: "Non Incremental Reason", type: "string"},
+    allocated: {name: "Allocated", type: "string"},
+    added_chunks: {name: "Chunks Added", type: "number"},
+    removed_chunks: {name: "Chunks Removed", type: "number"},
+  }
 };
 
 // Register this producer to Data Sink

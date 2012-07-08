@@ -164,21 +164,21 @@ NetworkResponseListener.prototype =
     }
     this._foundOpenResponse = true;
 
-    let logResponse = this.httpActivity.log.entries[0].response;
-    logResponse.headers = openResponse.headers;
-    logResponse.httpVersion = openResponse.httpVersion;
-    logResponse.status = openResponse.status;
-    logResponse.statusText = openResponse.statusText;
+    let response = this.httpActivity.entry.response;
+    response.headers = openResponse.headers;
+    response.httpVersion = openResponse.httpVersion;
+    response.status = openResponse.status;
+    response.statusText = openResponse.statusText;
     // if (openResponse.cookies) {
-      // logResponse.cookies = openResponse.cookies;
+      // response.cookies = openResponse.cookies;
     // }
     if (openResponse.contentType) {
-      logResponse.contentType = openResponse.contentType;
+      response.contentType = openResponse.contentType;
     }
 
     delete NetworkProducer.openResponses[openResponse.id];
 
-    this.httpActivity.meta.stages.push("http-on-examine-response");
+    this.httpActivity.stages.push("http-on-examine-response");
     NetworkProducer.sendActivity(this.httpActivity);
   },
 
@@ -204,7 +204,7 @@ NetworkResponseListener.prototype =
 
     this._findOpenResponse();
 
-    this.httpActivity.meta.stages.push("REQUEST_STOP");
+    this.httpActivity.stages.push("REQUEST_STOP");
 
     this.receivedData = "";
 
@@ -281,11 +281,6 @@ let NetworkProducer =
     0x804b0005: "STATUS_SENDING_TO",
     0x804b000a: "STATUS_WAITING_FOR",
     0x804b0006: "STATUS_RECEIVING_FROM"
-  },
-
-  harCreator: {
-    name: Services.appinfo.name + " - Graphical Timeline",
-    version: Services.appinfo.version,
   },
 
   _sequence: 0,
@@ -514,7 +509,7 @@ let NetworkProducer =
         httpActivity.timings[stage].last = aTimestamp;
       }
       else {
-        httpActivity.meta.stages.push(stage);
+        httpActivity.stages.push(stage);
         httpActivity.timings[stage] = {
           first: aTimestamp,
           last: aTimestamp,
@@ -565,17 +560,17 @@ let NetworkProducer =
 
     let httpActivity = this.createActivityObject(aChannel);
     httpActivity.charset = win.document.characterSet; // see NP__onRequestBodySent()
-    httpActivity.meta.stages.push("REQUEST_HEADER"); // activity stage (aActivitySubtype)
+    httpActivity.stages.push("REQUEST_HEADER"); // activity stage (aActivitySubtype)
 
     httpActivity.timings.REQUEST_HEADER = {
       first: aTimestamp,
       last: aTimestamp
     };
 
-    let entry = httpActivity.log.entries[0];
+    let entry = httpActivity.entry;
     entry.startedDateTime = new Date(Math.round(aTimestamp / 1000)).toISOString();
 
-    let request = httpActivity.log.entries[0].request;
+    let request = httpActivity.entry.request;
 
     // Copy the request header data.
     aChannel.visitRequestHeaders({
@@ -626,41 +621,34 @@ let NetworkProducer =
       contentWindow: NetworkHelper.getWindowForRequest(aChannel),
       channel: aChannel,
       charset: null, // see NP__onRequestHeader()
-      meta: { // holds metadata about the activity object
-        stages: [], // activity stages (aActivitySubtype)
-      },
+      stages: [], // activity stages (aActivitySubtype)
       timings: {}, // internal timing information, see NP_observeActivity()
-      log: { // HAR-like object
-        version: "1.2",
-        creator: this.harCreator,
-        // missing |browser| and |pages|
-        entries: [{  // we only track one entry at a time
-          connection: this.sequenceId, // connection ID
-          startedDateTime: 0, // see NP__onRequestHeader()
-          time: 0, // see NP__setupHarTimings()
-          // missing |serverIPAddress| and |cache|
-          request: {
-            method: aChannel.requestMethod,
-            url: aChannel.URI.spec,
-            httpVersion: "", // see NP__onRequestHeader()
-            headers: [], // see NP__onRequestHeader()
-            queryString: [], // never set
-            headersSize: -1, // see NP__onRequestHeader()
-            bodySize: -1, // see NP__onRequestBodySent()
-            postData: null, // see NP__onRequestBodySent()
-          },
-          response: {
-            status: 0, // see NP__onResponseHeader()
-            statusText: "", // see NP__onResponseHeader()
-            httpVersion: "", // see NP__onResponseHeader()
-            headers: [], // see NP_httpResponseExaminer()
-            content: null, // see NNRL_onStreamClose()
-            redirectURL: "", // never set
-            headersSize: -1, // see NP__onResponseHeader()
-            bodySize: -1, // see NNRL_onStreamClose()
-          },
-          timings: {}, // see NP__setupHarTimings()
-        }],
+      entry: {
+        connection: this.sequenceId, // connection ID
+        startedDateTime: 0, // see NP__onRequestHeader()
+        time: 0, // see NP__setupHarTimings()
+        // missing |serverIPAddress| and |cache|
+        request: {
+          method: aChannel.requestMethod,
+          url: aChannel.URI.spec,
+          httpVersion: "", // see NP__onRequestHeader()
+          headers: [], // see NP__onRequestHeader()
+          queryString: [], // never set
+          headersSize: -1, // see NP__onRequestHeader()
+          bodySize: -1, // see NP__onRequestBodySent()
+          postData: null, // see NP__onRequestBodySent()
+        },
+        response: {
+          status: 0, // see NP__onResponseHeader()
+          statusText: "", // see NP__onResponseHeader()
+          httpVersion: "", // see NP__onResponseHeader()
+          headers: [], // see NP_httpResponseExaminer()
+          content: null, // see NNRL_onStreamClose()
+          redirectURL: "", // never set
+          headersSize: -1, // see NP__onResponseHeader()
+          bodySize: -1, // see NNRL_onStreamClose()
+        },
+        timings: {}, // see NP__setupHarTimings()
       },
     };
   },
@@ -731,7 +719,7 @@ let NetworkProducer =
     } catch (ex) {} */
 
     let currentStage =
-      aHttpActivity.meta.stages[aHttpActivity.meta.stages.length - 1];
+      aHttpActivity.stages[aHttpActivity.stages.length - 1];
 
     let time;
     try {
@@ -755,13 +743,34 @@ let NetworkProducer =
 
     DataSink.addEvent("NetworkProducer", {
       type: eventType,
-      name: currentStage,
+      name: aHttpActivity.entry.request.method.toUpperCase() + " " +
+            aHttpActivity.entry.request.url,
       groupID: aHttpActivity.id,
       time: time/1000, // Converting micro to milli seconds.
       details: {
         /* tabID: tabId, */
-        meta: aHttpActivity.meta,
-        log: aHttpActivity.log,
+        stage: currentStage,
+        request: {
+          method: aHttpActivity.entry.request.method,
+          url: aHttpActivity.entry.request.url,
+          httpVersion: aHttpActivity.entry.request.httpVersion,
+          headers: aHttpActivity.entry.request.headers,
+          queryString: aHttpActivity.entry.request.queryString,
+          headersSize: aHttpActivity.entry.request.headersSize,
+          bodySize:aHttpActivity.entry.request.bodySize,
+          postData: aHttpActivity.entry.request.postData,
+        },
+        response: {
+          status: aHttpActivity.entry.response.status,
+          statusText: aHttpActivity.entry.response.statusText,
+          httpVersion: aHttpActivity.entry.response.httpVersion,
+          headers: aHttpActivity.entry.response.headers,
+          content: aHttpActivity.entry.response.content,
+          redirectURL: aHttpActivity.entry.response.redirectURL,
+          headersSize: aHttpActivity.entry.response.headersSize,
+          bodySize: aHttpActivity.entry.response.bodySize,
+        },
+        charset: aHttpActivity.charset,
       }
     });
   },
@@ -779,7 +788,7 @@ let NetworkProducer =
       return;
     }
 
-    let request = aHttpActivity.log.entries[0].request;
+    let request = aHttpActivity.entry.request;
 
     let sentBody = this.readPostTextFromRequest(aHttpActivity.channel,
                                                 aHttpActivity.charset);
@@ -827,7 +836,7 @@ let NetworkProducer =
       return;
     }
 
-    let response = aHttpActivity.log.entries[0].response;
+    let response = aHttpActivity.entry.response;
 
     let headers = aExtraStringData.split(/\r\n|\n|\r/);
     let statusLine = headers.shift();
@@ -872,7 +881,7 @@ let NetworkProducer =
   _setupHarTimings: function NP__setupHarTimings(aHttpActivity)
   {
     let timings = aHttpActivity.timings;
-    let entry = aHttpActivity.log.entries[0];
+    let entry = aHttpActivity.entry;
     let harTimings = entry.timings;
 
     // Not clear how we can determine "blocked" time.
@@ -963,6 +972,40 @@ let producerInfo = {
   // Features of this producer that can be turned on or off.
   // For this producer, its null as of 8th June 2012.
   features: null,
+  // detail view will show properties belonging represented by these names.
+  // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
+  details: {
+    stage: {name: "Stage", type: "string"},
+    request: {
+      name: "Request",
+      type: "nested",
+      items: {
+        method: {name: "Method", type: "string"},
+        url: {name: "URL", type: "string"},
+        httpVersion: {name: "HTTP Version", type: "string"},
+        headers: {name: "Headers", type: "string"},
+        queryString: {name: "Query Strings", type: "string"},
+        headersSize: {name: "Request Header Size", type: "number"},
+        bodySize: {name: "Request Body Size", type: "number"},
+        postData: {name: "Requset Post Data", type: "string"},
+      }
+    },
+    response: {
+      name: "response",
+      type: "nested",
+      items: {
+        status: {name: "Status", type: "string"},
+        statusText: {name: "Response Status Text", type: "string"},
+        httpVersion: {name: "HTTP Version", type: "string"},
+        headers: {name: "Response Headers", type: "string"},
+        content: {name: "Response Content", type: "string"},
+        redirectURL: {name: "Redirect URL", type: "string"},
+        headersSize: {name: "Response Header Size", type: "number"},
+        bodySize: {name: "Response Body Size", type: "number"},
+      }
+    },
+    charset: {name: "Character Set", type: "string"},
+  }
 };
 
 // Register this producer to Data Sink

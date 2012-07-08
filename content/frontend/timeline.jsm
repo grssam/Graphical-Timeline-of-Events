@@ -212,14 +212,13 @@ TimelineView.prototype = {
     if (!producerBox) {
       return;
     }
-    let request = aData.details.log.entries[0].request;
     let featureBox = producerBox.firstChild.nextSibling;
     let urlLabel = this._frameDoc.createElement("label");
     urlLabel.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
     urlLabel.setAttribute("class", "timeline-groubox");
     urlLabel.setAttribute("groupId", aData.groupID);
     urlLabel.setAttribute("shouldDelete", true);
-    urlLabel.setAttribute("value", request.method.toUpperCase() + " " + request.url);
+    urlLabel.setAttribute("value", aData.name);
     urlLabel.setAttribute("flex", "0");
     urlLabel.setAttribute("crop", "center");
     featureBox.appendChild(urlLabel);
@@ -707,7 +706,6 @@ TimelineView.prototype = {
     }
     feedItem.setAttribute("groupId", aData.groupID);
     feedItem.setAttribute("timestamp", aData.time);
-    // The only hard coded part of the code.
     let label1 = this._frameDoc.createElement("label");
     label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let label2 = this._frameDoc.createElement("label");
@@ -715,51 +713,33 @@ TimelineView.prototype = {
     let dateString =  (new Date(aData.time)).getHours() + ":" +
                       (new Date(aData.time)).getMinutes() + ":" +
                       (new Date(aData.time)).getSeconds();
-    switch (aData.producer) {
-      case "NetworkProducer":
-        let request = aData.details.log.entries[0].request;
-        label1.setAttribute("value", request.method.toUpperCase() + " " + request.url);
-        feedItem.appendChild(label1);
-        label2.setAttribute("value", aData.name + " at " + dateString);
-        feedItem.appendChild(label2);
-        break;
-
-      case "PageEventsProducer":
-        if (aData.groupID == "MouseEvent") {
-          label1.setAttribute("value", aData.name + " at (" +
-                                       aData.details.detail.screenX + "," +
-                                       aData.details.detail.screenY + ")");
-        }
-        else if (aData.groupID == "KeyboardEvent") {
-          label1.setAttribute("value", aData.name + ", Key " +
-                              String.fromCharCode(aData.details.detail.charCode));
+    label1.setAttribute("value", aData.name);
+    feedItem.appendChild(label1);
+    if (aData.details) {
+      for (let property in aData.details) {
+        if (Timeline.producerInfoList[aData.producer]
+                    .details[property].type != "nested") {
+          let {name:name, value:value} =
+            this.getPropertyInfo(aData.producer,
+                                 property,
+                                 aData.details[property]);
+          label2.setAttribute("value", name + ": " + value + " at " + dateString);
+          feedItem.appendChild(label2);
         }
         else {
-          label1.setAttribute("value", aData.name + " at " + dateString)
-        }
-        feedItem.appendChild(label1);
-        if (aData.groupID == "MouseEvent") {
-          label2.setAttribute("value", "on Id " + aData.details.target + " at " + dateString);
-          feedItem.appendChild(label2);
-        }
-        else if (aData.groupID == "KeyboardEvent") {
-          label2.setAttribute("value", "on Id " + aData.details.target + " at " + dateString);
-          feedItem.appendChild(label2);
-        }
-        break;
-
-      case "MemoryProducer":
-        label1.setAttribute("value", aData.name + " at " + dateString);
-        feedItem.appendChild(label1);
-        if (aData.name == "Garbage Collection") {
-          label2.setAttribute("value", "Total Slices: " + aData.details.total_slices +
-                                      ", Total Time: " + aData.details.total_time + "ms");
-          feedItem.appendChild(label2);
+          for (let subProp in aData.details[property].items) {
+            let {name:name, value:value} =
+              this.getPropertyInfo(aData.producer,
+                                   property,
+                                   aData.details[property].items[subProp],
+                                   subProp);
+            label2.setAttribute("value", name + ": " + value + " at " + dateString);
+            feedItem.appendChild(label2);
+            break;
+          }
         }
         break;
-
-      default:
-        return;
+      }
     }
     this.tickerGroups.push(aData.groupID);
     if (!this.infoBox.firstChild) {
@@ -771,6 +751,63 @@ TimelineView.prototype = {
     if (scrollTop != 0) {
       this.infoBox.scrollTop += feedItem.boxObject.height;
     }
+  },
+
+  /**
+   * Returns display name and value corresponding to a property.
+   *
+   * @param string aProducerId
+   *        producer ID corresponding to the property.
+   * @param string aName
+   *        Name of the property.
+   * @param * aValue
+   *        Value of the property.
+   * @param string aSubName
+   *        sub property name in case of nested type.
+   * @return {name: _name_, value: _value_}
+   *         _name_ is the display name, _value_ is the display value.
+   */
+  getPropertyInfo: function TV_getPropertyInfo(aProducerId, aName, aValue, aSubName)
+  {
+    if (Timeline.producerInfoList[aProducerId].details[aName]) {
+      let details = Timeline.producerInfoList[aProducerId].details;
+      let type = details[aName].type;
+      let name,value;
+      if (type == "nested") {
+        if (aSubName != null) {
+          type = details[aName].items[aSubName].type;
+          details = details[aName].items;
+          aName = aSubName;
+        }
+        else {
+          return null;
+        }
+      }
+      switch (type) {
+        case "string":
+        case "number":
+          value = aValue;
+          name = details[aName].name;
+          break;
+
+        case "date":
+          value = (new Date(aValue)).getHours() + ":" +
+                  (new Date(aValue)).getMinutes() + ":" +
+                  (new Date(aValue)).getSeconds();
+          name = details[aName].name;
+          break;
+
+        case "enum":
+          name = details[aName].name;
+          value = details[aName].values[aValue] || "null";
+          break;
+
+        default:
+          return null;
+      }
+      return {name: name, value: value};
+    }
+    return null;
   },
 
   /**

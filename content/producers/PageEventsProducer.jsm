@@ -287,8 +287,8 @@ let PageEventsProducer =
         return;
       }
 
-      let tabId = null;
-      try {
+/*      let tabId = null;
+       try {
         // Get the chrome window associated with the content window
         let chromeWindow = aSubject.QueryInterface(Ci.nsIInterfaceRequestor)
                                    .getInterface(Ci.nsIWebNavigation)
@@ -300,7 +300,7 @@ let PageEventsProducer =
           .getBrowserIndexForDocument(aSubject.document);
         // Get the unique tab id associated with the tab
         tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
-      } catch (ex) {}
+      } catch (ex) {} */
 
       let groupId = "";
       for each (let eventTypeName in PageEventsProducer.enabledEvents) {
@@ -317,7 +317,7 @@ let PageEventsProducer =
         groupID: groupId,
         time: Date.now(),
         details: {
-          tabID: tabId,
+          /* tabID: tabId, */
         }
       });
     },
@@ -363,7 +363,6 @@ let PageEventsProducer =
 
     let eventDetail = {
       target: aEvent.target.id || null,
-      eventName: aEvent.name,
     };
 
     let groupId = "";
@@ -449,6 +448,22 @@ let producerInfo = {
   features: ["MouseEvent", "PageEvent", "PaintEvent", "KeyboardEvent",
              "DragEvent", /*"FocusEvent", "UIEvent", "FormEvent",
              "MenuEvent", "MiscEvent"*/],
+  // detail view will show properties belonging represented by these names.
+  // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
+  details: {
+    target: {name: "Target ID", type: "string"},
+    eventName: {name: "Name", type: "string"},
+    screenX: {name: "Screen X", type: "number"},
+    screenY: {name: "Screen Y", type: "number"},
+    clientX: {name: "Client X", type: "number"},
+    clientY: {name: "Client Y", type: "number"},
+    shiftKey: {name: "Shift", type: "string"},
+    altKey: {name: "Alt", type: "string"},
+    metaKey: {name: "Meta", type: "string"},
+    ctrlKey: {name: "Control", type: "string"},
+    button: {name: "Button", type: "enum", values: {0: "Left Click", 1: "Middle Click", 2: "Right Click"}},
+    data: {name: "Data", type: "string"},
+  }
 };
 
 // Register this producer to Data Sink
