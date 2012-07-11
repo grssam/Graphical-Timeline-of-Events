@@ -479,9 +479,6 @@ TimelineView.prototype = {
     else {
       this._canvas.stopRendering();
       Timeline.stopListening({timelineUIId: Timeline.id});
-      try {
-        this.overviewButton.removeAttribute("checked");
-      } catch(e) {}
     }
     this.recording = !this.recording;
   },
