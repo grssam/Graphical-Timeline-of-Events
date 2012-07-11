@@ -140,6 +140,7 @@ TimelineView.prototype = {
     this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
+    this.overviewButton.setAttribute("checked", true);
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
       this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
       this.producersPane.setAttribute("visible", false);
@@ -457,7 +458,6 @@ TimelineView.prototype = {
       }
       this.cleanUI();
       Timeline.startListening(message);
-      this.overviewButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc);
@@ -474,6 +474,9 @@ TimelineView.prototype = {
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.startRendering();
+        if (this._canvas.timeFrozen) {
+          this._canvas.moveToLive();
+        }
       }
     }
     else {
@@ -828,7 +831,6 @@ TimelineView.prototype = {
     this.$("timeline-ruler").removeEventListener("mousedown", this._onDragStart, true);
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
-      this.overviewButton.setAttribute("checked", true);
     }
     this._canvas.startScrolling();
     this.$("canvas-container").addEventListener("mousemove", this._onDrag, true);
