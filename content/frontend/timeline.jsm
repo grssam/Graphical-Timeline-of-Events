@@ -141,16 +141,16 @@ TimelineView.prototype = {
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
+      this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
       this.producersPane.setAttribute("visible", false);
-      this.producersPane.collapsed = true;
       this.producersPaneOpened = false;
       this.producersButton.checked = false;
     }
     else {
+      this.producersPane.style.marginLeft = "0px";
       this.producersPane.setAttribute("visible", true);
       this.producersPaneOpened = true;
       this.producersButton.checked = true;
-      this.producersPane.collapsed = false;
     }
     if (TimelinePreferences.visiblePanes.indexOf("infobox") == -1) {
       this.infoBox.setAttribute("visible", false);
@@ -399,24 +399,22 @@ TimelineView.prototype = {
   _showProducersPane: function TV__showProducersPane()
   {
     this.producersPaneOpened = true;
+    this.producersPane.style.marginLeft = "0px";
     this.producersPane.setAttribute("visible", true);
-    this.producersPane.collapsed = false;
     if (this.canvasStarted) {
       this._canvas.height = this.$("canvas-container").boxObject.height - 25;
-      this._canvas.width = this.$("timeline-content").boxObject.width -
-                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+      this._canvas.width = this.$("timeline-content").boxObject.width - this.producersPane.boxObject.width;
     }
   },
 
   _hideProducersPane: function TV__hideProducersPane()
   {
     this.producersPaneOpened = false;
+    this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
     this.producersPane.setAttribute("visible", false);
-    this.producersPane.collapsed = true;
     if (this.canvasStarted) {
       this._canvas.height = this.$("canvas-container").boxObject.height - 25;
-      this._canvas.width = this.$("timeline-content").boxObject.width -
-                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+      this._canvas.width = this.$("timeline-content").boxObject.width;
     }
   },
 
@@ -660,8 +658,9 @@ TimelineView.prototype = {
   handleMousemove: function TV_handleMousemove(aEvent)
   {
     if (this.canvasStarted) {
-      this._canvas.mouseHoverAt(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width),
-                                aEvent.clientY - 32);
+      this._canvas.mouseHoverAt(aEvent.clientX -
+        (!this.producersPaneOpened?0:this.producersPane.boxObject.width),
+        aEvent.clientY - 32);
     }
   },
 
@@ -867,7 +866,7 @@ TimelineView.prototype = {
   {
     this.$("timeline-canvas-dots").removeEventListener("mousedown", this._onWindowStart, true);
     this.timeWindow.setAttribute("selecting", true);
-    let left = aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width);
+    let left = aEvent.clientX - (!this.producersPaneOpened?0:this.producersPane.boxObject.width);
     this.timeWindow.style.right = this.timeWindow.style.left = left + "px";
     this.timeWindow.style.width = "0px";
     this.$("canvas-container").addEventListener("mousemove", this._onWindowSelect, true);
@@ -879,7 +878,7 @@ TimelineView.prototype = {
   _onWindowSelect: function TV__onWindowSelect(aEvent)
   {
     this.timeWindow.style.width = (aEvent.clientX -
-      (this.producersPane.collapsed?0:this.producersPane.boxObject.width) -
+      (!this.producersPaneOpened?0:this.producersPane.boxObject.width) -
       this.timeWindow.style.left.replace("px", "")*1) + "px";
   },
 
@@ -888,7 +887,8 @@ TimelineView.prototype = {
     this.$("canvas-container").removeEventListener("mousemove", this._onWindowSelect, true);
     this._frameDoc.removeEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
-    this._canvas.stopTimeWindowAt(aEvent.clientX - (this.producersPane.collapsed?0:this.producersPane.boxObject.width));
+    this._canvas.stopTimeWindowAt(aEvent.clientX -
+      (!this.producersPaneOpened?0:this.producersPane.boxObject.width));
     if (!this._canvas.overview) {
       this._frameDoc.defaultView.setTimeout(function() {
         this.moveTickerToTime(this._canvas.lastVisibleTime);
