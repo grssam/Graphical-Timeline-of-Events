@@ -901,6 +901,15 @@ CanvasManager.prototype = {
     this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
     this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
 
+    this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
+                                 this.currentTime)/this.scale:(this.timeFrozen?
+                                  (date - this.frozenTime + this.offsetTime)/this.scale
+                                 :(this.offsetTime + date - this.currentTime)/this.scale)),
+                                 this.width);
+
+    // Moving the current time needle to appropriate position.
+    this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
+
     // Drawing the time ruler.
     this.ctxR.clearRect(0,0,this.width,25);
     this.ctxR.fillStyle = "rgb(3,101,151)";
@@ -1005,11 +1014,6 @@ CanvasManager.prototype = {
         this.dirtyZone = [5000,0,5000,0,0];
       }
       //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
-      this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
-                                   this.currentTime)/this.scale:(this.timeFrozen?
-                                    (date - this.frozenTime + this.offsetTime)/this.scale
-                                   :(this.offsetTime + date - this.currentTime)/this.scale)),
-                                   this.width);
 
       let endx,x;
       for each (group in this.groupedData) {
@@ -1054,8 +1058,6 @@ CanvasManager.prototype = {
         }
       }
 
-      // Moving the current time needle to appropriate position.
-      this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
       // Move the left bar of the time window if the timeline is moving.
       if (this.timeWindowLeft != null && !this.timeFrozen) {
         let width_o = this.doc.getElementById("timeline-time-window").style.width.replace("px", "")*1;
