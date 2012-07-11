@@ -903,7 +903,6 @@ CanvasManager.prototype = {
 
     // Drawing the time ruler.
     this.ctxR.clearRect(0,0,this.width,25);
-    this.ctxR.strokeStyle = "rgb(3,101,151)";
     this.ctxR.fillStyle = "rgb(3,101,151)";
     this.ctxR.font = "16px sans-serif";
     this.ctxR.lineWidth = 0.5;
@@ -913,7 +912,7 @@ CanvasManager.prototype = {
            i < this.width;
            i += 5000/this.scale, j++) {
         if (j%10 == 0) {
-          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
                                i + 2, 12);
           this.ctxR.fillRect(i+0.5,5,1,20);
         }
@@ -931,7 +930,7 @@ CanvasManager.prototype = {
            i < this.width;
            i += 1000/this.scale, j++) {
         if (j%10 == 0) {
-          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
                                i + 2, 12);
           this.ctxR.fillRect(i+0.5,5,1,20);
         }
@@ -949,7 +948,7 @@ CanvasManager.prototype = {
            i < this.width;
            i += 100/this.scale, j++) {
         if (j%10 == 0) {
-          this.ctxR.strokeText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
                                i + 2, 12);
           this.ctxR.fillRect(i+0.5,5,1,20);
         }
@@ -967,7 +966,7 @@ CanvasManager.prototype = {
            i < this.width;
            i += 10/this.scale, j++) {
         if (j%10 == 0) {
-          this.ctxR.strokeText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+          this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
                                i + 2, 12);
           this.ctxR.fillRect(i+0.5,5,1,20);
         }
@@ -985,7 +984,7 @@ CanvasManager.prototype = {
            i < this.width;
            i += 1/this.scale, j++) {
         if (j%10 == 0) {
-          this.ctxR.strokeText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+          this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
                                i + 2, 12);
           this.ctxR.fillRect(i+0.5,5,1,20);
         }
