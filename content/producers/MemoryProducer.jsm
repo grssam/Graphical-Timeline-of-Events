@@ -137,6 +137,7 @@ let MemoryProducer =
 
       if (aTopic == "cycle-collection-statistics") {
         data['timestamp'] -= (data['duration'] || 0);
+        data['name'] = "Cycle Collection";
         // Sending two events, one for start, and one for end of CC
         DataSink.addEvent("MemoryProducer", {
           type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
@@ -158,6 +159,7 @@ let MemoryProducer =
         let slices = data['slices'];
         startingTime -= (slices[slices.length - 1].when + slices[slices.length - 1].pause);
         data = {
+          name: "Garbage Collection",
           total_slices: slices.length,
           timestamp: startingTime,
           total_time: data['total_time'],
@@ -225,6 +227,7 @@ let producerInfo = {
     // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
+    name: {name: "Name", type: "string"},
     timestamp: {name: "Time", type: "date"},
     duration: {name: "Duration", type: "number"},
     slice_no: {name: "Slice Number", type: "number"},

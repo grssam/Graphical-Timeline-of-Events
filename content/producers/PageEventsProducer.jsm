@@ -453,8 +453,8 @@ let producerInfo = {
   // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
-    target: {name: "Target ID", type: "string"},
     eventName: {name: "Name", type: "string"},
+    target: {name: "Target ID", type: "string"},
     charCode: {name: "Key", type: "string"},
     screenX: {name: "Screen X", type: "number"},
     screenY: {name: "Screen Y", type: "number"},

@@ -755,6 +755,8 @@ let NetworkProducer =
       time: time/1000, // Converting micro to milli seconds.
       details: {
         /* tabID: tabId, */
+        name: aHttpActivity.entry.request.method.toUpperCase() + " " +
+              trim(aHttpActivity.entry.request.url),
         stage: currentStage,
         request: {
           method: aHttpActivity.entry.request.method,
@@ -981,6 +983,7 @@ let producerInfo = {
   // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
+    name: {name: "Name", type: "string"},
     stage: {name: "Stage", type: "string"},
     request: {
       name: "Request",
