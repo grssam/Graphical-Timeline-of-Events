@@ -702,6 +702,11 @@ let NetworkProducer =
    */
   sendActivity: function NP_sendActivity(aHttpActivity)
   {
+    function trim(val) {
+      let trimmedURL = val.match(/^[^?#&]+/)[0].length;
+      let lastSlash = val.lastIndexOf("/", trimmedURL);
+      return val.substring(lastSlash + 1, trimmedURL);
+    }
     /* let tabId = null;
     let window = aHttpActivity.contentWindow;
     // Get the chrome window associated with the content window
@@ -744,7 +749,8 @@ let NetworkProducer =
     DataSink.addEvent("NetworkProducer", {
       type: eventType,
       name: aHttpActivity.entry.request.method.toUpperCase() + " " +
-            aHttpActivity.entry.request.url,
+            trim(aHttpActivity.entry.request.url),
+      nameTooltip: aHttpActivity.entry.request.url,
       groupID: aHttpActivity.id,
       time: time/1000, // Converting micro to milli seconds.
       details: {

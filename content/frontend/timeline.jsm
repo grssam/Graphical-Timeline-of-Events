@@ -223,6 +223,7 @@ TimelineView.prototype = {
     urlLabel.setAttribute("groupId", aData.groupID);
     urlLabel.setAttribute("shouldDelete", true);
     urlLabel.setAttribute("value", aData.name);
+    urlLabel.setAttribute("tooltiptext", aData.nameTooltip || "");
     urlLabel.setAttribute("flex", "0");
     urlLabel.setAttribute("crop", "center");
     featureBox.appendChild(urlLabel);
