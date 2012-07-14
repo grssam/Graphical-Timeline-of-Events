@@ -87,8 +87,7 @@ function TimelineView(aChromeWindow) {
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleTickerClick = this.handleTickerClick.bind(this);
-  this.pinDetailBox = this.pinDetailBox.bind(this);
-  this.unpinDetailBox = this.unpinDetailBox.bind(this);
+  this.pinUnpinDetailBox = this.pinUnpinDetailBox.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
@@ -473,6 +472,7 @@ TimelineView.prototype = {
         this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
         this.canvasStarted = true;
         this.handleScroll();
+        this.handleDetailClick();
         this.handleTimeWindow();
       }
       else {
@@ -669,22 +669,20 @@ TimelineView.prototype = {
     }
   },
 
-  pinDetailBox: function TV_pinDetailBox()
+  pinUnpinDetailBox: function TV_pinUnpinDetailBox()
   {
-    this.$("timeline-canvas-dots").removeEventListener("mousedown", this.pinDetailBox);
-    this.$("timeline-canvas-dots").addEventListener("mousedown", this.unpinDetailBox);
-    this.detailBox.setAttribute("pinned", true);
-  },
-
-  unpinDetailBox: function TV_unpinDetailBox()
-  {
-    this.$("timeline-canvas-dots").removeEventListener("mousedown", this.unpinDetailBox);
-    this.detailBox.setAttribute("pinned", false);
+    if (this.detailBox.getAttribute("pinned") == "false" &&
+        this.detailBox.getAttribute("visible") == "true") {
+      this.detailBox.setAttribute("pinned", true);
+    }
+    else {
+      this.detailBox.setAttribute("pinned", false);
+    }
   },
 
   handleDetailClick: function TV_handleDetailClick()
   {
-    this.$("timeline-canvas-dots").addEventListener("mousedown", this.pinDetailBox);
+    this.$("timeline-canvas-dots").addEventListener("mousedown", this.pinUnpinDetailBox);
   },
 
   handleMousemove: function TV_handleMousemove(aEvent)
@@ -700,7 +698,6 @@ TimelineView.prototype = {
         if (this.detailBox.hasAttribute("dataId") && this.detailBox.getAttribute("dataId") == id) {
           return;
         }
-        this.handleDetailClick();
         this.detailBox.setAttribute("dataId", id);
         let tmp = this.detailBox.firstChild;
         while (tmp) {
