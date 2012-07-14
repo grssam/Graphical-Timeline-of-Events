@@ -14,6 +14,8 @@ let gAddon;
 let reload = function() {};
 const toolsMenuitemID = "graphical-timeline-tools-menu-item";
 const appMenuitemID = "graphical-timeline-app-menu-item";
+const keysetID = "graphical-timeline-keyset";
+const keyID = "graphical-timeline-key";
 
 // Function to run on every window which detects customizations
 function handleCustomization(window) {
@@ -69,13 +71,31 @@ function addMenuItem(window) {
     let appitem = $(appMenuitemID);
     appitem && appitem.parentNode.removeChild(appitem);
   }
+  function removeKey() {
+    let keyset = $(keysetID);
+    keyset && keyset.parentNode.removeChild(keyset);
+  }
+  removeKey();
   removeMenuItem();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+  let TimelineKeyset = window.document.createElementNS(XUL, "keyset");
+  TimelineKeyset.setAttribute("id", keysetID);
+  // add hotkey
+  let TimelineHotkey = window.document.createElementNS(XUL, "key");
+  TimelineHotkey.setAttribute("id", keyID);
+  TimelineHotkey.setAttribute("key", "Q");
+  TimelineHotkey.setAttribute("modifiers", "accel, shift");
+  TimelineHotkey.setAttribute("oncommand", "void(0)");
+  TimelineHotkey.addEventListener("command", showHideUI);
+  $("mainKeyset").parentNode.appendChild(TimelineKeyset).appendChild(TimelineHotkey);
+  unload(removeKey, window);
+
   let menuitem = window.document.createElementNS(XUL, "menuitem");
   menuitem.setAttribute("id", toolsMenuitemID);
   menuitem.setAttribute("type", "checkbox");
   menuitem.setAttribute("label", "Graphical Timeline");
+  menuitem.setAttribute("key", keyID);
   menuitem.addEventListener("command", showHideUI);
   $("menuWebDeveloperPopup").insertBefore(menuitem, $("webConsole"));
 
@@ -86,6 +106,7 @@ function addMenuItem(window) {
       appMenuItem.setAttribute("id", appMenuitemID);
       appMenuItem.setAttribute("type", "checkbox");
       appMenuItem.setAttribute("label", "Graphical Timeline");
+      appMenuItem.setAttribute("key", keyID);
       appMenuItem.addEventListener("command", showHideUI);
       appMenu.insertBefore(appMenuItem, $("appmenu_webConsole"));
     }
