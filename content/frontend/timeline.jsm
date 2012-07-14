@@ -87,6 +87,8 @@ function TimelineView(aChromeWindow) {
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleTickerClick = this.handleTickerClick.bind(this);
+  this.pinDetailBox = this.pinDetailBox.bind(this);
+  this.unpinDetailBox = this.unpinDetailBox.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
@@ -122,6 +124,7 @@ TimelineView.prototype = {
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
     this.infoBox = this.$("timeline-infobox");
+    this.detailBox = this.$("timeline-detailbox");
     this.producersButton = this.$("producers");
     this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
@@ -474,7 +477,7 @@ TimelineView.prototype = {
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.startRendering();
-        if (this._canvas.timeFrozen) {
+        if (!this.overviewButton.hasAttribute("checked")) {
           this._canvas.moveToLive();
         }
       }
@@ -655,12 +658,107 @@ TimelineView.prototype = {
     }
   },
 
+  pinDetailBox: function TV_pinDetailBox()
+  {
+    this.$("timeline-canvas-dots").removeEventListener("mousedown", this.pinDetailBox);
+    this.$("timeline-canvas-dots").addEventListener("mousedown", this.unpinDetailBox);
+    this.detailBox.setAttribute("pinned", true);
+  },
+
+  unpinDetailBox: function TV_unpinDetailBox()
+  {
+    this.$("timeline-canvas-dots").removeEventListener("mousedown", this.unpinDetailBox);
+    this.detailBox.setAttribute("pinned", false);
+  },
+
+  handleDetailClick: function TV_handleDetailClick()
+  {
+    this.$("timeline-canvas-dots").addEventListener("mousedown", this.pinDetailBox);
+  },
+
   handleMousemove: function TV_handleMousemove(aEvent)
   {
     if (this.canvasStarted) {
-      this._canvas.mouseHoverAt(aEvent.clientX -
-        (!this.producersPaneOpened?0:this.producersPane.boxObject.width),
-        aEvent.clientY - 32);
+      let ids = this._canvas
+                    .mouseHoverAt(aEvent.clientX -
+                                  (!this.producersPaneOpened?
+                                    0: this.producersPane.boxObject.width),
+                                  aEvent.clientY - 32);
+      if (ids && ids.length > 0) {
+        let id = ids[ids.length - 1];
+        if (this.detailBox.hasAttribute("dataId") && this.detailBox.getAttribute("dataId") == id) {
+          return;
+        }
+        this.handleDetailClick();
+        this.detailBox.setAttribute("dataId", id);
+        let tmp = this.detailBox.firstChild;
+        while (tmp) {
+          let temp = tmp.nextSibling;
+          tmp.parentNode.removeChild(tmp);
+          tmp = temp;
+        }
+        let propLabel = this._frameDoc.createElement("label");
+        propLabel.setAttribute("class", "property-heading");
+        propLabel.setAttribute("value", this.producerInfoList[Timeline.data[id].producer].name);
+        this.detailBox.appendChild(propLabel);
+        if (Timeline.data[id].details) {
+          for (let property in this.producerInfoList[Timeline.data[id].producer]
+                                   .details) {
+            if (Timeline.data[id].details[property] == null){
+              continue;
+            }
+            if (this.producerInfoList[Timeline.data[id].producer]
+                    .details[property].type != "nested") {
+              let {name:name, value:value} =
+                this.getPropertyInfo(Timeline.data[id].producer,
+                                     property,
+                                     Timeline.data[id].details[property]);
+              let propLine = this._frameDoc.createElement("hbox");
+              let nameLabel = this._frameDoc.createElement("label");
+              let valueLabel = this._frameDoc.createElement("label");
+              nameLabel.setAttribute("value", name + " :");
+              nameLabel.setAttribute("crop", "left");
+              valueLabel.setAttribute("value", value);
+              valueLabel.setAttribute("crop", "center");
+              propLine.appendChild(nameLabel);
+              propLine.appendChild(valueLabel);
+              propLine.setAttribute("class", "property-line");
+              this.detailBox.appendChild(propLine);
+            }
+            else {
+              let propLabel = this._frameDoc.createElement("label");
+              propLabel.setAttribute("value", this.producerInfoList[
+                                                Timeline.data[id].producer
+                                              ].details[property].name);
+              propLabel.setAttribute("class", "detailed-heading");
+              this.detailBox.appendChild(propLabel);
+              for (let subProp in this.producerInfoList[
+                                    Timeline.data[id].producer
+                                  ].details[property].items) {
+                if (Timeline.data[id].details[property][subProp] == null){
+                  continue;
+                }
+                let {name:name, value:value} =
+                  this.getPropertyInfo(Timeline.data[id].producer,
+                                       property,
+                                       Timeline.data[id].details[property][subProp],
+                                       subProp);
+                let propLine = this._frameDoc.createElement("hbox");
+                let nameLabel = this._frameDoc.createElement("label");
+                let valueLabel = this._frameDoc.createElement("label");
+                nameLabel.setAttribute("value", name + " :");
+                nameLabel.setAttribute("crop", "left");
+                valueLabel.setAttribute("value", value);
+                valueLabel.setAttribute("crop", "center");
+                propLine.appendChild(nameLabel);
+                propLine.appendChild(valueLabel);
+                propLine.setAttribute("class", "property-line");
+                this.detailBox.appendChild(propLine);
+              }
+            }
+          }
+        }
+      }
     }
   },
 
@@ -709,9 +807,9 @@ TimelineView.prototype = {
     label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let label2 = this._frameDoc.createElement("label");
     label2.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
-    let dateString =  (new Date(aData.time)).getHours() + ":" +
-                      (new Date(aData.time)).getMinutes() + ":" +
-                      (new Date(aData.time)).getSeconds();
+    let dateString = (new Date(aData.time)).getHours() + ":" +
+                     (new Date(aData.time)).getMinutes() + ":" +
+                     (new Date(aData.time)).getSeconds();
     label1.setAttribute("value", aData.name);
     feedItem.appendChild(label1);
     if (aData.details) {
@@ -996,6 +1094,7 @@ let Timeline = {
   id: null,
   timer: null,
   callback: null,
+  data: {},
 
   /**
    * Prepares the UI and sends ping to the Data Sink.
@@ -1172,6 +1271,7 @@ let Timeline = {
     Timeline._currentId += aData.length;
     for (let i = 0; i < aData.length; i++) {
       Timeline._view.displayData(aData[i]);
+      Timeline.data[aData[i].id] = aData[i];
       // Timeline._console
              // .logStringMessage("ID: " + aData[i].id +
                                // "; Producer: " + aData[i].producer +

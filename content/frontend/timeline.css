@@ -475,8 +475,8 @@
   min-width: 2px;
   max-width: 2px;
   background: -moz-linear-gradient(left, transparent 5px, rgba(27,25,40,0.5) 8px,
-                                               rgb(3,101,151) 9px, rgb(3,101,151) 11px,
-                                               rgba(27,25,40,0.5) 12px, transparent 15px);
+                                   rgb(3,101,151) 9px, rgb(3,101,151) 11px,
+                                   rgba(27,25,40,0.5) 12px, transparent 15px);
 }
 
 /**
@@ -580,12 +580,70 @@
  * Detail Box
  */
 #timeline-detailbox {
-  opacity: 0;
-  -moz-transition-property: left, top, width, height, opacity;
-  -moz-transition-duration: 0.25s;
-  min-height: 100px;
-  min-width: 100px;
   background-color: rgb(22,33,43);
-  box-shadow: 0px 0px 8px 8px rgba(0,0,0,0.75), inset 0px 0px 1px 1px rgba(80,80,80,0.35);
   color: rgb(183,193,205);
+  width: 240px;
+  height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  right: 25px;
+  top: -400px;
+  opacity: 0;
+  z-index: 100;
+  background-color: rgb(22,33,43);
+}
+
+#timeline-detailbox[visible=true]:not([pinned=true]) {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: slideup;
+  opacity: 1;
+  top: 25px;
+}
+
+#timeline-detailbox:not([visible=true]):not([pinned=true]) {
+  -moz-animation-duration: 0.25s;
+  -moz-animation-name: slidedown;
+  opacity: 0;
+  top: -400px;
+}
+
+#timeline-detailbox[pinned=true] {
+  box-shadow: 0px 0px 8px 8px rgba(0,0,0,0.75), inset 0px 0px 1px 1px rgba(80,80,80,0.35);
+  opacity: 1;
+  top: 25px;
+}
+
+.property-line {
+  width: 240px;
+  margin: 0px;
+  padding: 0px;
+}
+
+.property-line > label {
+  overflow: hidden;
+  width: 120px;
+  text-align: right;
+  color: rgb(183,193,205);
+  margin: 0px;
+  padding: 2px;
+}
+
+.property-line > label:last-child {
+  text-align: left !important;
+  width: 100px !important;
+  color: rgb(207,218,230);
+}
+
+.property-heading, .detailed-heading {
+  clear: both;
+  display: block;
+  text-align: center;
+  width: 100%;
+  color: rgb(207,218,230);
+  font-weight: bold;
+}
+
+.property-heading {
+  color: rgb(3,101,151);
 }

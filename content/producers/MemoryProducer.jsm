@@ -174,21 +174,21 @@ let MemoryProducer =
         for (let i = 0; i < slices.length; i++) {
           data['duration'] = slices[i].pause;
           data['timestamp'] = startingTime + slices[i].when;
-          data.slice_no = i;
+          data['slice_no'] = i + 1;
           // Send 2 notification for each slice
           DataSink.addEvent("MemoryProducer", {
             type: DataSink.NormalizedEventType.REPEATING_EVENT_START,
             name: "Garbage Collection",
             groupID: groupId,
-            time: data['timestamp'],
-            details: data,
+            time: JSON.parse(JSON.stringify(data['timestamp'])),
+            details: JSON.parse(JSON.stringify(data)),
           });
           DataSink.addEvent("MemoryProducer", {
             type: DataSink.NormalizedEventType.REPEATING_EVENT_STOP,
             name: "Garbage Collection",
             groupID: groupId,
-            time: data['timestamp'] + slices[i].pause,
-            details: data,
+            time: JSON.parse(JSON.stringify(data['timestamp'] + slices[i].pause)),
+            details: JSON.parse(JSON.stringify(data)),
           });
         }
       }

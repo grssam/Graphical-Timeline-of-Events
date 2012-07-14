@@ -991,7 +991,7 @@ let producerInfo = {
       }
     },
     response: {
-      name: "response",
+      name: "Response",
       type: "nested",
       items: {
         status: {name: "Status", type: "string"},

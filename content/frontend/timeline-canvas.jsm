@@ -289,8 +289,9 @@ CanvasManager.prototype = {
   getGroupForTime: function CM_getGroupForTime(aGroupId, aTime)
   {
     let group = this.groupedData[aGroupId];
-    if (group.timestamps[0].length == null &&
-        group.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
+    if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
+         group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID ||
+         group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START) &&
         aTime >= Math.max(this.firstVisibleTime, group.timestamps[0] - 10) &&
         aTime <= (group.active? this.lastVisibleTime:
                                 group.timestamps[group.timestamps.length - 1] + 10)) {
@@ -299,21 +300,31 @@ CanvasManager.prototype = {
     // Point event type
     else if (group.timestamps[0].length == null &&
              group.type == NORMALIZED_EVENT_TYPE.POINT_EVENT) {
+      let results = [];
       for (let i = 0; i < group.timestamps.length; i++) {
-        if (Math.abs(group.timestamps[i] - aTime) < 4) {
-          return [group.dataIds[i]];
+        if (Math.abs(group.timestamps[i] - aTime) < 4*this.scale) {
+          results.push(group.dataIds[i]);
         }
+      }
+      if (results.length > 0) {
+        return results;
       }
     }
     // Repeating event type
-    else {
+    else if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID ||
+             group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
+             group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP) {
       let timestamps = group.timestamps;
+      let results = [];
       for (let i = 0; i < timestamps.length; i++) {
         if (aTime >= Math.max(this.firstVisibleTime, timestamps[i][0]) &&
             aTime <= Math.min(timestamps[i][timestamps[i].length - 1],
                               this.lastVisibleTime)) {
-          return [group.dataIds[i]];
+          results.push(group.dataIds[i]);
         }
+      }
+      if (results.length > 0) {
+        return results;
       }
     }
     return null;
@@ -326,31 +337,36 @@ CanvasManager.prototype = {
   {
     if (this.timeFrozen) {
       let groupIds = this.getGroupsForYPixels(Y);
-      if (!groupIds) {
+      if (groupIds.length == 0) {
         this.hideDetailedData();
-        return;
+        return null;
       }
       let time = this.getTimeForXPixels(X);
       if (groupIds.length == 1) {
         // Continuous event type
         let matchingGroupIds = this.getGroupForTime(groupIds[0], time);
-        if (matchingGroupIds) {
-          this.displayDetailedData(matchingGroupIds, X, Y);
-          return;
+        if (matchingGroupIds && matchingGroupIds.length > 0) {
+          this.displayDetailedData(X);
+          return matchingGroupIds;
         }
       }
       else {
+        let results = [];
         for (let groupId of groupIds) {
           let matchingGroupIds = this.getGroupForTime(groupId, time);
-          if (matchingGroupIds) {
-            this.displayDetailedData(matchingGroupIds, X, Y);
-            return;
+          if (matchingGroupIds && matchingGroupIds.length > 0) {
+            results.push(matchingGroupIds[0]);
           }
+        }
+        if (results.length > 0 ) {
+          this.displayDetailedData(X);
+          return results;
         }
       }
     }
     // Hide the detailed view if nothing else matches.
     this.hideDetailedData();
+    return null;
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
@@ -813,19 +829,15 @@ CanvasManager.prototype = {
     this.leftWindowLine = this.timeWindowLeft = this.timeWindowRight = null;
   },
 
-  displayDetailedData: function CM_displayDetailedData(aDataIds, aLeft, aTop)
+  displayDetailedData: function CM_displayDetailedData(aLeft)
   {
-    this.doc.getElementById("timeline-detailbox").style.opacity = 1;
-    this.doc.getElementById("timeline-detailbox").style.left = (aLeft + 10) + "px";
-    this.doc.getElementById("timeline-detailbox").style.top = (aTop + 10) + "px";
-    this.doc.getElementById("timeline-detailbox").style.height = "100px";
-    this.doc.getElementById("timeline-detailbox").style.weight = "100px";
-    this.doc.getElementById("timeline-detailbox").innerHTML = JSON.stringify(aDataIds);
+    this.doc.getElementById("timeline-detailbox").setAttribute("visible", true);
+    this.doc.getElementById("timeline-detailbox").style.left = (aLeft < this.width * 0.5? this.width - 260: 20) + "px";
   },
 
   hideDetailedData: function CM_hideDetailedData()
   {
-    this.doc.getElementById("timeline-detailbox").style.opacity = 0;
+    this.doc.getElementById("timeline-detailbox").setAttribute("visible", false);
   },
 
   /**

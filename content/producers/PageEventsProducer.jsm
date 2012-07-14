@@ -362,14 +362,15 @@ let PageEventsProducer =
     } catch (ex) {} */
 
     let eventDetail = {
-      target: aEvent.target.id || null,
+      target: aEvent.originalTarget.id || null,
+      eventName: aEvent.type,
     };
 
     let groupId = "";
 
     for each (let eventTypeName in PageEventsProducer.enabledEvents) {
       if (PageEventsProducer.eventTypes[eventTypeName].indexOf(aEvent.type) >= 0) {
-        groupId = eventDetail.eventType = eventTypeName;
+        groupId = eventTypeName;
         switch (eventTypeName) {
           case "MouseEvent":
             eventDetail.screenX = aEvent.screenX;
@@ -383,7 +384,8 @@ let PageEventsProducer =
             break;
 
           case "KeyboardEvent":
-            eventDetail.charCode = aEvent.charCode || aEvent.keyCode;
+            eventDetail.charCode = String.fromCharCode(aEvent.keyCode?aEvent.keyCode
+                                                                     :aEvent.charCode);
             eventDetail.shiftKey = aEvent.shiftKey;
             eventDetail.altKey = aEvent.altKey;
             eventDetail.metaKey = aEvent.metaKey;
@@ -453,6 +455,7 @@ let producerInfo = {
   details: {
     target: {name: "Target ID", type: "string"},
     eventName: {name: "Name", type: "string"},
+    charCode: {name: "Key", type: "string"},
     screenX: {name: "Screen X", type: "number"},
     screenY: {name: "Screen Y", type: "number"},
     clientX: {name: "Client X", type: "number"},

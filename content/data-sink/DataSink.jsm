@@ -446,12 +446,12 @@ let DataSink = {
    *        - details (optional) - other details about the event.
    */
   addEvent: function DS_addEvent(aProducerId, aEventData) {
-    if (!this._enabledProducers[aProducerId]) {
+    if (!DataSink._enabledProducers[aProducerId]) {
       return;
     }
 
     let normalizedData = aEventData;
-    normalizedData.id = this.sequenceId;
+    normalizedData.id = DataSink.sequenceId;
     normalizedData.producer = aProducerId;
 
     // Adding the normalized data to the data store object.
