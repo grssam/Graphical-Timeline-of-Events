@@ -96,6 +96,7 @@ function TimelineView(aChromeWindow) {
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
+  this.resizeCanvas = this.resizeCanvas.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
@@ -134,6 +135,7 @@ TimelineView.prototype = {
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
+    this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
@@ -561,6 +563,14 @@ TimelineView.prototype = {
     }
     else {
       Timeline.stopProducer(producerId);
+    }
+  },
+
+  resizeCanvas: function TV_resizeCanvas()
+  {
+    if (this.canvasStarted) {
+      this._canvas.width = this.$("timeline-content").boxObject.width -
+        (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
     }
   },
 
