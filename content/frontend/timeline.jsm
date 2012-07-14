@@ -663,9 +663,13 @@ TimelineView.prototype = {
   {
     let group = aEvent.originalTarget;
     if (group.localName == "label" && group.hasAttribute("groupId")) {
+      let groupId = group.getAttribute("groupId");
+      let time = this._canvas.groupedData[groupId].timestamps[0];
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
-      this.moveTickerToTime(this._canvas.groupedData[
-        group.getAttribute("groupId")].timestamps[0]);
+      this.moveTickerToTime(time);
+      this._canvas.displayDetailedData(this.width*0.45);
+      this.showDetailedInfoFor(this._canvas.getGroupForTime(groupId, time));
+      this.detailBox.setAttribute("pinned", true);
     }
   },
 
@@ -693,77 +697,83 @@ TimelineView.prototype = {
                                   (!this.producersPaneOpened?
                                     0: this.producersPane.boxObject.width),
                                   aEvent.clientY - 32);
-      if (ids && ids.length > 0) {
-        let id = ids[ids.length - 1];
-        if (this.detailBox.hasAttribute("dataId") && this.detailBox.getAttribute("dataId") == id) {
-          return;
+      this.showDetailedInfoFor(ids);
+    }
+  },
+
+  showDetailedInfoFor: function TV_showDetailedInfoFor(aIds)
+  {
+    if (!aIds || aIds.length == 0) {
+      return;
+    }
+    let id = aIds[aIds.length - 1];
+    if (this.detailBox.hasAttribute("dataId") && this.detailBox.getAttribute("dataId") == id) {
+      return;
+    }
+    this.detailBox.setAttribute("dataId", id);
+    let tmp = this.detailBox.firstChild;
+    while (tmp) {
+      let temp = tmp.nextSibling;
+      tmp.parentNode.removeChild(tmp);
+      tmp = temp;
+    }
+    let propLabel = this._frameDoc.createElement("label");
+    propLabel.setAttribute("class", "property-heading");
+    propLabel.setAttribute("value", this.producerInfoList[Timeline.data[id].producer].name);
+    this.detailBox.appendChild(propLabel);
+    if (Timeline.data[id].details) {
+      for (let property in this.producerInfoList[Timeline.data[id].producer]
+                               .details) {
+        if (Timeline.data[id].details[property] == null){
+          continue;
         }
-        this.detailBox.setAttribute("dataId", id);
-        let tmp = this.detailBox.firstChild;
-        while (tmp) {
-          let temp = tmp.nextSibling;
-          tmp.parentNode.removeChild(tmp);
-          tmp = temp;
+        if (this.producerInfoList[Timeline.data[id].producer]
+                .details[property].type != "nested") {
+          let {name:name, value:value} =
+            this.getPropertyInfo(Timeline.data[id].producer,
+                                 property,
+                                 Timeline.data[id].details[property]);
+          let propLine = this._frameDoc.createElement("hbox");
+          let nameLabel = this._frameDoc.createElement("label");
+          let valueLabel = this._frameDoc.createElement("label");
+          nameLabel.setAttribute("value", name + " :");
+          nameLabel.setAttribute("crop", "left");
+          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("crop", "center");
+          propLine.appendChild(nameLabel);
+          propLine.appendChild(valueLabel);
+          propLine.setAttribute("class", "property-line");
+          this.detailBox.appendChild(propLine);
         }
-        let propLabel = this._frameDoc.createElement("label");
-        propLabel.setAttribute("class", "property-heading");
-        propLabel.setAttribute("value", this.producerInfoList[Timeline.data[id].producer].name);
-        this.detailBox.appendChild(propLabel);
-        if (Timeline.data[id].details) {
-          for (let property in this.producerInfoList[Timeline.data[id].producer]
-                                   .details) {
-            if (Timeline.data[id].details[property] == null){
+        else {
+          let propLabel = this._frameDoc.createElement("label");
+          propLabel.setAttribute("value", this.producerInfoList[
+                                            Timeline.data[id].producer
+                                          ].details[property].name);
+          propLabel.setAttribute("class", "detailed-heading");
+          this.detailBox.appendChild(propLabel);
+          for (let subProp in this.producerInfoList[
+                                Timeline.data[id].producer
+                              ].details[property].items) {
+            if (Timeline.data[id].details[property][subProp] == null){
               continue;
             }
-            if (this.producerInfoList[Timeline.data[id].producer]
-                    .details[property].type != "nested") {
-              let {name:name, value:value} =
-                this.getPropertyInfo(Timeline.data[id].producer,
-                                     property,
-                                     Timeline.data[id].details[property]);
-              let propLine = this._frameDoc.createElement("hbox");
-              let nameLabel = this._frameDoc.createElement("label");
-              let valueLabel = this._frameDoc.createElement("label");
-              nameLabel.setAttribute("value", name + " :");
-              nameLabel.setAttribute("crop", "left");
-              valueLabel.setAttribute("value", value);
-              valueLabel.setAttribute("crop", "center");
-              propLine.appendChild(nameLabel);
-              propLine.appendChild(valueLabel);
-              propLine.setAttribute("class", "property-line");
-              this.detailBox.appendChild(propLine);
-            }
-            else {
-              let propLabel = this._frameDoc.createElement("label");
-              propLabel.setAttribute("value", this.producerInfoList[
-                                                Timeline.data[id].producer
-                                              ].details[property].name);
-              propLabel.setAttribute("class", "detailed-heading");
-              this.detailBox.appendChild(propLabel);
-              for (let subProp in this.producerInfoList[
-                                    Timeline.data[id].producer
-                                  ].details[property].items) {
-                if (Timeline.data[id].details[property][subProp] == null){
-                  continue;
-                }
-                let {name:name, value:value} =
-                  this.getPropertyInfo(Timeline.data[id].producer,
-                                       property,
-                                       Timeline.data[id].details[property][subProp],
-                                       subProp);
-                let propLine = this._frameDoc.createElement("hbox");
-                let nameLabel = this._frameDoc.createElement("label");
-                let valueLabel = this._frameDoc.createElement("label");
-                nameLabel.setAttribute("value", name + " :");
-                nameLabel.setAttribute("crop", "left");
-                valueLabel.setAttribute("value", value);
-                valueLabel.setAttribute("crop", "center");
-                propLine.appendChild(nameLabel);
-                propLine.appendChild(valueLabel);
-                propLine.setAttribute("class", "property-line");
-                this.detailBox.appendChild(propLine);
-              }
-            }
+            let {name:name, value:value} =
+              this.getPropertyInfo(Timeline.data[id].producer,
+                                   property,
+                                   Timeline.data[id].details[property][subProp],
+                                   subProp);
+            let propLine = this._frameDoc.createElement("hbox");
+            let nameLabel = this._frameDoc.createElement("label");
+            let valueLabel = this._frameDoc.createElement("label");
+            nameLabel.setAttribute("value", name + " :");
+            nameLabel.setAttribute("crop", "left");
+            valueLabel.setAttribute("value", value);
+            valueLabel.setAttribute("crop", "center");
+            propLine.appendChild(nameLabel);
+            propLine.appendChild(valueLabel);
+            propLine.setAttribute("class", "property-line");
+            this.detailBox.appendChild(propLine);
           }
         }
       }
@@ -777,9 +787,14 @@ TimelineView.prototype = {
       group = group.parentNode;
     }
     if (group.hasAttribute("timestamp")) {
-      this._canvas.moveToTime(group.getAttribute("timestamp")*1);
+      let time = group.getAttribute("timestamp")*1,
+          groupId = group.getAttribute("groupId");
+      this._canvas.moveToTime(time);
       this._canvas.moveTopOffsetTo(this._canvas
-          .groupedData[group.getAttribute("groupId")].y);
+          .groupedData[groupId].y);
+      this._canvas.displayDetailedData(this.width*0.45);
+      this.showDetailedInfoFor(this._canvas.getGroupForTime(groupId, time));
+      this.detailBox.setAttribute("pinned", true);
     }
   },
 
