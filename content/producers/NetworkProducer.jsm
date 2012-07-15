@@ -705,7 +705,11 @@ let NetworkProducer =
     function trim(val) {
       let trimmedURL = val.match(/^[^?#&]+/)[0].length;
       let lastSlash = val.lastIndexOf("/", trimmedURL);
-      return val.substring(lastSlash + 1, trimmedURL);
+      let value = val.substring(lastSlash + 1, trimmedURL);
+      if (value.length == 0) {
+        value = val;
+      }
+      return value;
     }
     /* let tabId = null;
     let window = aHttpActivity.contentWindow;

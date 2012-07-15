@@ -592,6 +592,7 @@
   opacity: 0;
   z-index: 100;
   background-color: rgb(22,33,43);
+  box-shadow: 0px 0px 4px 4px rgba(0,0,0,0.75);
 }
 
 #timeline-detailbox[visible=true]:not([pinned=true]) {

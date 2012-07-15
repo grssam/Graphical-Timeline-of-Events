@@ -914,7 +914,7 @@ TimelineView.prototype = {
                   (new Date(aValue)).getMinutes() + ":" +
                   (new Date(aValue)).getSeconds();
           valueLabel.setAttribute("value", value);
-          valueLabel.setAttribute("tooltiptext", (new Date(aValue)).toLocaleDateString());
+          valueLabel.setAttribute("tooltiptext", (new Date(aValue)).toLocaleString());
           break;
 
         case "enum":
@@ -936,6 +936,9 @@ TimelineView.prototype = {
           let trimmedURL = aValue.match(/^[^?#&]+/)[0].length;
           let lastSlash = aValue.lastIndexOf("/", trimmedURL);
           value = aValue.substring(lastSlash + 1, trimmedURL);
+          if (value.length == 0) {
+            value = aValue;
+          }
           valueLabel.setAttribute("value", value);
           valueLabel.setAttribute("tooltiptext", aValue);
           valueLabel.setAttribute("class", "text-link");
