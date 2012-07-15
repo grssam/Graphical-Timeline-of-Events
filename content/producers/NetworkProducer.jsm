@@ -990,9 +990,9 @@ let producerInfo = {
       type: "nested",
       items: {
         method: {name: "Method", type: "string"},
-        url: {name: "URL", type: "string"},
+        url: {name: "URL", type: "url"},
         httpVersion: {name: "HTTP Version", type: "string"},
-        headers: {name: "Headers", type: "string"},
+        headers: {name: "Headers", type: "object"},
         queryString: {name: "Query Strings", type: "string"},
         headersSize: {name: "Request Header Size", type: "number"},
         bodySize: {name: "Request Body Size", type: "number"},
@@ -1006,9 +1006,9 @@ let producerInfo = {
         status: {name: "Status", type: "string"},
         statusText: {name: "Response Status Text", type: "string"},
         httpVersion: {name: "HTTP Version", type: "string"},
-        headers: {name: "Response Headers", type: "string"},
+        headers: {name: "Response Headers", type: "object"},
         content: {name: "Response Content", type: "string"},
-        redirectURL: {name: "Redirect URL", type: "string"},
+        redirectURL: {name: "Redirect URL", type: "url"},
         headersSize: {name: "Response Header Size", type: "number"},
         bodySize: {name: "Response Body Size", type: "number"},
       }

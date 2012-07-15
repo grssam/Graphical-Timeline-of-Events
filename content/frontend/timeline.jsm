@@ -729,16 +729,14 @@ TimelineView.prototype = {
         }
         if (this.producerInfoList[Timeline.data[id].producer]
                 .details[property].type != "nested") {
-          let {name:name, value:value} =
+          let {name:name, valueLabel:valueLabel} =
             this.getPropertyInfo(Timeline.data[id].producer,
                                  property,
                                  Timeline.data[id].details[property]);
           let propLine = this._frameDoc.createElement("hbox");
           let nameLabel = this._frameDoc.createElement("label");
-          let valueLabel = this._frameDoc.createElement("label");
           nameLabel.setAttribute("value", name + " :");
-          nameLabel.setAttribute("crop", "left");
-          valueLabel.setAttribute("value", value);
+          nameLabel.setAttribute("crop", "start");
           valueLabel.setAttribute("crop", "center");
           propLine.appendChild(nameLabel);
           propLine.appendChild(valueLabel);
@@ -758,17 +756,15 @@ TimelineView.prototype = {
             if (Timeline.data[id].details[property][subProp] == null){
               continue;
             }
-            let {name:name, value:value} =
+            let {name:name, valueLabel:valueLabel} =
               this.getPropertyInfo(Timeline.data[id].producer,
                                    property,
                                    Timeline.data[id].details[property][subProp],
                                    subProp);
             let propLine = this._frameDoc.createElement("hbox");
             let nameLabel = this._frameDoc.createElement("label");
-            let valueLabel = this._frameDoc.createElement("label");
             nameLabel.setAttribute("value", name + " :");
-            nameLabel.setAttribute("crop", "left");
-            valueLabel.setAttribute("value", value);
+            nameLabel.setAttribute("crop", "start");
             valueLabel.setAttribute("crop", "center");
             propLine.appendChild(nameLabel);
             propLine.appendChild(valueLabel);
@@ -884,8 +880,9 @@ TimelineView.prototype = {
    *        Value of the property.
    * @param string aSubName
    *        sub property name in case of nested type.
-   * @return {name: _name_, value: _value_}
-   *         _name_ is the display name, _value_ is the display value.
+   * @return {name: _name_, value: _value_, valueLabel: _valueLabel_}
+   *         _name_ is the display name, _value_ is the display value,
+   *         _valueLabel_ is the XUL element representing the value.
    */
   getPropertyInfo: function TV_getPropertyInfo(aProducerId, aName, aValue, aSubName)
   {
@@ -903,29 +900,58 @@ TimelineView.prototype = {
           return null;
         }
       }
+      name = details[aName].name;
+      let valueLabel = this._frameDoc.createElement("label");
       switch (type) {
         case "string":
         case "number":
           value = aValue;
-          name = details[aName].name;
+          valueLabel.setAttribute("value", aValue);
           break;
 
         case "date":
           value = (new Date(aValue)).getHours() + ":" +
                   (new Date(aValue)).getMinutes() + ":" +
                   (new Date(aValue)).getSeconds();
-          name = details[aName].name;
+          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("tooltiptext", (new Date(aValue)).toLocaleDateString());
           break;
 
         case "enum":
-          name = details[aName].name;
           value = details[aName].values[aValue] || "null";
+          valueLabel.setAttribute("value", value);
+          break;
+
+        case "ms":
+          value = (aValue || "0") + " ms";
+          valueLabel.setAttribute("value", value);
+          break;
+
+        case "s":
+          value = (aValue || "0") + " s";
+          valueLabel.setAttribute("value", value);
+          break;
+
+        case "url":
+          let trimmedURL = aValue.match(/^[^?#&]+/)[0].length;
+          let lastSlash = aValue.lastIndexOf("/", trimmedURL);
+          value = aValue.substring(lastSlash + 1, trimmedURL);
+          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("tooltiptext", aValue);
+          valueLabel.setAttribute("class", "text-link");
+          valueLabel.setAttribute("href", aValue);
+          break;
+
+        case "object":
+          value = aValue;
+          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
           break;
 
         default:
           return null;
       }
-      return {name: name, value: value};
+      return {name: name, value: value, valueLabel: valueLabel};
     }
     return null;
   },

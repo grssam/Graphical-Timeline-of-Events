@@ -635,6 +635,16 @@
   color: rgb(207,218,230);
 }
 
+.property-line > .text-link {
+  color: rgb(3,101,151) !important;
+  margin: 0px !important;
+  padding: 0px 2px !important;
+}
+
+.property-line > .text-link:hover {
+  color: rgb(20,150,175) !important;
+}
+
 .property-heading, .detailed-heading {
   clear: both;
   display: block;
