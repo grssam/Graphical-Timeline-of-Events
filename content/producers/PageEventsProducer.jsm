@@ -454,7 +454,7 @@ let producerInfo = {
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
     eventName: {name: "Name", type: "string"},
-    target: {name: "Target ID", type: "string"},
+    target: {name: "Target ID", type: "id"},
     charCode: {name: "Key", type: "string"},
     screenX: {name: "Screen X", type: "px"},
     screenY: {name: "Screen Y", type: "px"},
@@ -465,7 +465,7 @@ let producerInfo = {
     metaKey: {name: "Meta", type: "string"},
     ctrlKey: {name: "Control", type: "string"},
     button: {name: "Button", type: "enum", values: {0: "Left Click", 1: "Middle Click", 2: "Right Click"}},
-    data: {name: "Data", type: "string"},
+    data: {name: "Data", type: "object"},
   }
 };
 

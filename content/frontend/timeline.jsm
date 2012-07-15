@@ -932,6 +932,24 @@ TimelineView.prototype = {
           valueLabel.setAttribute("value", value);
           break;
 
+        case "px":
+          value = (aValue || "0") + " px";
+          valueLabel.setAttribute("value", value);
+          break;
+
+        case "id":
+          value = aValue;
+          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("class", "text-link");
+          if (aValue != null) {
+            valueLabel.addEventListener("click", function() {
+              this._window.InspectorUI
+                  .openInspectorUI(this._window.gBrowser.contentDocument
+                                       .getElementById(value));
+            }.bind(this), true);
+          }
+          break;
+
         case "url":
           let trimmedURL = aValue.match(/^[^?#&]+/)[0].length;
           let lastSlash = aValue.lastIndexOf("/", trimmedURL);
