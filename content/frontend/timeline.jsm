@@ -359,6 +359,12 @@ TimelineView.prototype = {
       feed = temp.nextSibling;
       this.infoBox.removeChild(temp);
     }
+    let details = this.detailBox.firstChild;
+    while (feed) {
+      let temp = details;
+      details = temp.nextSibling;
+      this.detailBox.removeChild(temp);
+    }
   },
 
   /**
