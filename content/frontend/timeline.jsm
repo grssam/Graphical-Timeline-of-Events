@@ -37,6 +37,7 @@ const DataSinkEventMessageType = {
   UPDATE_UI: 2, // This event will be sent when there are local changes in
                 // active features or producers and those changes need to be
                 // reflected back to the UI.
+  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
 };
 
 const ERRORS = {
@@ -88,6 +89,7 @@ function TimelineView(aChromeWindow) {
   this.handleGroupClick = this.handleGroupClick.bind(this);
   this.handleTickerClick = this.handleTickerClick.bind(this);
   this.pinUnpinDetailBox = this.pinUnpinDetailBox.bind(this);
+  this.toggleRestartOnReload = this.toggleRestartOnReload.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
@@ -129,6 +131,7 @@ TimelineView.prototype = {
     this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
+    this.restartOnReload = this.$("restart-on-reload");
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
@@ -142,6 +145,7 @@ TimelineView.prototype = {
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.producersButton.addEventListener("command", this.toggleProducersPane, true);
     this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
+    this.restartOnReload.addEventListener("command", this.toggleRestartOnReload, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     this.overviewButton.setAttribute("checked", true);
@@ -167,6 +171,7 @@ TimelineView.prototype = {
       this.infoBoxHidden = false;
       this.infoBoxButton.checked = true;
     }
+    this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
   },
 
   /**
@@ -570,6 +575,11 @@ TimelineView.prototype = {
     else {
       Timeline.stopProducer(producerId);
     }
+  },
+
+  toggleRestartOnReload: function TV_toggleRestartOnReload()
+  {
+    TimelinePreferences.doRestartOnReload = !TimelinePreferences.doRestartOnReload;
   },
 
   resizeCanvas: function TV_resizeCanvas()
@@ -1386,6 +1396,13 @@ let Timeline = {
           Timeline._view.updateUI(message);
         }
         break;
+
+      case DataSinkEventMessageType.PAGE_RELOAD:
+        if (TimelinePreferences.doRestartOnReload) {
+          Timeline._view.recording = false;
+          Timeline._view.toggleRecording();
+        }
+        break;
     }
   },
 
@@ -1487,6 +1504,27 @@ let TimelinePreferences = {
   set height(value) {
     Services.prefs.setCharPref("devtools.timeline.height", value);
     this._height = value;
+  },
+
+  /**
+   * Gets the preference for restating the Timeline on page reload.
+   */
+  get doRestartOnReload() {
+    if (this._doRestartOnReload === undefined) {
+      this._doRestartOnReload =
+        Services.prefs.getBoolPref("devtools.timeline.restartOnReload");
+    }
+    return this._doRestartOnReload;
+  },
+
+  /**
+   * Sets the preference for restating the Timeline on page reload.
+   * @param boolean aRestartOnReload
+   */
+  set doRestartOnReload(aRestartOnReload) {
+    Services.prefs.setBoolPref("devtools.timeline.restartOnReload",
+                               aRestartOnReload);
+    this._doRestartOnReload = aRestartOnReload;
   },
 
   /**

@@ -36,6 +36,7 @@ const DataSinkEventMessageType = {
   UPDATE_UI: 2, // This event will be sent when there are local changes in
                 // active features or producers and those changes need to be
                 // reflected back to the UI.
+  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
 };
 
 const NORMALIZED_EVENT_TYPE = {
@@ -166,6 +167,10 @@ let DataSink = {
                    .chromeEventHandler
                    .ownerDocument.defaultView;
 
+    Cc["@mozilla.org/appshell/window-mediator;1"]
+      .getService(Ci.nsIWindowMediator)
+      .getMostRecentWindow("navigator:browser")
+      .gBrowser.addTabsProgressListener(this.progressListner);
     // Initiating the Data Store
     //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     //this.dataStore = new DataStore(this.databaseName);
@@ -407,6 +412,30 @@ let DataSink = {
   },
 
   /**
+   * Keeps track of page reloads on the listening content windows.
+  */
+  progressListner: {
+    onLocationChange: function DS_PL_onLocationChange(aBrowser, aWebProgress,
+                                                      aRequest, aLocation) {
+      let contentWindow = aBrowser.contentWindow;
+      if (DataSink.listeningWindows.indexOf(contentWindow) == -1) {
+        return;
+      }
+      let chromeWindow = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                           .getInterface(Ci.nsIWebNavigation)
+                           .QueryInterface(Ci.nsIDocShell)
+                           .chromeEventHandler
+                           .ownerDocument.defaultView;
+      // Get the tab indexassociated with the content window
+      let tabIndex = chromeWindow.gBrowser
+        .getBrowserIndexForDocument(contentWindow.document);
+      // Get the unique tab id associated with the tab
+      let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
+      DataSink.sendMessage(DataSinkEventMessageType.PAGE_RELOAD, {tabId: tabId});
+    },
+  },
+
+  /**
    * Fires an event to let the Graph UI know about data changes.
    *
    * @param int aMessageType
@@ -583,6 +612,11 @@ let DataSink = {
     if (this.registeredUI.length > 0) {
       return;
     }
+
+    Cc["@mozilla.org/appshell/window-mediator;1"]
+      .getService(Ci.nsIWindowMediator)
+      .getMostRecentWindow("navigator:browser")
+      .gBrowser.removeTabsProgressListener(this.progressListner);
 
     if (this.listening) {
       for (let producer in this._enabledProducers) {

@@ -42,3 +42,7 @@
 <!-- LOCALIZATION NOTE (timelineUI.emptyFilterText): This is the placeholder text
   -  for the search bar in the timeline UI. -->
 <!ENTITY timelineUI.emptyFilterText        "Click to Search">
+
+<!-- LOCALIZATION NOTE (timelineUI.restartOnReloadLabel): This is the label for the
+  -  checkbox to enable the feature to resstart the timeline on page reload. -->
+<!ENTITY timelineUI.restartOnReloadLabel        "Restart on page reload">

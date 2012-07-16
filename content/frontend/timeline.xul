@@ -39,9 +39,9 @@
                        tabindex="3"/>
 
       </hbox>
-      <textbox id="search-bar" type="search"
-               class="devtools-searchinput"
-               emptytext="&timelineUI.emptyFilterText;"/>
+      <checkbox id="restart-on-reload"
+                class="devtools-checkbox"
+                label="&timelineUI.restartOnReloadLabel;"/>
       <spacer flex="1"/>
       <toolbarbutton id="close"
                      tooltiptext="&timelineUI.closeButton.tooltip;"
