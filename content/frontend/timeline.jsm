@@ -1193,6 +1193,8 @@ let Timeline = {
     //Timeline._console = Cc["@mozilla.org/consoleservice;1"]
     //                     .getService(Ci.nsIConsoleService);
     Timeline.addRemoteListener(Timeline._window);
+    // destroying on unload.
+    Timeline._window.addEventListener("unload", Timeline.destroy, true);
     if (!Timeline.id) {
       Timeline.id = "timeline-ui-" + Date.now();
     }
