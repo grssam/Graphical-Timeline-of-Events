@@ -54,7 +54,7 @@ function addMenuItem(window) {
         global.DataSink = global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer = null;
       }.bind(global));
       $(toolsMenuitemID).setAttribute("checked", true);
-      $(appMenuitemID).setAttribute("checked", true);
+      $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
     }
     else {
       Timeline.destroy();
