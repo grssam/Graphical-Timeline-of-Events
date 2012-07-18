@@ -58,10 +58,17 @@ let MemoryProducer =
       aEnabledEvents = this.defaultEvents;
     }
 
-    // set javascript.options.mem.log to true to record CC/GC/Resident notifications.
-    if (!Services.prefs.getBoolPref("javascript.options.mem.log")) {
-      this.disablePrefOnUnload = true;
-      Services.prefs.setBoolPref("javascript.options.mem.log", true);
+    // set javascript.options.mem.(notify||log) to true to record CC/GC/Resident notifications.
+    try {
+      if (!Services.prefs.getBoolPref("javascript.options.mem.notify")) {
+        this.disablePrefOnUnload = true;
+        Services.prefs.setBoolPref("javascript.options.mem.notify", true);
+      }
+    } catch (ex) {
+      if (!Services.prefs.getBoolPref("javascript.options.mem.log")) {
+        this.disablePrefOnUnload = true;
+        Services.prefs.setBoolPref("javascript.options.mem.log", true);
+      }
     }
 
     this.enableFeatures(aEnabledEvents);
@@ -202,8 +209,14 @@ let MemoryProducer =
    */
   destroy: function MP_destroy()
   {
-    if (this.disablePrefOnUnload) {
-      Services.prefs.setBoolPref("javascript.options.mem.log", false);
+    try {
+      if (this.disablePrefOnUnload && Services.prefs.getBoolPref("javascript.options.mem.notify")) {
+        Services.prefs.setBoolPref("javascript.options.mem.notify", false);
+      }
+    } catch (ex) {
+      if (this.disablePrefOnUnload) {
+        Services.prefs.setBoolPref("javascript.options.mem.log", false);
+      }
     }
     this.disableFeatures(this.enabledEvents);
 
