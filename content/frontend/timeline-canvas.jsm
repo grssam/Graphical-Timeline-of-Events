@@ -775,6 +775,9 @@ CanvasManager.prototype = {
     this.stopTime = null;
     this.render();
     this.startTime = Date.now();
+    this.timeFrozen = false;
+    this.offsetTime = 0;
+    this.scrollDistance = 0;
   },
 
   stopRendering: function CM_stopRendering()
