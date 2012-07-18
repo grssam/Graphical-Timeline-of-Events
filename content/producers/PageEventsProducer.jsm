@@ -317,6 +317,7 @@ let PageEventsProducer =
         groupID: groupId,
         time: Date.now(),
         details: {
+          time: Date.now(),
           /* tabID: tabId, */
         }
       });
@@ -364,6 +365,7 @@ let PageEventsProducer =
     let eventDetail = {
       target: aEvent.originalTarget.id || null,
       eventName: aEvent.type,
+      time: Date.now(),
     };
 
     let groupId = "";
@@ -454,6 +456,7 @@ let producerInfo = {
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
     eventName: {name: "Name", type: "string"},
+    time: {name: "Time", type: "date"},
     target: {name: "Target ID", type: "id"},
     charCode: {name: "Key", type: "string"},
     screenX: {name: "Screen X", type: "px"},
