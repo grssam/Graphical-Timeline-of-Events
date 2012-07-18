@@ -702,12 +702,15 @@ let NetworkProducer =
    */
   sendActivity: function NP_sendActivity(aHttpActivity)
   {
-    function trim(val) {
-      let trimmedURL = val.match(/^[^?#&]+/)[0].length;
-      let lastSlash = val.lastIndexOf("/", trimmedURL);
-      let value = val.substring(lastSlash + 1, trimmedURL);
-      if (value.length == 0) {
-        value = val;
+    function trim(aValue) {
+      let value = aValue;
+      if (value.length > 20) {
+        let trimmedURL = aValue.match(/^[^?#&]+/)[0].length;
+        let lastSlash = aValue.lastIndexOf("/", trimmedURL);
+        value = value.substring(lastSlash + 1, trimmedURL);
+        if (value.length == 0) {
+          value = aValue;
+        }
       }
       return value;
     }

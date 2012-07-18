@@ -127,37 +127,6 @@ CanvasManager.prototype = {
     return this._paneHeight;
   },
 
-  hasGroup: function CM_hasGroup(aData)
-  {
-    let temp = false;
-    if (this.doc.getElementById("producers-pane").collapsed == true) {
-      this.doc.getElementById("producers-pane").collapsed = false;
-      temp = true;
-    }
-    let groupBox = null;
-    switch (aData.type) {
-      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
-      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
-      case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
-        groupBox = this.doc.getElementById(aData.name.replace(" ", "_") + "-groupbox");
-        break;
-
-      default:
-        groupBox = this.doc.getElementById(aData.groupID + "-groupbox");
-    }
-
-    if (temp) {
-      this.doc.getElementById("producers-pane").collapsed = true;
-    }
-
-    if (groupBox && groupBox.parentNode.getAttribute("producerId") == aData.producer) {
-      return true;
-    }
-    else {
-      return false;
-    }
-  },
-
   /**
    * Gets the Y offset of the group residing in the Producers Pane.
    *
@@ -408,7 +377,6 @@ CanvasManager.prototype = {
   {
     let groupId = aData.groupID;
 
-    this.insertAtCorrectPosition(aData.time, groupId);
     switch (aData.type) {
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START:
         this.groupedData[groupId] = {
@@ -428,18 +396,28 @@ CanvasManager.prototype = {
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID:
-        this.groupedData[groupId].timestamps.push(aData.time);
-        this.groupedData[groupId].dataIds.push(aData.id);
-        this.waitForDotData = false;
+        try {
+          this.groupedData[groupId].timestamps.push(aData.time);
+          this.groupedData[groupId].dataIds.push(aData.id);
+          this.waitForDotData = false;
+        } catch (ex) {
+          // Case when restart on relaod is true and some in-flight calls mid-ed
+          return null;
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END:
-        this.groupedData[groupId].timestamps.push(aData.time);
-        this.groupedData[groupId].dataIds.push(aData.id);
-        this.groupedData[groupId].active = false;
-        this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
-        this.waitForDotData = false;
-        this.waitForLineData = false;
+        try {
+          this.groupedData[groupId].timestamps.push(aData.time);
+          this.groupedData[groupId].dataIds.push(aData.id);
+          this.groupedData[groupId].active = false;
+          this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
+          this.waitForDotData = false;
+          this.waitForLineData = false;
+        } catch (ex) {
+          // Case when restart on relaod is true and some in-flight calls ended
+          return null;
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START:
@@ -466,20 +444,30 @@ CanvasManager.prototype = {
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID:
-        this.groupedData[groupId].timestamps[
-          this.groupedData[groupId].timestamps.length - 1
-        ].push(aData.time);
-        this.waitForDotData = false;
+        try {
+          this.groupedData[groupId].timestamps[
+            this.groupedData[groupId].timestamps.length - 1
+          ].push(aData.time);
+          this.waitForDotData = false;
+        } catch (ex) {
+          // Case when restart on relaod is true and some in-flight calls mid-ed
+          return null;
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP:
-        this.groupedData[groupId].timestamps[
-          this.groupedData[groupId].timestamps.length - 1
-        ].push(aData.time);
-        this.groupedData[groupId].active = false;
-        this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
-        this.waitForDotData = false;
-        this.waitForLineData = false;
+        try {
+          this.groupedData[groupId].timestamps[
+            this.groupedData[groupId].timestamps.length - 1
+          ].push(aData.time);
+          this.groupedData[groupId].active = false;
+          this.activeGroups.splice(this.activeGroups.indexOf(groupId), 1);
+          this.waitForDotData = false;
+          this.waitForLineData = false;
+        } catch (ex) {
+          // Case when restart on relaod is true and some in-flight calls ended
+          return null;
+        }
         break;
 
       case NORMALIZED_EVENT_TYPE.POINT_EVENT:
@@ -502,6 +490,7 @@ CanvasManager.prototype = {
         this.waitForDotData = false;
         break;
     }
+    this.insertAtCorrectPosition(aData.time, groupId);
     return this.groupedData[groupId].id;
   },
 
@@ -832,7 +821,7 @@ CanvasManager.prototype = {
   displayDetailedData: function CM_displayDetailedData(aLeft)
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", true);
-    this.doc.getElementById("timeline-detailbox").style.left = (aLeft < this.width * 0.5? this.width - 260: 20) + "px";
+    this.doc.getElementById("timeline-detailbox").style.left = (aLeft < 250 ? this.width - 260: 20) + "px";
   },
 
   hideDetailedData: function CM_hideDetailedData()

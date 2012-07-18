@@ -167,10 +167,9 @@ let DataSink = {
                    .chromeEventHandler
                    .ownerDocument.defaultView;
 
-    Cc["@mozilla.org/appshell/window-mediator;1"]
-      .getService(Ci.nsIWindowMediator)
-      .getMostRecentWindow("navigator:browser")
-      .gBrowser.addTabsProgressListener(this.progressListner);
+    this._browsers = [this._chromeWindowForGraph.gBrowser
+                          .getBrowserForDocument(contentWindow.document)];
+    this._browsers[0].addEventListener("beforeunload", this.onWindowUnload, true);
     // Initiating the Data Store
     //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     //this.dataStore = new DataStore(this.databaseName);
@@ -414,25 +413,34 @@ let DataSink = {
   /**
    * Keeps track of page reloads on the listening content windows.
   */
-  progressListner: {
-    onLocationChange: function DS_PL_onLocationChange(aBrowser, aWebProgress,
-                                                      aRequest, aLocation) {
-      let contentWindow = aBrowser.contentWindow;
-      if (DataSink.listeningWindows.indexOf(contentWindow) == -1) {
-        return;
-      }
-      let chromeWindow = contentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                           .getInterface(Ci.nsIWebNavigation)
-                           .QueryInterface(Ci.nsIDocShell)
-                           .chromeEventHandler
-                           .ownerDocument.defaultView;
-      // Get the tab indexassociated with the content window
-      let tabIndex = chromeWindow.gBrowser
-        .getBrowserIndexForDocument(contentWindow.document);
-      // Get the unique tab id associated with the tab
-      let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
-      DataSink.sendMessage(DataSinkEventMessageType.PAGE_RELOAD, {tabId: tabId});
-    },
+  onWindowUnload: function DS_onWindowUnload(aEvent)
+  {
+    let window = null;
+    if (aEvent.target instanceof Ci.nsIDOMWindow) {
+      window = aEvent.target;
+    }
+    else if (aEvent.target.defaultView &&
+             aEvent.target.defaultView instanceof Ci.nsIDOMWindow) {
+      window = aEvent.target.defaultView;
+    }
+    else if (aEvent.target.ownerDocument &&
+             aEvent.target.ownerDocument.defaultView instanceof Ci.nsIDOMWindow) {
+      window = aEvent.target.ownerDocument.defaultView;
+    }
+    if (!window || DataSink.listeningWindows.indexOf(window) == -1) {
+      return;
+    }
+    /* let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
+                         .getInterface(Ci.nsIWebNavigation)
+                         .QueryInterface(Ci.nsIDocShell)
+                         .chromeEventHandler
+                         .ownerDocument.defaultView;
+    // Get the tab indexassociated with the content window
+    let tabIndex = chromeWindow.gBrowser
+      .getBrowserIndexForDocument(window.document);
+    // Get the unique tab id associated with the tab
+    let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel; */
+    DataSink.sendMessage(DataSinkEventMessageType.PAGE_RELOAD, {/*tabId: tabId*/});
   },
 
   /**
@@ -613,22 +621,25 @@ let DataSink = {
       return;
     }
 
-    Cc["@mozilla.org/appshell/window-mediator;1"]
-      .getService(Ci.nsIWindowMediator)
-      .getMostRecentWindow("navigator:browser")
-      .gBrowser.removeTabsProgressListener(this.progressListner);
-
     if (this.listening) {
       for (let producer in this._enabledProducers) {
+       try {
         this.stopProducer(producer);
+       }catch (e) {Services.prompt.confirm(e);}
       }
     }
+
+    for each (let browser in this._browsers) {
+      browser.removeEventListener("beforeunload", this.onWindowUnload, true);
+    }
+
     //this.dataStore.destroy(aMessage.deleteDatabase);
     try {
       //Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
     //DataStore = this.dataStore = null;
-    this.registeredUI = this._enabledProducers = this.listeningWindows = null;
+    this._browsers = this.registeredUI = this._enabledProducers =
+      this._registeredProducers = this.listeningWindows = null;
     this.initiated = false;
     this.databaseName = "";
   },
