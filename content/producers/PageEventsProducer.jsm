@@ -192,13 +192,9 @@ let PageEventsProducer =
           if (this.eventTypes[eventType]) {
             started = true;
             if (eventType == "PaintEvent") {
-              let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
-                                   .getInterface(Ci.nsIWebNavigation)
-                                   .QueryInterface(Ci.nsIDocShell)
-                                   .chromeEventHandler
-                                   .ownerDocument.defaultView;
+              Services.prefs.setBoolPref("dom.send_after_paint_to_content", true);
               for each (let eventName in this.eventTypes[eventType]) {
-                chromeWindow.addEventListener(eventName, this.listenEvents, false);
+                window.addEventListener(eventName, this.listenEvents, false);
               }
             }
             else {
@@ -238,13 +234,9 @@ let PageEventsProducer =
             stopped[eventType] = true;
             try {
               if (eventType == "PaintEvent") {
-                let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
-                                     .getInterface(Ci.nsIWebNavigation)
-                                     .QueryInterface(Ci.nsIDocShell)
-                                     .chromeEventHandler
-                                     .ownerDocument.defaultView;
+                Services.prefs.clearUserPref("dom.send_after_paint_to_content");
                 for each (let eventName in this.eventTypes[eventType]) {
-                  chromeWindow.removeEventListener(eventName, this.listenEvents, false);
+                  window.removeEventListener(eventName, this.listenEvents, false);
                 }
               }
               else {
