@@ -52,16 +52,16 @@ function addMenuItem(window) {
           $(appMenuitemID).removeAttribute("checked");
         } catch (ex) {}
         global.DataSink = global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer = null;
+        delete global.DataSink;
+        delete global.MemoryProducer;
+        delete global.NetworkProducer;
+        delete global.PageEventsProducer;
       }.bind(global));
       $(toolsMenuitemID).setAttribute("checked", true);
       $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
     }
     else {
       Timeline.destroy();
-      try {
-        $(toolsMenuitemID).removeAttribute("checked");
-        $(appMenuitemID).removeAttribute("checked");
-      } catch (ex) {}
     }
   }
 

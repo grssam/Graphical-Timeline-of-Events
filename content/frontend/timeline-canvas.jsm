@@ -87,6 +87,7 @@ function CanvasManager(aDoc) {
 
   this.timeFrozen = false;
   this.overview = true;
+  this.alive = true;
   this.render();
 }
 
@@ -877,6 +878,9 @@ CanvasManager.prototype = {
    */
   render: function CM_render()
   {
+    if (!this.alive) {
+      return;
+    }
     // getting the current time, which will be at the center of the canvas.
     let date = (this.stopTime? this.stopTime: Date.now());
     if (this.timeFrozen) {
@@ -1115,5 +1119,17 @@ CanvasManager.prototype = {
       }
     }
     this.doc.defaultView.mozRequestAnimationFrame(this.render);
+  },
+
+  destroy: function CM_destroy()
+  {
+    this.alive = false;
+    this.ctxL.clearRect(0,0,this.width,this.height);
+    this.ctxD.clearRect(0,0,this.width,this.height);
+    this.ctxR.clearRect(0,0,this.width,25);
+    this.groupedData = this.activeGroups = this.globalTiming = this.globalGroup =
+      this.dirtyDots = this.dirtyZone = this.waitForDotData = this.waitForLineData =
+      this.id = this.startTime = this.stopTime = this.timeFrozen = this.offsetTime =
+      this.scrollDistance = null;
   }
 };

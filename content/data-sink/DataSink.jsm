@@ -623,9 +623,7 @@ let DataSink = {
 
     if (this.listening) {
       for (let producer in this._enabledProducers) {
-       try {
         this.stopProducer(producer);
-       }catch (e) {Services.prompt.confirm(null, "", e);}
       }
     }
 

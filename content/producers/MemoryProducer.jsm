@@ -219,7 +219,6 @@ let MemoryProducer =
       }
     }
     this.disableFeatures(this.enabledEvents);
-
     this.enabledEvents = null;
   },
 };

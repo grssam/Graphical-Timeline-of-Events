@@ -1195,8 +1195,13 @@ TimelineView.prototype = {
     TimelinePreferences.activeProducers = activeProducers;
 
     // Removing frame and splitter.
+    if (this.canvasStarted) {
+      this._canvas.destroy();
+      this._canvas = null;
+    }
     this._splitter.parentNode.removeChild(this._splitter);
     this._frame.parentNode.removeChild(this._frame);
+    this._frame = this._frameDoc = this._window = null;
   },
 
   _onUnload: function TV__onUnload()
