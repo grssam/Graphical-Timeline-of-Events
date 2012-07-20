@@ -79,6 +79,9 @@ function CanvasManager(aDoc) {
   this.ctxD = this.canvasDots.getContext('2d');
   this.canvasRuler = aDoc.getElementById("ruler-canvas");
   this.ctxR = this.canvasRuler.getContext('2d');
+  this.producerPane = this.doc.getElementById("producers-pane");
+  this.currentTimeNeedle = this.doc.getElementById("timeline-current-time");
+  this.timeWindow = this.doc.getElementById("timeline-time-window");
 
   // Bind
   this.render = this.render.bind(this);
@@ -123,7 +126,7 @@ CanvasManager.prototype = {
   get paneHeight()
   {
     if (this._paneHeight === undefined) {
-      this._paneHeight = this.doc.getElementById("producers-pane").scrollHeight;
+      this._paneHeight = this.producerPane.scrollHeight;
     }
     return this._paneHeight;
   },
@@ -140,11 +143,6 @@ CanvasManager.prototype = {
    */
   getOffsetForGroup: function CM_getOffsetForGroup(aGroupId, producerId)
   {
-    let temp = false;
-    if (this.doc.getElementById("producers-pane").collapsed == true) {
-      this.doc.getElementById("producers-pane").collapsed = false;
-      temp = true;
-    }
     let producerBoxes = this.doc.getElementsByClassName("producer-box");
     for (let i = 0; i < producerBoxes.length; i++) {
       let producerBox = producerBoxes[i];
@@ -154,9 +152,6 @@ CanvasManager.prototype = {
       }
 
       if (producerBox.getAttribute("visible") == "false") {
-        if (temp) {
-          this.doc.getElementById("producers-pane").collapsed = true;
-        }
         return (producerBox.firstChild.boxObject.y +
                 producerBox.firstChild.boxObject.height/2 - 32);
       }
@@ -164,16 +159,10 @@ CanvasManager.prototype = {
       let feature = producerBox.firstChild.nextSibling.firstChild;
       while (feature) {
         if (feature.getAttribute("groupId") == aGroupId) {
-          if (temp) {
-            this.doc.getElementById("producers-pane").collapsed = true;
-          }
           return (feature.boxObject.y + feature.boxObject.height/2 - 32);
         }
         feature = feature.nextSibling;
       }
-    }
-    if (temp) {
-      this.doc.getElementById("producers-pane").collapsed = true;
     }
     return null;
   },
@@ -589,7 +578,7 @@ CanvasManager.prototype = {
     }
     if (aAnimate != null && aAnimate == false) {
       this.freezeCanvas();
-      this.doc.getElementById("producers-pane").scrollTop = this.offsetTop = this.finalOffset;
+      this.producerPane.scrollTop = this.offsetTop = this.finalOffset;
       this.offsetTime = 0;
       return;
     }
@@ -605,23 +594,22 @@ CanvasManager.prototype = {
         (this.finalOffset - this.offsetTop < 0 &&
          this.finalOffset - this.offsetTop >= 0.05*(this.initialOffset - this.finalOffset))) {
       this.freezeCanvas();
-      this.doc.getElementById("producers-pane").scrollTop = this.finalOffset;
-      this.offsetTop = this.doc.getElementById("producers-pane").scrollTop;
+      this.producerPane.scrollTop = this.finalOffset;
+      this.offsetTop = this.producerPane.scrollTop;
       this.finalOffset = this.initialOffset = null;
       this.waitForLineData = false;
       this.waitForDotData = false;
     }
     else {
-      let initial = this.doc.getElementById("producers-pane").scrollTop*1;
-      this.doc.getElementById("producers-pane").scrollTop -=
-        0.05*(this.initialOffset - this.finalOffset);
-      if (initial == this.doc.getElementById("producers-pane").scrollTop) {
+      let initial = this.producerPane.scrollTop*1;
+      this.producerPane.scrollTop -= 0.05*(this.initialOffset - this.finalOffset);
+      if (initial == this.producerPane.scrollTop) {
         // Destination is already reached, no need to go any further.
         aY -= (this.finalOffset - initial);
         this.offsetTop = initial;
       }
       else {
-        this.offsetTop = this.doc.getElementById("producers-pane").scrollTop;
+        this.offsetTop = this.producerPane.scrollTop;
       }
       this.doc.defaultView
           .mozRequestAnimationFrame(function() {
@@ -916,7 +904,7 @@ CanvasManager.prototype = {
                                  this.width);
 
     // Moving the current time needle to appropriate position.
-    this.doc.getElementById("timeline-current-time").style.left = this.currentWidth + "px";
+    this.currentTimeNeedle.style.left = this.currentWidth + "px";
 
     // Drawing the time ruler.
     this.ctxR.clearRect(0,0,this.width,25);
@@ -1068,11 +1056,11 @@ CanvasManager.prototype = {
 
       // Move the left bar of the time window if the timeline is moving.
       if (this.timeWindowLeft != null && !this.timeFrozen) {
-        let width_o = this.doc.getElementById("timeline-time-window").style.width.replace("px", "")*1;
-        let left_o = this.doc.getElementById("timeline-time-window").style.left.replace("px", "")*1;
+        let width_o = this.timeWindow.style.width.replace("px", "")*1;
+        let left_o = this.timeWindow.style.left.replace("px", "")*1;
         let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
-        this.doc.getElementById("timeline-time-window").style.width = (width_o + left_o - left) + "px";
-        this.doc.getElementById("timeline-time-window").style.left = left + "px";
+        this.timeWindow.style.width = (width_o + left_o - left) + "px";
+        this.timeWindow.style.left = left + "px";
       }
 
       if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
