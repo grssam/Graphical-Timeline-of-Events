@@ -65,6 +65,7 @@ function CanvasManager(aDoc) {
   this.globalTiming = [];
   this.globalGroup = [];
   this.activeGroups = [];
+  this.mousePointerAt = {x: 0, time: 0};
 
   // How many milli seconds per pixel.
   this.scale = 50;
@@ -294,13 +295,14 @@ CanvasManager.prototype = {
    */
   mouseHoverAt: function CM_mouseHoverAt(X,Y)
   {
+    let time = this.getTimeForXPixels(X);
+    this.mousePointerAt = {x : X, time: time};
     if (this.timeFrozen) {
       let groupIds = this.getGroupsForYPixels(Y);
       if (groupIds.length == 0) {
         this.hideDetailedData();
         return null;
       }
-      let time = this.getTimeForXPixels(X);
       if (groupIds.length == 1) {
         // Continuous event type
         let matchingGroupIds = this.getGroupForTime(groupIds[0], time);
@@ -1000,6 +1002,12 @@ CanvasManager.prototype = {
           this.ctxR.fillRect(i+0.5,15,1,10);
         }
       }
+    }
+    if (this.mousePointerAt.time != 0) {
+      this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
+      this.ctxR.fillRect(this.mousePointerAt.x+0.5,0,1,25);
+      this.ctxR.fillText(Math.round(this.mousePointerAt.time - this.startTime) + "ms",
+                         this.mousePointerAt.x + 2, 12)
     }
     if (!this.waitForLineData) {
       this.linesDrawn = 0;

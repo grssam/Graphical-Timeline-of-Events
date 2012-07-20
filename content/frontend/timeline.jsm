@@ -92,6 +92,7 @@ function TimelineView(aChromeWindow) {
   this.pinUnpinDetailBox = this.pinUnpinDetailBox.bind(this);
   this.toggleRestartOnReload = this.toggleRestartOnReload.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
+  this.handleMouseout = this.handleMouseout.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.handleTimeWindow = this.handleTimeWindow.bind(this);
@@ -138,6 +139,7 @@ TimelineView.prototype = {
     this.producersPane.onscroll = this.onProducersScroll;
     this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
+    this.$("timeline-canvas-dots").addEventListener("mouseout", this.handleMouseout, true);
     this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.infoBox.addEventListener("click", this.handleTickerClick, true);
@@ -742,6 +744,13 @@ TimelineView.prototype = {
                                     0: this.producersPane.boxObject.width),
                                   aEvent.clientY - 32);
       this.showDetailedInfoFor(ids);
+    }
+  },
+
+  handleMouseout: function TV_handleMouseout(aEvent)
+  {
+    if (this.canvasStarted) {
+      this._canvas.mousePointerAt = {x: 0, time: 0};
     }
   },
 
