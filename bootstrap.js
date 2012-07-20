@@ -107,7 +107,7 @@ function addMenuItem(window) {
       appMenuItem.setAttribute("id", appMenuitemID);
       appMenuItem.setAttribute("type", "checkbox");
       appMenuItem.setAttribute("label", "Graphical Timeline");
-      appMenuitem.setAttribute("accesskey", "G");
+      appMenuItem.setAttribute("accesskey", "G");
       appMenuItem.setAttribute("key", keyID);
       appMenuItem.addEventListener("command", showHideUI);
       appMenu.insertBefore(appMenuItem, $("appmenu_webConsole"));
