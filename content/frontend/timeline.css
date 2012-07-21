@@ -660,11 +660,11 @@
 }
 
 #timeline-highlighter {
-  min-height: 2px;
-  max-height: 2px;
+  min-height: 1px;
+  max-height: 1px;
   padding: 0;
   margin: 0;
-  height: 2px;
+  height: 1px;
   opacity: 0;
   -moz-transition: opacity 500ms;
 }

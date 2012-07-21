@@ -1173,7 +1173,7 @@ CanvasManager.prototype = {
       }
       else {
         this.highlighter.style.opacity = 0.75;
-        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 2) + "px";
+        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 1) + "px";
         this.highlighter.style.left = Math.round(start - 2) + "px";
         this.highlighter.style.width = Math.round(width + 4) + "px";
         this.highlighter.style.boxShadow = "0px 0px 4px 4px " + this.highlightInfo.color;

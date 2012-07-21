@@ -714,7 +714,8 @@ TimelineView.prototype = {
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
       this.moveTickerToTime(time);
       this._canvas.displayDetailedData(this.width*0.45);
-      this.showDetailedInfoFor(this._canvas.getGroupForTime(groupId, time));
+      this.showDetailedInfoFor([], this._canvas.getGroupForTime(groupId, time));
+      this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
       this.detailBox.setAttribute("pinned", true);
     }
   },
@@ -854,7 +855,8 @@ TimelineView.prototype = {
       this._canvas.moveTopOffsetTo(this._canvas
           .groupedData[groupId].y);
       this._canvas.displayDetailedData(this.width*0.45);
-      this.showDetailedInfoFor(this._canvas.getGroupForTime(groupId, time));
+      this.showDetailedInfoFor([groupId], this._canvas.getGroupForTime(groupId, time));
+      this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
       this.detailBox.setAttribute("pinned", true);
     }
   },
@@ -1037,7 +1039,29 @@ TimelineView.prototype = {
           }
           if (aValue.length > 0) {
             valueLabel.setAttribute("class", "text-link");
-            valueLabel.setAttribute("href", aValue);
+            let extension = value.split(".");
+            if (extension && extension.length > 1) {
+              extension = extension[extension.length - 1];
+              switch (extension) {
+                case "css":
+                  valueLabel.addEventListener("click", function() {
+                    let styleSheets = this._window.content.window.document.styleSheets;
+                    for each (let style in styleSheets) {
+                      if (style.href == aValue) {
+                        this._window.StyleEditor.openChrome(style, 1);
+                        break;
+                      }
+                    }
+                  }.bind(this));
+                  break;
+
+                default:
+                  valueLabel.setAttribute("href", aValue);
+              }
+            }
+            else {
+              valueLabel.setAttribute("href", aValue);
+            }
           }
           valueLabel.setAttribute("value", value);
           valueLabel.setAttribute("tooltiptext", aValue);
