@@ -451,7 +451,7 @@ let producerInfo = {
     eventName: {name: "Name", type: "string"},
     observedName: {name: "Name", type: "enum", values: {
                     "chrome-document-global-created": "Chrome document created",
-                    "content-document-global-created": "content document created",
+                    "content-document-global-created": "Content document created",
                     "document-element-inserted": "Document inserted",
                     "user-interaction-active": "User interaction active",
                     "user-interaction-inactive": "User interaction inactive"

@@ -248,7 +248,7 @@ let producerInfo = {
     compartments_collected: {name: "Compartments Collected", type: "number"},
     total_compartments: {name: "Total Compartments", type: "number"},
     mmu_20ms: {name: "20ms MMU", type: "number"},
-    mmu_50ms: {name: "50 ms MMU", type: "number"},
+    mmu_50ms: {name: "50ms MMU", type: "number"},
     max_pause: {name: "Max. Pause", type: "ms"},
     nonincremental_reason: {name: "Non Incremental Reason", type: "string"},
     allocated: {name: "Allocated", type: "string"},

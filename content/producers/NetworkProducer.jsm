@@ -1011,9 +1011,9 @@ let producerInfo = {
         url: {name: "URL", type: "url"},
         httpVersion: {name: "HTTP Version", type: "string"},
         headers: {name: "Headers", type: "object"},
-        headersSize: {name: "Request Header Size", type: "number"},
-        bodySize: {name: "Request Body Size", type: "number"},
-        postData: {name: "Requset Post Data", type: "string"},
+        headersSize: {name: "Header Size", type: "number"},
+        bodySize: {name: "Body Size", type: "number"},
+        postData: {name: "Post Data", type: "string"},
       }
     },
     response: {
@@ -1021,12 +1021,12 @@ let producerInfo = {
       type: "nested",
       items: {
         status: {name: "Status", type: "string"},
-        statusText: {name: "Response Status Text", type: "string"},
-        headers: {name: "Response Headers", type: "object"},
-        content: {name: "Response Content", type: "string"},
+        statusText: {name: "Status Text", type: "string"},
+        headers: {name: "Headers", type: "object"},
+        content: {name: "Content", type: "string"},
         redirectURL: {name: "Redirect URL", type: "url"},
-        headersSize: {name: "Response Header Size", type: "number"},
-        bodySize: {name: "Response Body Size", type: "number"},
+        headersSize: {name: "Header Size", type: "number"},
+        bodySize: {name: "Body Size", type: "number"},
       }
     },
     charset: {name: "Character Set", type: "string"},
