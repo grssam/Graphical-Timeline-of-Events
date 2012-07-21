@@ -59,12 +59,45 @@ function addMenuItem(window) {
       }.bind(global));
       $(toolsMenuitemID).setAttribute("checked", true);
       $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
+      timelineWindow = window.content.window;
     }
     else {
-      Timeline.destroy();
+      if (window.content.window != timelineWindow) {
+        notificationBox = window.gBrowser.getNotificationBox();
+        let buttons = [{
+          label: 'Open it in this tab',
+          accessKey: 'O',
+          callback: reopenTimeline
+        },{  
+          label: 'Switch to that tab',
+          accessKey: 'S',  
+          callback: switchToTimelineTab
+        }];
+        notificationBox.removeAllNotifications(true);
+        notificationBox.appendNotification("Timeline is open in another tab. What would you like to do?",
+                                           "", null,
+                                           notificationBox.PRIORITY_WARNING_MEDIUM,
+                                           buttons,
+                                           null);
+        // Check the checkboxes again.
+        $(toolsMenuitemID).setAttribute("checked", true);
+        $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
+      }
+      else {
+        Timeline.destroy();
+      }
     }
   }
 
+  function reopenTimeline() {
+    Timeline.destroy();
+    showHideUI();
+  }
+  function switchToTimelineTab() {
+    window.gBrowser.selectedTab = window.gBrowser.tabs[
+      window.gBrowser.getBrowserIndexForDocument(timelineWindow.document)
+    ];
+  }
   function removeMenuItem() {
     let menuitem = $(toolsMenuitemID);
     menuitem && menuitem.parentNode.removeChild(menuitem);
@@ -79,6 +112,10 @@ function addMenuItem(window) {
   removeMenuItem();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+  let notificationBox, timelineWindow;
+  unload(function() {
+    notificationBox = timelineWindow = null;
+  }, window);
   let TimelineKeyset = window.document.createElementNS(XUL, "keyset");
   TimelineKeyset.setAttribute("id", keysetID);
   // add hotkey
