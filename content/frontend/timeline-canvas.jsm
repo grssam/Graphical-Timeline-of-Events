@@ -1004,6 +1004,7 @@ CanvasManager.prototype = {
       }
     }
     if (this.mousePointerAt.time != 0) {
+      this.ctxR.fillStyle = "#f770ff";
       this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
       this.ctxR.fillRect(this.mousePointerAt.x+0.5,0,1,25);
       this.ctxR.fillText(Math.round(this.mousePointerAt.time - this.startTime) + "ms",
