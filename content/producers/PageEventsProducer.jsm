@@ -309,6 +309,7 @@ let PageEventsProducer =
         groupID: groupId,
         time: Date.now(),
         details: {
+          observedName: aTopic,
           time: Date.now(),
           /* tabID: tabId, */
         }
@@ -448,6 +449,13 @@ let producerInfo = {
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
     eventName: {name: "Name", type: "string"},
+    observedName: {name: "Name", type: "enum", values: {
+                    "chrome-document-global-created": "Chrome document created",
+                    "content-document-global-created": "content document created",
+                    "document-element-inserted": "Document inserted",
+                    "user-interaction-active": "User interaction active",
+                    "user-interaction-inactive": "User interaction inactive"
+                  }},
     time: {name: "Time", type: "date"},
     target: {name: "Target ID", type: "id"},
     charCode: {name: "Key", type: "string"},
