@@ -297,7 +297,7 @@ CanvasManager.prototype = {
   {
     let time = this.getTimeForXPixels(X);
     this.mousePointerAt = {x : X, time: time};
-    if (this.timeFrozen) {
+    if (this.timeFrozen || this.overview) {
       let groupIds = this.getGroupsForYPixels(Y);
       if (groupIds.length == 0) {
         this.hideDetailedData();
