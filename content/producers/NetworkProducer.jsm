@@ -762,15 +762,14 @@ let NetworkProducer =
       time: time/1000, // Converting micro to milli seconds.
       details: {
         /* tabID: tabId, */
-        name: aHttpActivity.entry.request.method.toUpperCase() + " " +
-              trim(aHttpActivity.entry.request.url),
+        startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first,
         stage: currentStage,
+        timings: aHttpActivity.entry.timings,
         request: {
           method: aHttpActivity.entry.request.method,
           url: aHttpActivity.entry.request.url,
           httpVersion: aHttpActivity.entry.request.httpVersion,
           headers: aHttpActivity.entry.request.headers,
-          queryString: aHttpActivity.entry.request.queryString,
           headersSize: aHttpActivity.entry.request.headersSize,
           bodySize:aHttpActivity.entry.request.bodySize,
           postData: aHttpActivity.entry.request.postData,
@@ -778,7 +777,6 @@ let NetworkProducer =
         response: {
           status: aHttpActivity.entry.response.status,
           statusText: aHttpActivity.entry.response.statusText,
-          httpVersion: aHttpActivity.entry.response.httpVersion,
           headers: aHttpActivity.entry.response.headers,
           content: aHttpActivity.entry.response.content,
           redirectURL: aHttpActivity.entry.response.redirectURL,
@@ -879,7 +877,7 @@ let NetworkProducer =
     if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
       return;
     }
-    //this._setupHarTimings(aHttpActivity);
+    this._setupHarTimings(aHttpActivity);
     this.sendActivity(aHttpActivity);
     delete this.openRequests[aHttpActivity.id];
   },
@@ -990,8 +988,21 @@ let producerInfo = {
   // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
-    name: {name: "Name", type: "string"},
+    startTime: {name: "Start Time", type: "date"},
     stage: {name: "Stage", type: "string"},
+    timings: {
+      name: "Timings",
+      type: "nested",
+      items: {
+        blocked: {name: "Blocking", type: "ms"},
+        ssl: {name: "SSL Lookup", type: "ms"},
+        dns: {name: "DNS Lookup", type: "ms"},
+        connect: {name: "Connecting", type: "ms"},
+        send: {name: "Sending", type: "ms"},
+        wait: {name: "Waiting", type: "ms"},
+        receive: {name: "Receiving", type: "ms"}
+      }
+    },
     request: {
       name: "Request",
       type: "nested",
@@ -1000,7 +1011,6 @@ let producerInfo = {
         url: {name: "URL", type: "url"},
         httpVersion: {name: "HTTP Version", type: "string"},
         headers: {name: "Headers", type: "object"},
-        queryString: {name: "Query Strings", type: "string"},
         headersSize: {name: "Request Header Size", type: "number"},
         bodySize: {name: "Request Body Size", type: "number"},
         postData: {name: "Requset Post Data", type: "string"},
@@ -1012,7 +1022,6 @@ let producerInfo = {
       items: {
         status: {name: "Status", type: "string"},
         statusText: {name: "Response Status Text", type: "string"},
-        httpVersion: {name: "HTTP Version", type: "string"},
         headers: {name: "Response Headers", type: "object"},
         content: {name: "Response Content", type: "string"},
         redirectURL: {name: "Redirect URL", type: "url"},
