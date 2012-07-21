@@ -879,30 +879,42 @@ TimelineView.prototype = {
     label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let label2 = this._frameDoc.createElement("label");
     label2.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
-    let dateString = (new Date(aData.time)).getHours() + ":" +
-                     (new Date(aData.time)).getMinutes() + ":" +
-                     (new Date(aData.time)).getSeconds();
+    let date = new Date(aData.time);
+    let dateString = Math.round(aData.time - this._canvas.startTime) + "ms (" +
+                     date.getHours() + ":" +
+                     date.getMinutes() + ":" +
+                     date.getSeconds() + "." +
+                     date.getMilliseconds() + ")";
     label1.setAttribute("value", aData.name);
     feedItem.appendChild(label1);
     if (aData.details) {
-      for (let property in aData.details) {
-        if (Timeline.producerInfoList[aData.producer]
-                    .details[property].type != "nested") {
-          let {name:name, value:value} =
+      for (let property in this.producerInfoList[aData.producer]
+                               .details) {
+        if (aData.details[property] == null || property.match(/(name|time)/i)){
+          continue;
+        }
+        if (this.producerInfoList[aData.producer]
+                .details[property].type != "nested") {
+          let {value:value} =
             this.getPropertyInfo(aData.producer,
                                  property,
                                  aData.details[property]);
-          label2.setAttribute("value", name + ": " + value + " at " + dateString);
+          label2.setAttribute("value", value + " at " + dateString);
           feedItem.appendChild(label2);
         }
         else {
-          for (let subProp in aData.details[property].items) {
-            let {name:name, value:value} =
+          for (let subProp in this.producerInfoList[
+                                aData.producer
+                              ].details[property].items) {
+            if (aData.details[property][subProp] == null || subProp.match(/(name|time)/i)){
+              continue;
+            }
+            let {value:value} =
               this.getPropertyInfo(aData.producer,
                                    property,
-                                   aData.details[property].items[subProp],
+                                   aData.details[property][subProp],
                                    subProp);
-            label2.setAttribute("value", name + ": " + value + " at " + dateString);
+            label2.setAttribute("value", value + " at " + dateString);
             feedItem.appendChild(label2);
             break;
           }
@@ -963,11 +975,15 @@ TimelineView.prototype = {
           break;
 
         case "date":
-          value = (new Date(aValue)).getHours() + ":" +
-                  (new Date(aValue)).getMinutes() + ":" +
-                  (new Date(aValue)).getSeconds();
+          let date = new Date(aValue);
+          value = "+" + Math.round(aValue - this._canvas.startTime) + "ms (" +
+                  date.getHours() + ":" +
+                  date.getMinutes() + ":" +
+                  date.getSeconds() + "." +
+                  date.getMilliseconds() + ")";
           valueLabel.setAttribute("value", value);
-          valueLabel.setAttribute("tooltiptext", (new Date(aValue)).toLocaleString());
+          valueLabel.setAttribute("tooltiptext", date.toLocaleString()
+            .replace(/\s([ap]m)/i, "." + date.getMilliseconds() + " " + "$1"));
           break;
 
         case "enum":
@@ -1004,7 +1020,7 @@ TimelineView.prototype = {
           break;
 
         case "url":
-          let value = aValue;
+          value = aValue;
           if (value.length > 20) {
             let trimmedURL = aValue.match(/^[^?#&]+/)[0].length;
             let lastSlash = aValue.lastIndexOf("/", trimmedURL);

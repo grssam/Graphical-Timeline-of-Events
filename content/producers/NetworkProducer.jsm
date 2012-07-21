@@ -762,7 +762,7 @@ let NetworkProducer =
       time: time/1000, // Converting micro to milli seconds.
       details: {
         /* tabID: tabId, */
-        startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first,
+        startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first/1000,
         stage: currentStage,
         timings: aHttpActivity.entry.timings,
         request: {
@@ -988,8 +988,8 @@ let producerInfo = {
   // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
-    startTime: {name: "Start Time", type: "date"},
     stage: {name: "Stage", type: "string"},
+    startTime: {name: "Start Time", type: "date"},
     timings: {
       name: "Timings",
       type: "nested",
