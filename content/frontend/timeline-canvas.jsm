@@ -252,9 +252,9 @@ CanvasManager.prototype = {
     if ((group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END ||
          group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID ||
          group.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START) &&
-        aTime >= Math.max(this.firstVisibleTime, group.timestamps[0] - 10) &&
+        aTime >= Math.max(this.firstVisibleTime, group.timestamps[0] - 3*this.scale) &&
         aTime <= (group.active? this.lastVisibleTime:
-                                group.timestamps[group.timestamps.length - 1] + 10)) {
+                                group.timestamps[group.timestamps.length - 1] + 3*this.scale)) {
       return group.dataIds;
     }
     // Point event type
@@ -277,8 +277,8 @@ CanvasManager.prototype = {
       let timestamps = group.timestamps;
       let results = [];
       for (let i = 0; i < timestamps.length; i++) {
-        if (aTime >= Math.max(this.firstVisibleTime, timestamps[i][0]) &&
-            aTime <= Math.min(timestamps[i][timestamps[i].length - 1],
+        if (aTime >= Math.max(this.firstVisibleTime, timestamps[i][0] - 3*this.scale) &&
+            aTime <= Math.min(timestamps[i][timestamps[i].length - 1] + 3*this.scale,
                               this.lastVisibleTime)) {
           results.push(group.dataIds[i]);
         }

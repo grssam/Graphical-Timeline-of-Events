@@ -880,11 +880,9 @@ TimelineView.prototype = {
     let label2 = this._frameDoc.createElement("label");
     label2.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
     let date = new Date(aData.time);
-    let dateString = Math.round(aData.time - this._canvas.startTime) + "ms (" +
-                     date.getHours() + ":" +
-                     date.getMinutes() + ":" +
-                     date.getSeconds() + "." +
-                     date.getMilliseconds() + ")";
+    label2.setAttribute("tooltiptext", date.toLocaleString()
+      .replace(/\s([ap]m)/i, "." + date.getMilliseconds() + " " + "$1"));
+    let dateString = "+" + this.getScaledTime(aData.time - this._canvas.startTime);
     label1.setAttribute("value", aData.name);
     feedItem.appendChild(label1);
     if (aData.details) {
@@ -976,11 +974,7 @@ TimelineView.prototype = {
 
         case "date":
           let date = new Date(aValue);
-          value = "+" + Math.round(aValue - this._canvas.startTime) + "ms (" +
-                  date.getHours() + ":" +
-                  date.getMinutes() + ":" +
-                  date.getSeconds() + "." +
-                  date.getMilliseconds() + ")";
+          value = "+" + this.getScaledTime(aValue - this._canvas.startTime);
           valueLabel.setAttribute("value", value);
           valueLabel.setAttribute("tooltiptext", date.toLocaleString()
             .replace(/\s([ap]m)/i, "." + date.getMilliseconds() + " " + "$1"));
@@ -1049,6 +1043,39 @@ TimelineView.prototype = {
       return {name: name, value: value, valueLabel: valueLabel};
     }
     return null;
+  },
+
+  /**
+   * Returns sotring for a time duration.
+   *
+   * @param aTime number
+   *        Duration in milli seconds.
+   *
+   * @return string
+   *         Formatted strings like '1h34m10s'
+  */
+  getScaledTime: function TV_getScaledTime(aTime)
+  {
+    aTime = Math.round(aTime);
+    if (aTime > 3600000) {
+      let seconds = Math.round(aTime/1000);
+      let minutes = Math.floor(seconds/60);
+      return Math.floor(minutes/60) + "h" +
+             (minutes%60 > 0?(" " + minutes%60 + "m"):"") +
+             (seconds > 0? " " + seconds + "s":"");
+    }
+    else if (aTime > 60000) {
+      let seconds = Math.round(aTime/1000);
+      let minutes = Math.floor(seconds/60);
+      return minutes + "m" + (seconds > 0? " " + seconds + "s":"");
+    }
+    else if (aTime > 10000) {
+      let seconds = Math.floor(aTime/1000);
+      return seconds + "s" + (aTime%1000 > 0? " " + aTime%1000 + "ms":"");
+    }
+    else {
+      return aTime + "ms";
+    }
   },
 
   hasGroup: function TV_hasGroup(aData)
