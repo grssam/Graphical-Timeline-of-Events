@@ -301,33 +301,33 @@ CanvasManager.prototype = {
       let groupIds = this.getGroupsForYPixels(Y);
       if (groupIds.length == 0) {
         this.hideDetailedData();
-        return null;
+        return [null, null];
       }
       if (groupIds.length == 1) {
         // Continuous event type
-        let matchingGroupIds = this.getGroupForTime(groupIds[0], time);
-        if (matchingGroupIds && matchingGroupIds.length > 0) {
+        let matchingDataIds = this.getGroupForTime(groupIds[0], time);
+        if (matchingDataIds && matchingDataIds.length > 0) {
           this.displayDetailedData(X);
-          return matchingGroupIds;
+          return [groupIds, matchingDataIds];
         }
       }
       else {
         let results = [];
         for (let groupId of groupIds) {
-          let matchingGroupIds = this.getGroupForTime(groupId, time);
-          if (matchingGroupIds && matchingGroupIds.length > 0) {
-            results.push(matchingGroupIds[0]);
+          let matchingDataIds = this.getGroupForTime(groupId, time);
+          if (matchingDataIds && matchingDataIds.length > 0) {
+            results.push(matchingDataIds[0]);
           }
         }
         if (results.length > 0 ) {
           this.displayDetailedData(X);
-          return results;
+          return [groupIds, results];
         }
       }
     }
     // Hide the detailed view if nothing else matches.
     this.hideDetailedData();
-    return null;
+    return [null, null];
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
@@ -1007,7 +1007,7 @@ CanvasManager.prototype = {
       this.ctxR.fillStyle = "#f770ff";
       this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
       this.ctxR.fillRect(this.mousePointerAt.x+0.5,0,1,25);
-      this.ctxR.fillText(Math.round(this.mousePointerAt.time - this.startTime) + "ms",
+      this.ctxR.fillText(Math.floor(this.mousePointerAt.time - this.startTime) + "ms",
                          this.mousePointerAt.x + 2, 12)
     }
     if (!this.waitForLineData) {

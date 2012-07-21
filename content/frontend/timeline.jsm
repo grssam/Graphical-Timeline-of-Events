@@ -738,12 +738,12 @@ TimelineView.prototype = {
   handleMousemove: function TV_handleMousemove(aEvent)
   {
     if (this.canvasStarted) {
-      let ids = this._canvas
-                    .mouseHoverAt(aEvent.clientX -
-                                  (!this.producersPaneOpened?
-                                    0: this.producersPane.boxObject.width),
-                                  aEvent.clientY - 32);
-      this.showDetailedInfoFor(ids);
+      let [groupIds, ids] = this._canvas
+                                 .mouseHoverAt(aEvent.clientX -
+                                               (!this.producersPaneOpened?
+                                                 0: this.producersPane.boxObject.width),
+                                               aEvent.clientY - 32);
+      this.showDetailedInfoFor(groupIds, ids);
     }
   },
 
@@ -754,7 +754,7 @@ TimelineView.prototype = {
     }
   },
 
-  showDetailedInfoFor: function TV_showDetailedInfoFor(aIds)
+  showDetailedInfoFor: function TV_showDetailedInfoFor(aGroupIds, aIds)
   {
     if (!aIds || aIds.length == 0) {
       return;
@@ -764,6 +764,18 @@ TimelineView.prototype = {
       return;
     }
     this.detailBox.setAttribute("dataId", id);
+    if (this.detailBox.hasAttribute("groupId")) {
+      try {
+        this._frameDoc.getElementById(this.detailBox.getAttribute("groupId")).blur();
+      } catch (ex) {}
+      this.detailBox.removeAttribute("groupId");
+    }
+    if (aGroupIds && aGroupIds.length == 1) {
+      this.detailBox.setAttribute("groupId", aGroupIds[0] + "-groupbox");
+      try {
+        this._frameDoc.getElementById(aGroupIds[0] + "-groupbox").focus();
+      } catch(ex) {}
+    }
     let tmp = this.detailBox.firstChild;
     while (tmp) {
       let temp = tmp.nextSibling;

@@ -902,7 +902,7 @@ let NetworkProducer =
 
     // DNS timing information is available only in when the DNS record is not
     // cached.
-    harTimings.dns = timings.STATUS_RESOLVING ?
+    harTimings.dns = timings.STATUS_RESOLVING && timings.STATUS_RESOLVED ?
                      timings.STATUS_RESOLVED.last -
                      timings.STATUS_RESOLVING.first : -1;
 
