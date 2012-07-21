@@ -66,6 +66,7 @@ function CanvasManager(aDoc) {
   this.globalGroup = [];
   this.activeGroups = [];
   this.mousePointerAt = {x: 0, time: 0};
+  this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
 
   // How many milli seconds per pixel.
   this.scale = 50;
@@ -83,6 +84,7 @@ function CanvasManager(aDoc) {
   this.producerPane = this.doc.getElementById("producers-pane");
   this.currentTimeNeedle = this.doc.getElementById("timeline-current-time");
   this.timeWindow = this.doc.getElementById("timeline-time-window");
+  this.highlighter = this.doc.getElementById("timeline-highlighter");
 
   // Bind
   this.render = this.render.bind(this);
@@ -308,6 +310,7 @@ CanvasManager.prototype = {
         let matchingDataIds = this.getGroupForTime(groupIds[0], time);
         if (matchingDataIds && matchingDataIds.length > 0) {
           this.displayDetailedData(X);
+          this.highlightGroup(groupIds, matchingDataIds);
           return [groupIds, matchingDataIds];
         }
       }
@@ -321,6 +324,7 @@ CanvasManager.prototype = {
         }
         if (results.length > 0 ) {
           this.displayDetailedData(X);
+          this.highlightGroup(groupIds, results);
           return [groupIds, results];
         }
       }
@@ -328,6 +332,49 @@ CanvasManager.prototype = {
     // Hide the detailed view if nothing else matches.
     this.hideDetailedData();
     return [null, null];
+  },
+
+  highlightGroup: function CM_highlightGroup(aGroupIds, aIds)
+  {
+    for (let groupId of aGroupIds) {
+      let group = this.groupedData[groupId];
+      if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID ||
+          group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
+          group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP) {
+        for each (let id in aIds) {
+          if (group.dataIds.indexOf(id) == -1) {
+            continue;
+          }
+          try {
+            this.highlightInfo.startTime = group.timestamps[group.dataIds.indexOf(id)][0];
+            this.highlightInfo.endTime = group.timestamps[group.dataIds.indexOf(id)];
+            this.highlightInfo.endTime = this.highlightInfo.endTime[this.highlightInfo.endTime.length - 1];
+            this.highlightInfo.y = group.y;
+            this.highlightInfo.color = COLOR_LIST[group.id%12];
+            return;
+          } catch(ex) {}
+        }
+      }
+      else if (group.type == NORMALIZED_EVENT_TYPE.POINT_EVENT) {
+        // Point event type.
+        try {
+          this.highlightInfo.startTime = group.timestamps[group.dataIds.indexOf(aIds[aIds.length - 1])];
+          this.highlightInfo.endTime = this.highlightInfo.startTime + 1;
+          this.highlightInfo.y = group.y;
+          this.highlightInfo.color = COLOR_LIST[group.id%12];
+          return;
+        } catch(ex) {}
+      }
+      else {
+        try {
+          this.highlightInfo.y = group.y;
+          this.highlightInfo.startTime = group.timestamps[group.dataIds.indexOf(aIds[0])];
+          this.highlightInfo.endTime = group.timestamps[group.dataIds.indexOf(aIds[aIds.length - 1])];
+          this.highlightInfo.color = COLOR_LIST[group.id%12];
+          return;
+        } catch(ex) {}
+      }
+    }
   },
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
@@ -821,6 +868,8 @@ CanvasManager.prototype = {
   hideDetailedData: function CM_hideDetailedData()
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", false);
+    this.highlighter.style.opacity = 0;
+    this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
   },
 
   /**
@@ -1113,6 +1162,21 @@ CanvasManager.prototype = {
 
       if (this.dotsDrawn == 0 && !this.scrolling && this.offsetTime == 0) {
         this.waitForDotData = true;
+      }
+    }
+    if (this.highlightInfo.color) {
+      let start = Math.max(0, this.highlightInfo.startTime - this.firstVisibleTime);
+      start = start/this.scale;
+      let width = (this.highlightInfo.endTime - this.firstVisibleTime)/this.scale - start;
+      if (width <= 0 && start == 0) {
+        this.highlighter.style.opacity = 0;
+      }
+      else {
+        this.highlighter.style.opacity = 0.75;
+        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 2) + "px";
+        this.highlighter.style.left = Math.round(start - 2) + "px";
+        this.highlighter.style.width = Math.round(width + 4) + "px";
+        this.highlighter.style.boxShadow = "0px 0px 4px 4px " + this.highlightInfo.color;
       }
     }
     this.doc.defaultView.mozRequestAnimationFrame(this.render);

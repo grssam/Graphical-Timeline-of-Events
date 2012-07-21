@@ -658,3 +658,13 @@
 .property-heading {
   color: rgb(3,101,151);
 }
+
+#timeline-highlighter {
+  min-height: 2px;
+  max-height: 2px;
+  padding: 0;
+  margin: 0;
+  height: 2px;
+  opacity: 0;
+  -moz-transition: opacity 500ms;
+}
