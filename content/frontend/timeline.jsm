@@ -1045,14 +1045,55 @@ TimelineView.prototype = {
               switch (extension) {
                 case "css":
                   valueLabel.addEventListener("click", function() {
-                    let styleSheets = this._window.content.window.document.styleSheets;
-                    for each (let style in styleSheets) {
-                      if (style.href == aValue) {
-                        this._window.StyleEditor.openChrome(style, 1);
-                        break;
+                    try {
+                      let styleSheets = this._window.content.window.document.styleSheets;
+                      for each (let style in styleSheets) {
+                        if (style.href == aValue) {
+                          this._window.StyleEditor.openChrome(style, 1);
+                          return;
+                        }
                       }
-                    }
+                    } catch (ex) {}
+                    this._window.openUILinkIn(aValue, "tab");
                   }.bind(this));
+                  break;
+
+                case "js":
+                  valueLabel.addEventListener("click", function() {
+                    let window = this._window;
+                    function openScript(scriptsView) {
+                      let targetScript = aValue;
+                      let scriptLocations = scriptsView.scriptLocations;
+
+                      if (scriptLocations.indexOf(targetScript) === -1) {
+                        window.DebuggerUI.toggleDebugger();
+                        window.openUILinkIn(aValue, "tab");
+                        window = null;
+                        return;
+                      }
+                      scriptsView.selectScript(targetScript);
+                      window = null;
+                    }
+                    if (window.DebuggerUI.getDebugger() == null) {
+                      window.DebuggerUI.toggleDebugger();
+                      let dbg = window.DebuggerUI.getDebugger().contentWindow;
+
+                      dbg.addEventListener("Debugger:Connecting", function onConnecting() {
+                        dbg.removeEventListener("Debugger:Connecting", onConnecting);
+
+                        let client = dbg.DebuggerController.client;
+                        let scripts = dbg.DebuggerView.Scripts;
+
+                        client.addOneTimeListener("resumed", openScript.bind(this, scripts));
+                      });
+                    }
+                    else {
+                      let dbg = window.DebuggerUI.getDebugger().contentWindow;
+                      let client = dbg.DebuggerController.client;
+                      let scripts = dbg.DebuggerView.Scripts;
+                      openScript(scripts);
+                    }
+                  }.bind(this))
                   break;
 
                 default:
