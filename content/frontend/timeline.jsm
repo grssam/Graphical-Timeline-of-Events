@@ -5,7 +5,6 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
 
 var EXPORTED_SYMBOLS = ["Timeline"];
 
@@ -1097,7 +1096,9 @@ TimelineView.prototype = {
                   break;
 
                 default:
-                  valueLabel.setAttribute("href", aValue);
+                  valueLabel.addEventListener("click", function() {
+                    this._window.openUILinkIn(aValue, "tab");
+                  }.bind(this));
               }
             }
             else {
@@ -1377,6 +1378,7 @@ let Timeline = {
    * Prepares the UI and sends ping to the Data Sink.
    */
   init: function GUI_init(aCallback) {
+    Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
     Timeline.callback = aCallback;
     Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
@@ -1634,7 +1636,11 @@ let Timeline = {
    * Stops the UI, Data Sink and Data Store.
    */
   destroy: function GUI_destroy() {
-    Timeline._window.removeEventListener("beforeunload", Timeline.destroy, false);
+    if (Timeline._window) {
+      try {
+        Timeline._window.removeEventListener("beforeunload", Timeline.destroy, false);
+      } catch(ex) {}
+    }
     if (Timeline.UIOpened == true) {
       if (Timeline.listening) {
         //Timeline._window.clearInterval(Timeline.timer);
@@ -1653,6 +1659,8 @@ let Timeline = {
       Timeline.pingSent = Timeline.listening = false;
       Timeline.removeRemoteListener(Timeline._window);
       Timeline._view.closeUI();
+      Cu.unload("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
+      CanvasManager = null;
       Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
         Timeline._currentId = Timeline._window = null;
       Timeline.producerInfoList = null;

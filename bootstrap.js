@@ -43,20 +43,21 @@ function addMenuItem(window) {
       Timeline.init(function () { // temporary function to be called at destroy
                                   // This is done to avoide memory leak while closing via close button
         global.DataSink.removeRemoteListener(window);
-        Cu.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-        Cu.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-        Cu.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-        Cu.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-        try {
-          $(toolsMenuitemID).removeAttribute("checked");
-          $(appMenuitemID).removeAttribute("checked");
-        } catch (ex) {}
-        global.DataSink = global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer = null;
-        delete global.DataSink;
+        Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+        Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+        global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer =
+          global.DataSink = null;
         delete global.MemoryProducer;
         delete global.NetworkProducer;
         delete global.PageEventsProducer;
-      }.bind(global));
+        delete global.DataSink;
+        try {
+          $(toolsMenuitemID).removeAttribute("checked");
+          $(appMenuitemID) && $(appMenuitemID).removeAttribute("checked");
+        } catch (ex) {}
+      });
       $(toolsMenuitemID).setAttribute("checked", true);
       $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
       timelineWindow = window.content.window;
@@ -108,8 +109,8 @@ function addMenuItem(window) {
     let keyset = $(keysetID);
     keyset && keyset.parentNode.removeChild(keyset);
   }
-  removeKey();
   removeMenuItem();
+  removeKey();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
   let notificationBox, timelineWindow;
@@ -126,7 +127,6 @@ function addMenuItem(window) {
   TimelineHotkey.setAttribute("oncommand", "void(0)");
   TimelineHotkey.addEventListener("command", showHideUI);
   $("mainKeyset").parentNode.appendChild(TimelineKeyset).appendChild(TimelineHotkey);
-  unload(removeKey, window);
 
   let menuitem = window.document.createElementNS(XUL, "menuitem");
   menuitem.setAttribute("id", toolsMenuitemID);
@@ -151,6 +151,7 @@ function addMenuItem(window) {
     }
   }
   unload(removeMenuItem, window);
+  unload(removeKey, window);
 }
 
 function disable(id) {
@@ -179,10 +180,15 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-        global.DataSink = global.NetworkProducer = global.PageEventsProducer = global.MemoryProducer = null;
-      }
-      catch (e) {}
-      global.Timeline = null;
+      } catch (e) {Services.prompt.confirm(null, "", e);}
+      try {
+        delete global.DataSink;
+        delete global.NetworkProducer;
+        delete global.PageEventsProducer;
+        delete global.MemoryProducer;
+        global.Timeline = null;
+        delete global.Timeline;
+      } catch (e) {}
     });
   }
   reload = function() {
