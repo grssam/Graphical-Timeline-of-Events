@@ -883,8 +883,10 @@ CanvasManager.prototype = {
   hideDetailedData: function CM_hideDetailedData()
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", false);
-    this.highlighter.style.opacity = 0;
-    this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+    if (this.doc.getElementById("timeline-detailbox").getAttribute("pinned") == "false") {
+      this.highlighter.style.opacity = 0;
+      this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+    }
   },
 
   /**

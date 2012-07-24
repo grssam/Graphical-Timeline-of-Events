@@ -133,6 +133,8 @@ TimelineView.prototype = {
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
     this.restartOnReload = this.$("restart-on-reload");
+    this.detailBox.setAttribute("visible", false);
+    this.detailBox.setAttribute("pinned", false);
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
@@ -727,6 +729,10 @@ TimelineView.prototype = {
     }
     else {
       this.detailBox.setAttribute("pinned", false);
+      if (this.detailBox.getAttribute("visible") == "false") {
+        this._canvas.highlighter.style.opacity = 0;
+        this._canvas.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+      }
     }
   },
 
