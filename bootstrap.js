@@ -43,16 +43,20 @@ function addMenuItem(window) {
       Timeline.init(function () { // temporary function to be called at destroy
                                   // This is done to avoide memory leak while closing via close button
         global.DataSink.removeRemoteListener(window);
-        Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-        Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-        Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-        Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-        global.MemoryProducer = global.NetworkProducer = global.PageEventsProducer =
-          global.DataSink = null;
-        delete global.MemoryProducer;
-        delete global.NetworkProducer;
-        delete global.PageEventsProducer;
-        delete global.DataSink;
+        try {
+          Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
+          Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+          Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+          Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
+          Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+          delete global.DataSink;
+          delete global.NetworkProducer;
+          delete global.PageEventsProducer;
+          delete global.MemoryProducer;
+          global.Timeline = null;
+          delete global.Timeline;
+          Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+        } catch (e) {}
         try {
           $(toolsMenuitemID).removeAttribute("checked");
           $(appMenuitemID) && $(appMenuitemID).removeAttribute("checked");
@@ -180,7 +184,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
         Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
         Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-      } catch (e) {Services.prompt.confirm(null, "", e);}
+      } catch (e) {}
       try {
         delete global.DataSink;
         delete global.NetworkProducer;
