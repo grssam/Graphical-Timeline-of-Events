@@ -79,7 +79,9 @@ function addMenuItem(window) {
           callback: switchToTimelineTab
         }];
         notificationBox.removeAllNotifications(true);
-        notificationBox.appendNotification("Timeline is open in another tab. What would you like to do?",
+        notificationBox.appendNotification("Timeline is open in another tab (" +
+                                            timelineWindow.document.title +
+                                            "). What would you like to do?",
                                            "", null,
                                            notificationBox.PRIORITY_WARNING_MEDIUM,
                                            buttons,
