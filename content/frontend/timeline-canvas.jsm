@@ -366,13 +366,28 @@ CanvasManager.prototype = {
         } catch(ex) {}
       }
       else {
-        try {
-          this.highlightInfo.y = group.y;
-          this.highlightInfo.startTime = group.timestamps[group.dataIds.indexOf(aIds[0])];
-          this.highlightInfo.endTime = group.timestamps[group.dataIds.indexOf(aIds[aIds.length - 1])];
-          this.highlightInfo.color = COLOR_LIST[group.id%12];
-          return;
-        } catch(ex) {}
+        if (aGroupIds.length > 1) {
+          for each (let id in aIds) {
+            if (group.dataIds.indexOf(id) == -1) {
+              continue;
+            }
+            try {
+              this.highlightInfo.startTime = group.timestamps[0];
+              this.highlightInfo.endTime = group.timestamps[group.timestamps.length - 1];
+              this.highlightInfo.y = group.y;
+              this.highlightInfo.color = COLOR_LIST[group.id%12];
+            } catch(ex) {}
+          }
+        }
+        else {
+          try {
+            this.highlightInfo.y = group.y;
+            this.highlightInfo.startTime = group.timestamps[0];
+            this.highlightInfo.endTime = group.timestamps[group.timestamps.length - 1];
+            this.highlightInfo.color = COLOR_LIST[group.id%12];
+            return;
+          } catch(ex) {}
+        }
       }
     }
   },
