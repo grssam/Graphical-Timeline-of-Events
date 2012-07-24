@@ -1391,7 +1391,7 @@ let Timeline = {
                         .getMostRecentWindow("navigator:browser");
     Timeline.addRemoteListener(Timeline._window);
     // destroying on unload.
-    Timeline._window.addEventListener("beforeunload", Timeline.destroy, false);
+    Timeline._window.addEventListener("unload", Timeline.destroy, false);
     if (!Timeline.id) {
       Timeline.id = "timeline-ui-" + Date.now();
     }
@@ -1644,7 +1644,7 @@ let Timeline = {
   destroy: function GUI_destroy() {
     if (Timeline._window) {
       try {
-        Timeline._window.removeEventListener("beforeunload", Timeline.destroy, false);
+        Timeline._window.removeEventListener("unload", Timeline.destroy, false);
       } catch(ex) {}
     }
     if (Timeline.UIOpened == true) {
