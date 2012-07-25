@@ -133,6 +133,7 @@ TimelineView.prototype = {
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
     this.restartOnReload = this.$("restart-on-reload");
+    this.canvasScrollbar = this.$("timeline-scrollbar");
     this.detailBox.setAttribute("visible", false);
     this.detailBox.setAttribute("pinned", false);
     // Attaching events.
@@ -176,6 +177,7 @@ TimelineView.prototype = {
       this.infoBoxButton.checked = true;
     }
     this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
+    this._prepareScrollbar();
   },
 
   /**
@@ -237,6 +239,7 @@ TimelineView.prototype = {
     urlLabel.setAttribute("flex", "0");
     urlLabel.setAttribute("crop", "center");
     featureBox.appendChild(urlLabel);
+    this.updateScrollbar();
   },
 
   /**
@@ -398,6 +401,28 @@ TimelineView.prototype = {
       if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 50) {
         this._canvas.height = this.producersPane.clientHeight;
       }
+    }
+  },
+
+  updateScrollbar: function TV_updateScrollbar(aPositionOnly)
+  {
+    if (aPositionOnly) {
+      this.canvasScrollbar.style.top =
+        Math.floor(this.producersPane.scrollTop * this.scrollScale) + "px";
+    }
+    else if (this.producersPane.scrollHeight > this.producersPane.clientHeight) {
+      this.canvasScrollbar.style.opacity = 1;
+      let clientHeight = this.producersPane.clientHeight,
+          scrollHeight = this.producersPane.scrollHeight;
+      let height = Math.floor(Math.max(20, clientHeight * clientHeight /scrollHeight));
+      this.canvasScrollbar.style.height = height + "px";
+      this.scrollScale = (clientHeight - height) /
+                         (scrollHeight - clientHeight);
+      this.canvasScrollbar.style.top =
+        Math.floor(this.producersPane.scrollTop * this.scrollScale) + "px";
+    }
+    else {
+      this.canvasScrollbar.style.opacity = 0;
     }
   },
 
@@ -625,6 +650,7 @@ TimelineView.prototype = {
   {
     if (aEvent.target.scrollTop) {
       this._canvas.offsetTop = aEvent.target.scrollTop;
+      this.updateScrollbar(true);
       this._canvas.waitForLineData = false;
       this._canvas.waitForDotData = false;
     }
@@ -635,6 +661,7 @@ TimelineView.prototype = {
     if (aEvent.detail) {
       aEvent.preventDefault();
       this.producersPane.scrollTop = Math.max(0, this._canvas.offsetTop + aEvent.detail);
+      this.updateScrollbar(true);
       this._canvas.offsetTop = this.producersPane.scrollTop;
       this._canvas.waitForLineData = false;
       this._canvas.waitForDotData = false;
@@ -702,6 +729,7 @@ TimelineView.prototype = {
         this._canvas.updateGroupOffset();
         this._canvas.waitForLineData = false;
         this._canvas.waitForDotData = false;
+        this.updateScrollbar();
       }.bind(this), 500);
     }
   },

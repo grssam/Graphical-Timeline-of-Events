@@ -65,6 +65,7 @@
           <html:div id="timeline-infobox" class="absolute" />
           <html:div id="timeline-detailbox" class="absolute" />
           <html:div id="timeline-highlighter" class="absolute" />
+          <html:div id="timeline-scrollbar" class="absolute" />
         </hbox>
       </vbox>
     </hbox>
