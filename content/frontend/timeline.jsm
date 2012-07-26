@@ -177,7 +177,7 @@ TimelineView.prototype = {
       this.infoBoxButton.checked = true;
     }
     this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
-    this._prepareScrollbar();
+    this.updateScrollbar();
   },
 
   /**
@@ -661,7 +661,6 @@ TimelineView.prototype = {
     if (aEvent.detail) {
       aEvent.preventDefault();
       this.producersPane.scrollTop = Math.max(0, this._canvas.offsetTop + aEvent.detail);
-      this.updateScrollbar(true);
       this._canvas.offsetTop = this.producersPane.scrollTop;
       this._canvas.waitForLineData = false;
       this._canvas.waitForDotData = false;
