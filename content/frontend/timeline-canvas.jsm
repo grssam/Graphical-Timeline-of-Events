@@ -200,7 +200,20 @@ CanvasManager.prototype = {
     if (this.globalTiming[length - 1] < aTime) {
       return length - 1;
     }
-    let left = 0, right = length - 1,mid;
+    let left,right,mid,start = this.globalTiming[0];
+    let i = Math.floor((aTime - start) * length /
+                       (this.globalTiming[length - 1] - start));
+    if (this.globalTiming[i] == aTime) {
+      return i;
+    }
+    else if (this.globalTiming[i] > aTime) {
+      left = 0;
+      right = i;
+    }
+    else {
+     left = i;
+     right = length - 1;
+    }
     while (right - left > 1) {
       mid = Math.floor((left + right)/2);
       if (this.globalTiming[mid] > aTime) {
@@ -400,23 +413,8 @@ CanvasManager.prototype = {
       this.globalTiming.push(aTime);
       return;
     }
-    let left = 0, right = length - 1,mid, i = null;
-    while (right - left > 1) {
-      mid = Math.floor((left + right)/2);
-      if (this.globalTiming[mid] > aTime) {
-        right = mid;
-      }
-      else if (this.globalTiming[mid] < aTime) {
-        left = mid;
-      }
-      else {
-        i = mid;
-        break;
-      }
-    }
-    if (i == null) {
-      i = left;
-    }
+    let i = this.searchIndexForTime(aTime) + 1;
+    // As the search function return index for value just less than provided
     this.globalGroup.splice(i,0,aGroupId);
     this.globalTiming.splice(i,0,aTime);
   },
