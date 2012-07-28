@@ -34,9 +34,13 @@ const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f
  *
  * @param object aDoc
  *        reference to the document in which the canvas resides.
+ * @param object aWindow
+ *        reference to the window object from where mozRequestAnimationFrame
+ *        will be called.
  */
-function CanvasManager(aDoc) {
-  this.doc = aDoc
+function CanvasManager(aDoc, aWindow) {
+  this.doc = aDoc;
+  this.window = aWindow;
   this.currentTime = this.startTime = Date.now();
   this.lastVisibleTime = null;
   this.offsetTop = 0;
@@ -67,6 +71,8 @@ function CanvasManager(aDoc) {
   this.activeGroups = [];
   this.mousePointerAt = {x: 0, time: 0};
   this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+  this.lastMouseX = 0;
+  this.lastTimeNeedleX = 0
 
   // How many milli seconds per pixel.
   this.scale = 50;
@@ -81,8 +87,9 @@ function CanvasManager(aDoc) {
   this.ctxD = this.canvasDots.getContext('2d');
   this.canvasRuler = aDoc.getElementById("ruler-canvas");
   this.ctxR = this.canvasRuler.getContext('2d');
+  this.canvasOverlay = aDoc.getElementById("timeline-canvas-overlay");
+  this.ctxO = this.canvasOverlay.getContext('2d');
   this.producerPane = this.doc.getElementById("producers-pane");
-  this.currentTimeNeedle = this.doc.getElementById("timeline-current-time");
   this.timeWindow = this.doc.getElementById("timeline-time-window");
   this.highlighter = this.doc.getElementById("timeline-highlighter");
 
@@ -93,6 +100,7 @@ function CanvasManager(aDoc) {
 
   this.timeFrozen = false;
   this.overview = true;
+  this.forcePaint = false;
   this.alive = true;
   this.render();
 }
@@ -109,7 +117,9 @@ CanvasManager.prototype = {
   set width(val)
   {
     this._width = val;
-    this.canvasRuler.width = this.canvasLines.width = this.canvasDots.width = val;
+    this.canvasOverlay.width = this.canvasRuler.width = this.canvasLines.width =
+      this.canvasDots.width = val;
+    this.forcePaint = true;
   },
 
   get height()
@@ -124,6 +134,8 @@ CanvasManager.prototype = {
   {
     this._height = val;
     this.canvasLines.height = this.canvasDots.height = val;
+    this.canvasOverlay.height = val + 30;
+    this.forcePaint = true;
   },
 
   get paneHeight()
@@ -186,6 +198,7 @@ CanvasManager.prototype = {
           this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
       }
     }
+    this.forcePaint = true;
   },
 
   /**
@@ -605,7 +618,7 @@ CanvasManager.prototype = {
         this.startingoffsetTime = this.offsetTime;
       }
       this.offsetTime -= this.startingoffsetTime/20;
-      this.doc.defaultView.mozRequestAnimationFrame(this.moveToCurrentTime);
+      this.window.mozRequestAnimationFrame(this.moveToCurrentTime);
       this.waitForLineData = false;
       this.waitForDotData = false;
     }
@@ -673,8 +686,7 @@ CanvasManager.prototype = {
       else {
         this.offsetTop = this.producerPane.scrollTop;
       }
-      this.doc.defaultView
-          .mozRequestAnimationFrame(function() {
+      this.window.mozRequestAnimationFrame(function() {
         this.moveTopOffsetTo(aY, aPosition, true);
       }.bind(this));
       this.waitForLineData = false;
@@ -739,8 +751,7 @@ CanvasManager.prototype = {
     else {
       this.movingView = true;
       this.frozenTime -= 0.05*(this.initialFrozenTime - this.finalFrozenTime);
-      this.doc.defaultView
-          .mozRequestAnimationFrame(function() {
+      this.window.mozRequestAnimationFrame(function() {
         this.moveToTime(aTime, aPosition, true);
       }.bind(this));
       this.waitForLineData = false;
@@ -815,6 +826,7 @@ CanvasManager.prototype = {
     this.ctxL.clearRect(0,0,this.width,this.height);
     this.ctxD.clearRect(0,0,this.width,this.height);
     this.ctxR.clearRect(0,0,this.width,25);
+    this.ctxO.clearRect(0,0,this.width,this.height + 30);
     this.groupedData = {};
     this.activeGroups = [];
     this.globalTiming = [];
@@ -824,6 +836,7 @@ CanvasManager.prototype = {
     this.waitForDotData = this.waitForLineData = false;
     this.id = 0;
     this.stopTime = null;
+    this.lastFirstVisibleTime = this.lastLastVisibleTime = 0;
     this.render();
     this.startTime = Date.now();
     this.timeFrozen = false;
@@ -936,7 +949,7 @@ CanvasManager.prototype = {
       return;
     }
     // getting the current time, which will be at the center of the canvas.
-    let date = (this.stopTime? this.stopTime: Date.now());
+    let date = (this.stopTime? this.stopTime: Date.now()), leaveEarly = false;
     if (this.timeFrozen) {
       if (!this.scrolling) {
         this.currentTime = this.frozenTime - this.offsetTime;
@@ -968,113 +981,139 @@ CanvasManager.prototype = {
                                   (date - this.frozenTime + this.offsetTime)/this.scale
                                  :(this.offsetTime + date - this.currentTime)/this.scale)),
                                  this.width);
+    // Preliminary check to see if at all anything changed that needs to be drawn
+    if (this.firstVisibleTime == this.lastFirstVisibleTime &&
+        this.lastVisibleTime == this.lastLastVisibleTime &&
+        this.offsetTop == this.lastOffsetTop) {
+      if (this.currentWidth >= this.width ||
+          (this.overview && this.activeGroups.length == 0) ||
+          (this.timeFrozen && date < this.lastVisibleTime &&
+           this.waitForDotData && this.waitForLineData)) {
+        leaveEarly = true;
+      }
+    }
+    this.lastFirstVisibleTime = this.firstVisibleTime;
+    this.lastLastVisibleTime = this.lastVisibleTime;
+    this.lastOffsetTop = this.offsetTop;
 
-    // Moving the current time needle to appropriate position.
-    this.currentTimeNeedle.style.left = this.currentWidth + "px";
-
-    // Drawing the time ruler.
-    this.ctxR.clearRect(0,0,this.width,25);
-    this.ctxR.fillStyle = "rgb(3,101,151)";
-    this.ctxR.font = "16px sans-serif";
-    this.ctxR.lineWidth = 0.5;
-    if (this.scale > 50) {
-      for (let i = -((this.firstVisibleTime - this.startTime)%50000 + 50000)/this.scale,
-               j = 0;
-           i < this.width;
-           i += 5000/this.scale, j++) {
-        if (j%10 == 0) {
-          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                               i + 2, 12);
-          this.ctxR.fillRect(i+0.5,5,1,20);
+    if (this.forcePaint || !leaveEarly) {
+      // Drawing the time ruler.
+      this.ctxR.clearRect(0,0,this.width,25);
+      this.ctxR.fillStyle = "rgb(3,101,151)";
+      this.ctxR.font = "16px sans-serif";
+      this.ctxR.lineWidth = 0.5;
+      if (this.scale > 50) {
+        for (let i = -((this.firstVisibleTime - this.startTime)%50000 + 50000)/this.scale,
+                 j = 0;
+             i < this.width;
+             i += 5000/this.scale, j++) {
+          if (j%10 == 0) {
+            this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                                 i + 2, 12);
+            this.ctxR.fillRect(i+0.5,5,1,20);
+          }
+          else if (j%5 == 0) {
+            this.ctxR.fillRect(i+0.5,10,1,15);
+          }
+          else {
+            this.ctxR.fillRect(i+0.5,15,1,10);
+          }
         }
-        else if (j%5 == 0) {
-          this.ctxR.fillRect(i+0.5,10,1,15);
+      }
+      else if (this.scale > 20) {
+        for (let i = -((this.firstVisibleTime - this.startTime)%10000 + 10000)/this.scale,
+                 j = 0;
+             i < this.width;
+             i += 1000/this.scale, j++) {
+          if (j%10 == 0) {
+            this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                                 i + 2, 12);
+            this.ctxR.fillRect(i+0.5,5,1,20);
+          }
+          else if (j%5 == 0) {
+            this.ctxR.fillRect(i+0.5,10,1,15);
+          }
+          else {
+            this.ctxR.fillRect(i+0.5,15,1,10);
+          }
         }
-        else {
-          this.ctxR.fillRect(i+0.5,15,1,10);
+      }
+      else if (this.scale > 1) {
+        for (let i = -((this.firstVisibleTime - this.startTime)%1000 + 1000)/this.scale,
+                 j = 0;
+             i < this.width;
+             i += 100/this.scale, j++) {
+          if (j%10 == 0) {
+            this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
+                                 i + 2, 12);
+            this.ctxR.fillRect(i+0.5,5,1,20);
+          }
+          else if (j%5 == 0) {
+            this.ctxR.fillRect(i+0.5,10,1,15);
+          }
+          else {
+            this.ctxR.fillRect(i+0.5,15,1,10);
+          }
+        }
+      }
+      else if (this.scale > 0.1) {
+        for (let i = -((this.firstVisibleTime - this.startTime)%100 + 100)/this.scale,
+                 j = 0;
+             i < this.width;
+             i += 10/this.scale, j++) {
+          if (j%10 == 0) {
+            this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+                                 i + 2, 12);
+            this.ctxR.fillRect(i+0.5,5,1,20);
+          }
+          else if (j%5 == 0) {
+            this.ctxR.fillRect(i+0.5,10,1,15);
+          }
+          else {
+            this.ctxR.fillRect(i+0.5,15,1,10);
+          }
+        }
+      }
+      else if (this.scale > 0) {
+        for (let i = -((this.firstVisibleTime - this.startTime)%10 + 10)/this.scale,
+                 j = 0;
+             i < this.width;
+             i += 1/this.scale, j++) {
+          if (j%10 == 0) {
+            this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
+                                 i + 2, 12);
+            this.ctxR.fillRect(i+0.5,5,1,20);
+          }
+          else if (j%5 == 0) {
+            this.ctxR.fillRect(i+0.5,10,1,15);
+          }
+          else {
+            this.ctxR.fillRect(i+0.5,15,1,10);
+          }
         }
       }
     }
-    else if (this.scale > 20) {
-      for (let i = -((this.firstVisibleTime - this.startTime)%10000 + 10000)/this.scale,
-               j = 0;
-           i < this.width;
-           i += 1000/this.scale, j++) {
-        if (j%10 == 0) {
-          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                               i + 2, 12);
-          this.ctxR.fillRect(i+0.5,5,1,20);
-        }
-        else if (j%5 == 0) {
-          this.ctxR.fillRect(i+0.5,10,1,15);
-        }
-        else {
-          this.ctxR.fillRect(i+0.5,15,1,10);
-        }
+    if (this.mousePointerAt.time != 0 || this.currentWidth <= this.width + 2) {
+      this.ctxO.clearRect(this.lastMouseX,this.height,200,30);
+      this.ctxO.clearRect(this.lastTimeNeedleX - 1,0,4,this.height + 30);
+      if (this.currentWidth < this.width) {
+        // Moving the current time needle to appropriate position.
+        this.ctxO.fillStyle = "rgb(3,101,151)";
+        this.ctxO.fillRect(this.currentWidth,0,2,this.height + 30);
+        this.lastTimeNeedleX = this.currentWidth;
+      }
+      if (this.mousePointerAt.time != 0) {
+        this.ctxO.fillStyle = "#f770ff";
+        this.ctxO.font = "16px sans-serif";
+        this.ctxO.lineWidth = 0.5;
+        this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
+        this.ctxO.fillRect(this.mousePointerAt.x,this.height + 4,1,25);
+        this.ctxO.fillText(Math.floor(this.mousePointerAt.time - this.startTime) + "ms",
+                           this.mousePointerAt.x + 2, this.height + 16);
+        this.lastMouseX = this.mousePointerAt.x;
       }
     }
-    else if (this.scale > 1) {
-      for (let i = -((this.firstVisibleTime - this.startTime)%1000 + 1000)/this.scale,
-               j = 0;
-           i < this.width;
-           i += 100/this.scale, j++) {
-        if (j%10 == 0) {
-          this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                               i + 2, 12);
-          this.ctxR.fillRect(i+0.5,5,1,20);
-        }
-        else if (j%5 == 0) {
-          this.ctxR.fillRect(i+0.5,10,1,15);
-        }
-        else {
-          this.ctxR.fillRect(i+0.5,15,1,10);
-        }
-      }
-    }
-    else if (this.scale > 0.1) {
-      for (let i = -((this.firstVisibleTime - this.startTime)%100 + 100)/this.scale,
-               j = 0;
-           i < this.width;
-           i += 10/this.scale, j++) {
-        if (j%10 == 0) {
-          this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
-                               i + 2, 12);
-          this.ctxR.fillRect(i+0.5,5,1,20);
-        }
-        else if (j%5 == 0) {
-          this.ctxR.fillRect(i+0.5,10,1,15);
-        }
-        else {
-          this.ctxR.fillRect(i+0.5,15,1,10);
-        }
-      }
-    }
-    else if (this.scale > 0) {
-      for (let i = -((this.firstVisibleTime - this.startTime)%10 + 10)/this.scale,
-               j = 0;
-           i < this.width;
-           i += 1/this.scale, j++) {
-        if (j%10 == 0) {
-          this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
-                               i + 2, 12);
-          this.ctxR.fillRect(i+0.5,5,1,20);
-        }
-        else if (j%5 == 0) {
-          this.ctxR.fillRect(i+0.5,10,1,15);
-        }
-        else {
-          this.ctxR.fillRect(i+0.5,15,1,10);
-        }
-      }
-    }
-    if (this.mousePointerAt.time != 0) {
-      this.ctxR.fillStyle = "#f770ff";
-      this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
-      this.ctxR.fillRect(this.mousePointerAt.x+0.5,0,1,25);
-      this.ctxR.fillText(Math.floor(this.mousePointerAt.time - this.startTime) + "ms",
-                         this.mousePointerAt.x + 2, 12)
-    }
-    if (!this.waitForLineData) {
+    if (this.forcePaint || (!this.waitForLineData && !leaveEarly)) {
       this.linesDrawn = 0;
 
       let ([x,endx,y,endy,v] = this.dirtyZone) {
@@ -1141,7 +1180,7 @@ CanvasManager.prototype = {
         this.waitForLineData = true;
       }
     }
-    if (!this.waitForDotData) {
+    if (this.forcePaint || (!this.waitForDotData && !leaveEarly)) {
       this.dotsDrawn = 0;
 
       this.ctxD.shadowOffsetY = 2;
@@ -1194,7 +1233,8 @@ CanvasManager.prototype = {
         this.highlighter.style.boxShadow = "0px 0px 4px 4px " + this.highlightInfo.color;
       }
     }
-    this.doc.defaultView.mozRequestAnimationFrame(this.render);
+    this.forcePaint = false;
+    this.window.mozRequestAnimationFrame(this.render);
   },
 
   destroy: function CM_destroy()

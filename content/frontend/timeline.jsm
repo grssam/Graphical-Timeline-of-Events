@@ -505,11 +505,10 @@ TimelineView.prototype = {
       Timeline.startListening(message);
       // Starting the canvas.
       if (!this.canvasStarted) {
-        this._canvas = new CanvasManager(this._frameDoc);
+        this._canvas = new CanvasManager(this._frameDoc, this._window);
         this._canvas.height = this.$("canvas-container").boxObject.height - 25;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
-        this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
         this.canvasStarted = true;
         this.handleScroll();
         this.handleDetailClick();
@@ -538,11 +537,10 @@ TimelineView.prototype = {
     this.recording = true;
     // Starting the canvas.
     if (!this.canvasStarted) {
-      this._canvas = new CanvasManager(this._frameDoc);
+      this._canvas = new CanvasManager(this._frameDoc, this._window);
       this._canvas.height = this.$("canvas-container").boxObject.height - 25;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
-      this.$("timeline-current-time").style.left = this._canvas.width*0.8 + "px";
       this.canvasStarted = true;
       this.handleScroll();
       this.handleDetailClick();
@@ -1232,7 +1230,7 @@ TimelineView.prototype = {
   _onDragStart: function TV__onDragStart(aEvent)
   {
     this.scrollStartX = aEvent.clientX;
-    this.$("timeline-ruler").removeEventListener("mousedown", this._onDragStart, true);
+    this.$("timeline-canvas-overlay").removeEventListener("mousedown", this._onDragStart, true);
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
     }
@@ -1262,7 +1260,7 @@ TimelineView.prototype = {
    */
   handleScroll: function TV_handleScroll()
   {
-    this.$("timeline-ruler").addEventListener("mousedown", this._onDragStart, true);
+    this.$("timeline-canvas-overlay").addEventListener("mousedown", this._onDragStart, true);
   },
 
   _onWindowStart: function TV__onWindowStart(aEvent)
