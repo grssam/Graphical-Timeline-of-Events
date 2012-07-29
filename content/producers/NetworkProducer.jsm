@@ -35,12 +35,11 @@ const PR_UINT32_MAX = 4294967295;
  *        body and status is stored on aHttpActivity.
  */
 function NetworkResponseListener(aHttpActivity) {
-  this.receivedData = "";
   this.httpActivity = aHttpActivity;
+  this.bodySize = 0;
 }
 
-NetworkResponseListener.prototype =
-{
+NetworkResponseListener.prototype = {
   QueryInterface:
     XPCOMUtils.generateQI([Ci.nsIStreamListener, Ci.nsIInputStreamCallback,
                            Ci.nsIRequestObserver, Ci.nsISupports]),
@@ -64,9 +63,9 @@ NetworkResponseListener.prototype =
   httpActivity: null,
 
   /**
-   * Stores the received data as a string.
+   * The network response body size.
    */
-  receivedData: null,
+  bodySize: null,
 
   /**
    * The nsIRequest we are started for.
@@ -79,28 +78,39 @@ NetworkResponseListener.prototype =
    *
    * @param nsIAsyncInputStream aStream
    *        The input stream from where we are waiting for data to come in.
-   *
    * @param nsIInputStreamCallback aListener
    *        The input stream callback you want. This is an object that must have
    *        the onInputStreamReady() method. If the argument is null, then the
    *        current callback is removed.
-   *
-   * @returns void
+   * @return void
    */
   setAsyncListener: function NRL_setAsyncListener(aStream, aListener)
   {
-    // Quiting early if producer has stopped
-    if (!NetworkProducer || !Ci) {
-      this.sink.outputStream.close();
-      this.httpActivity.channel = null;
-      this.httpActivity = null;
-      this.sink = null;
-      this.inputStream = null;
-      this.requtStream = null;
-      return;
-    }
     // Asynchronously wait for the stream to be readable or closed.
-    aStream.asyncWait(aListener, 0, 0, Services.tm.mainThread);
+    if (Services) {
+      aStream.asyncWait(aListener, 0, 0, Services.tm.mainThread);
+    }
+  },
+
+  /**
+   * Stores the received data, if request/response body logging is enabled. It
+   * also does limit the number of stored bytes, based on the
+   * RESPONSE_BODY_LIMIT constant.
+   *
+   * Learn more about nsIStreamListener at:
+   * https://developer.mozilla.org/en/XPCOM_Interface_Reference/nsIStreamListener
+   *
+   * @param nsIRequest aRequest
+   * @param nsISupports aContext
+   * @param nsIInputStream aInputStream
+   * @param unsigned long aOffset
+   * @param unsigned long aCount
+   */
+  onDataAvailable:
+  function NRL_onDataAvailable(aRequest, aContext, aInputStream, aOffset, aCount)
+  {
+    this._findOpenResponse();
+    this.bodySize += aCount;
   },
 
   /**
@@ -118,8 +128,7 @@ NetworkResponseListener.prototype =
   },
 
   /**
-   * Handle the onStopRequest by storing the response header is stored on the
-   * httpActivity object. The sink output stream is also closed.
+   * Handle the onStopRequest by closing the sink output stream.
    *
    * For more documentation about nsIRequestObserver go to:
    * https://developer.mozilla.org/En/NsIRequestObserver
@@ -131,22 +140,17 @@ NetworkResponseListener.prototype =
   },
 
   /**
-  * Find the open response object associated to the current request. The
-  * NetworkProducer.httpResponseExaminer() method saves the response headers in
-  * NetworkProducer.openResponses. This method takes the data from the open
-  * response object and puts it into the HTTP activity object, then sends it to
-  * the remote Web Console instance.
-  *
-  * @private
-  */
-  _findOpenResponse: function NNRL__findOpenResponse()
+   * Find the open response object associated to the current request. The
+   * NetworkProducer.httpResponseExaminer() method saves the response headers in
+   * NetworkProducer.openResponses. This method takes the data from the open
+   * response object and puts it into the HTTP activity object, then sends it to
+   * the remote Web Console instance.
+   *
+   * @private
+   */
+  _findOpenResponse: function NRL__findOpenResponse()
   {
-    // Quiting early if producer has stopped
-    if (!NetworkProducer || !Ci) {
-      return;
-    }
-
-    if (this._foundOpenResponse) {
+    if (!NetworkProducer || !Ci || this._foundOpenResponse) {
       return;
     }
 
@@ -169,9 +173,6 @@ NetworkResponseListener.prototype =
     response.httpVersion = openResponse.httpVersion;
     response.status = openResponse.status;
     response.statusText = openResponse.statusText;
-    // if (openResponse.cookies) {
-      // response.cookies = openResponse.cookies;
-    // }
     if (openResponse.contentType) {
       response.contentType = openResponse.contentType;
     }
@@ -186,16 +187,10 @@ NetworkResponseListener.prototype =
    * Clean up the response listener once the response input stream is closed.
    * This is called from onStopRequest() or from onInputStreamReady() when the
    * stream is closed.
-   *
-   * @returns void
+   * @return void
    */
   onStreamClose: function NRL_onStreamClose()
   {
-    // Quiting early if producer has stopped
-    if (!NetworkProducer || !Ci) {
-      return;
-    }
-
     if (!this.httpActivity) {
       return;
     }
@@ -206,15 +201,54 @@ NetworkResponseListener.prototype =
 
     this.httpActivity.stages.push("REQUEST_STOP");
 
-    this.receivedData = "";
+    this._onComplete();
+  },
 
-    NetworkProducer.sendActivity(this.httpActivity);
+  /**
+   * Handler for when the response completes. This function cleans up the
+   * response listener.
+   *
+   * @param string [aData]
+   *        Optional, the received data coming from the response listener or
+   *        from the cache.
+   */
+  _onComplete: function NRL__onComplete(aData)
+  {
+    let response = this.httpActivity.entry.response;
+
+    try {
+      response.bodySize = response.status != 304 ? this.bodySize : 0;
+    }
+    catch (ex) {
+      response.bodySize = -1;
+    }
+
+    try {
+      response.content = { mimeType: this.request.contentType };
+    }
+    catch (ex) {
+      response.content = { mimeType: "" };
+    }
+
+    if (response.content.mimeType && this.request.contentCharset) {
+      response.content.mimeType += "; charset=" + this.request.contentCharset;
+    }
+
+    response.content.size = this.bodySize || (aData || "").length;
+
+    if (aData) {
+      response.content.text = aData;
+    }
+
+    if (NetworkProducer) {
+      NetworkProducer.sendActivity(this.httpActivity);
+    }
 
     this.httpActivity.channel = null;
     this.httpActivity = null;
     this.sink = null;
     this.inputStream = null;
-    this.requtStream = null;
+    this.request = null;
   },
 
   /**
@@ -223,16 +257,10 @@ NetworkResponseListener.prototype =
    *
    * @param nsIAsyncInputStream aStream
    *        The sink input stream from which data is coming.
-   *
    * @returns void
    */
   onInputStreamReady: function NRL_onInputStreamReady(aStream)
   {
-    // Quiting early if producer has stopped
-    if (!NetworkProducer || !Ci) {
-      return;
-    }
-
     if (!(aStream instanceof Ci.nsIAsyncInputStream) || !this.httpActivity) {
       return;
     }
@@ -245,6 +273,12 @@ NetworkResponseListener.prototype =
     catch (ex) { }
 
     if (available != -1) {
+      if (available != 0) {
+        // Note that passing 0 as the offset here is wrong, but the
+        // onDataAvailable() method does not use the offset, so it does not
+        // matter.
+        this.onDataAvailable(this.request, null, aStream, 0, available);
+      }
       this.setAsyncListener(aStream, this);
     }
     else {
