@@ -937,7 +937,7 @@ CanvasManager.prototype = {
    */
   drawLine: function CM_drawLine(x, y, id, endx)
   {
-    if (this.offsetTop > y || y - this.offsetTop > this.height) {
+    if (this.offsetTop > y || y - this.offsetTop > this.height || endx - x < 5) {
       return;
     }
     this.ctxL.fillStyle = COLOR_LIST[id%12];
