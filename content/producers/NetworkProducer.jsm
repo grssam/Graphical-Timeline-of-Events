@@ -6,6 +6,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/NetUtil.jsm");
 Cu.import("resource:///modules/NetworkHelper.jsm");
 Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
 
@@ -110,6 +111,8 @@ NetworkResponseListener.prototype = {
   function NRL_onDataAvailable(aRequest, aContext, aInputStream, aOffset, aCount)
   {
     this._findOpenResponse();
+    let data = NetUtil.readInputStreamToString(aInputStream, aCount);
+
     this.bodySize += aCount;
   },
 
