@@ -398,8 +398,11 @@ TimelineView.prototype = {
   onFrameResize: function TV_onFrameResize()
   {
     if (this.canvasStarted) {
-      if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 50) {
+      if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 5) {
         this._canvas.height = this.producersPane.clientHeight;
+      }
+      if (Math.abs(this.$("canvas-container").boxObject.width - this._canvas.width) > 10) {
+        this._canvas.width = this.$("canvas-container").boxObject.width;
       }
     }
   },
