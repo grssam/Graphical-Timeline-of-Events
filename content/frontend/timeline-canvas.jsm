@@ -66,13 +66,13 @@ function CanvasManager(aDoc, aWindow) {
    */
   this.groupedData = {};
 
-  this.globalTiming = [];
-  this.globalGroup = [];
+  this.dotsData = {};
   this.activeGroups = [];
   this.mousePointerAt = {x: 0, time: 0};
   this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
   this.lastMouseX = 0;
-  this.lastTimeNeedleX = 0
+  this.lastTimeNeedleX = 0;
+  this.lastDotTime = null;
 
   // How many milli seconds per pixel.
   this.scale = 50;
@@ -189,12 +189,12 @@ CanvasManager.prototype = {
   {
     for (groupId in this.groupedData) {
       if (this.groupedData[groupId].type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START) {
-        this.groupedData[groupId].y =
+        this.dotsData[groupId].y = this.groupedData[groupId].y =
           this.getOffsetForGroup(this.groupedData[groupId].name.replace(" ", "_"),
                                  this.groupedData[groupId].producerId);
       }
       else {
-        this.groupedData[groupId].y =
+        this.dotsData[groupId].y = this.groupedData[groupId].y =
           this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
       }
     }
@@ -206,20 +206,22 @@ CanvasManager.prototype = {
    *
    * @param number aTime
    *        The time to searach.
+   * @param array aArray
+   *        The array from where to search
    */
-  searchIndexForTime: function CM_searchIndexForTime(aTime)
+  searchIndexForTime: function CM_searchIndexForTime(aTime, aArray)
   {
-    let {length} = this.globalTiming;
-    if (this.globalTiming[length - 1] < aTime) {
+    let {length} = aArray;
+    if (aArray[length - 1] < aTime) {
       return length - 1;
     }
-    let left,right,mid,start = this.globalTiming[0];
+    let left,right,mid,start = aArray[0];
     let i = Math.floor((aTime - start) * length /
-                       (this.globalTiming[length - 1] - start));
-    if (this.globalTiming[i] == aTime) {
+                       (aArray[length - 1] - start));
+    if (aArray[i] == aTime) {
       return i;
     }
-    else if (this.globalTiming[i] > aTime) {
+    else if (aArray[i] > aTime) {
       left = 0;
       right = i;
     }
@@ -229,10 +231,10 @@ CanvasManager.prototype = {
     }
     while (right - left > 1) {
       mid = Math.floor((left + right)/2);
-      if (this.globalTiming[mid] > aTime) {
+      if (aArray[mid] > aTime) {
         right = mid;
       }
-      else if (this.globalTiming[mid] < aTime) {
+      else if (aArray[mid] < aTime) {
         left = mid;
       }
       else
@@ -420,16 +422,23 @@ CanvasManager.prototype = {
 
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
   {
-    let {length} = this.globalTiming;
-    if (this.globalTiming[length - 1] < aTime) {
-      this.globalGroup.push(aGroupId);
-      this.globalTiming.push(aTime);
+    let length;
+    try {
+      length = this.dotsData[aGroupId].timings.length;
+    } catch(e) {
+      this.dotsData[aGroupId] = {y: this.groupedData[aGroupId].y, timings: []};
+      length = 0;
+    }
+    if (this.lastDotTime == null || this.lastDotTime < aTime) {
+      this.lastDotTime = aTime;
+    }
+    if (length == 0 || this.dotsData[aGroupId].timings[length - 1] < aTime) {
+      this.dotsData[aGroupId].timings.push(aTime);
       return;
     }
-    let i = this.searchIndexForTime(aTime) + 1;
+    let i = this.searchIndexForTime(aTime, this.dotsData[aGroupId].timings) + 1;
     // As the search function return index for value just less than provided
-    this.globalGroup.splice(i,0,aGroupId);
-    this.globalTiming.splice(i,0,aTime);
+    this.dotsData[aGroupId].timings.splice(i,0,aTime);
   },
 
   /**
@@ -829,8 +838,8 @@ CanvasManager.prototype = {
     this.ctxO.clearRect(0,0,this.width,this.height + 30);
     this.groupedData = {};
     this.activeGroups = [];
-    this.globalTiming = [];
-    this.globalGroup = [];
+    this.dotsData = {};
+    this.lastDotTime = null;
     this.dirtyDots = [];
     this.dirtyZone = [];
     this.waitForDotData = this.waitForLineData = false;
@@ -962,8 +971,8 @@ CanvasManager.prototype = {
     else if (this.overview) {
       // Check if any continuous or repeating event is currently unfinished.
       // If so, then draw full time width, else, draw to the max time of any event.
-      if (this.activeGroups.length == 0 && this.globalTiming.length > 0) {
-        this.currentTime = this.globalTiming[this.globalTiming.length - 1];
+      if (this.activeGroups.length == 0 && this.lastDotTime != null) {
+        this.currentTime = this.lastDotTime;
       }
       else {
         this.currentTime = date;
@@ -1201,16 +1210,24 @@ CanvasManager.prototype = {
       // }
       // getting the current time, which will be at the center of the canvas.
 
-      let i = this.searchIndexForTime(this.lastVisibleTime);
-      for (; i >= 0; i--) {
-        if (this.globalTiming[i] >= this.firstVisibleTime) {
-          this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
-                       this.groupedData[this.globalGroup[i]].y,
-                       this.groupedData[this.globalGroup[i]].id);
+      for (let groupId in this.dotsData) {
+        // leave early if the group is out of visible
+        if (this.dotsData[groupId].y < this.offsetTop ||
+            this.dotsData[groupId].y > this.height + this.offsetTop) {
+          continue;
         }
-        // No need of going down further as time is already below visible state.
-        else {
-          break;
+        let timings = this.dotsData[groupId].timings;
+        let i = this.searchIndexForTime(this.lastVisibleTime, timings);
+        for (; i >= 0; i--) {
+          if (timings[i] >= this.firstVisibleTime) {
+            this.drawDot((timings[i] - this.firstVisibleTime)/this.scale,
+                         this.dotsData[groupId].y,
+                         this.groupedData[groupId].id);
+          }
+          // No need of going down further as time is already below visible state.
+          else {
+            break;
+          }
         }
       }
 
@@ -1243,7 +1260,7 @@ CanvasManager.prototype = {
     this.ctxL.clearRect(0,0,this.width,this.height);
     this.ctxD.clearRect(0,0,this.width,this.height);
     this.ctxR.clearRect(0,0,this.width,25);
-    this.groupedData = this.activeGroups = this.globalTiming = this.globalGroup =
+    this.groupedData = this.activeGroups = this.dotsData = this.lastDotTime =
       this.dirtyDots = this.dirtyZone = this.waitForDotData = this.waitForLineData =
       this.id = this.startTime = this.stopTime = this.timeFrozen = this.offsetTime =
       this.scrollDistance = null;
