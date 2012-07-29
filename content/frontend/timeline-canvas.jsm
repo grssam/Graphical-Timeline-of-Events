@@ -66,7 +66,7 @@ function CanvasManager(aDoc, aWindow) {
    */
   this.groupedData = {};
 
-  this.dotsData = {};
+  this.dotsTimings = {};
   this.activeGroups = [];
   this.mousePointerAt = {x: 0, time: 0};
   this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
@@ -189,12 +189,12 @@ CanvasManager.prototype = {
   {
     for (groupId in this.groupedData) {
       if (this.groupedData[groupId].type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START) {
-        this.dotsData[groupId].y = this.groupedData[groupId].y =
+        this.groupedData[groupId].y =
           this.getOffsetForGroup(this.groupedData[groupId].name.replace(" ", "_"),
                                  this.groupedData[groupId].producerId);
       }
       else {
-        this.dotsData[groupId].y = this.groupedData[groupId].y =
+        this.groupedData[groupId].y =
           this.getOffsetForGroup(groupId, this.groupedData[groupId].producerId);
       }
     }
@@ -424,21 +424,21 @@ CanvasManager.prototype = {
   {
     let length;
     try {
-      length = this.dotsData[aGroupId].timings.length;
+      length = this.dotsTimings[aGroupId].length;
     } catch(e) {
-      this.dotsData[aGroupId] = {y: this.groupedData[aGroupId].y, timings: []};
+      this.dotsTimings[aGroupId] = [];
       length = 0;
     }
     if (this.lastDotTime == null || this.lastDotTime < aTime) {
       this.lastDotTime = aTime;
     }
-    if (length == 0 || this.dotsData[aGroupId].timings[length - 1] < aTime) {
-      this.dotsData[aGroupId].timings.push(aTime);
+    if (length == 0 || this.dotsTimings[aGroupId][length - 1] < aTime) {
+      this.dotsTimings[aGroupId].push(aTime);
       return;
     }
-    let i = this.searchIndexForTime(aTime, this.dotsData[aGroupId].timings) + 1;
+    let i = this.searchIndexForTime(aTime, this.dotsTimings[aGroupId]) + 1;
     // As the search function return index for value just less than provided
-    this.dotsData[aGroupId].timings.splice(i,0,aTime);
+    this.dotsTimings[aGroupId].splice(i,0,aTime);
   },
 
   /**
@@ -838,7 +838,7 @@ CanvasManager.prototype = {
     this.ctxO.clearRect(0,0,this.width,this.height + 30);
     this.groupedData = {};
     this.activeGroups = [];
-    this.dotsData = {};
+    this.dotsTimings = {};
     this.lastDotTime = null;
     this.dirtyDots = [];
     this.dirtyZone = [];
@@ -1210,18 +1210,18 @@ CanvasManager.prototype = {
       // }
       // getting the current time, which will be at the center of the canvas.
 
-      for (let groupId in this.dotsData) {
+      for (let groupId in this.dotsTimings) {
         // leave early if the group is out of visible
-        if (this.dotsData[groupId].y < this.offsetTop ||
-            this.dotsData[groupId].y > this.height + this.offsetTop) {
+        if (this.groupedData[groupId].y < this.offsetTop ||
+            this.groupedData[groupId].y > this.height + this.offsetTop) {
           continue;
         }
-        let timings = this.dotsData[groupId].timings;
-        let i = this.searchIndexForTime(this.lastVisibleTime, timings);
+        let i = this.searchIndexForTime(this.lastVisibleTime,
+                                        this.dotsTimings[groupId]);
         for (; i >= 0; i--) {
-          if (timings[i] >= this.firstVisibleTime) {
-            this.drawDot((timings[i] - this.firstVisibleTime)/this.scale,
-                         this.dotsData[groupId].y,
+          if (this.dotsTimings[groupId][i] >= this.firstVisibleTime) {
+            this.drawDot((this.dotsTimings[groupId][i] - this.firstVisibleTime)/this.scale,
+                         this.groupedData[groupId].y,
                          this.groupedData[groupId].id);
           }
           // No need of going down further as time is already below visible state.
@@ -1260,7 +1260,7 @@ CanvasManager.prototype = {
     this.ctxL.clearRect(0,0,this.width,this.height);
     this.ctxD.clearRect(0,0,this.width,this.height);
     this.ctxR.clearRect(0,0,this.width,25);
-    this.groupedData = this.activeGroups = this.dotsData = this.lastDotTime =
+    this.groupedData = this.activeGroups = this.dotsTimings = this.lastDotTime =
       this.dirtyDots = this.dirtyZone = this.waitForDotData = this.waitForLineData =
       this.id = this.startTime = this.stopTime = this.timeFrozen = this.offsetTime =
       this.scrollDistance = null;
