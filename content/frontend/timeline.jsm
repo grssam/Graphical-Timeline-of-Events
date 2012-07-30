@@ -1253,8 +1253,8 @@ TimelineView.prototype = {
   _onScrollbarDrag: function TV__onScrollbarDrag(aEvent)
   {
     this.producersPane.scrollBoxObject
-        .scrollTo(0, Math.max(0, this.scrollScale * (this.originalScrollbarTop +
-                                                     aEvent.clientY - this.scrollStartY)));
+        .scrollTo(0, Math.max(0, (this.originalScrollbarTop + aEvent.clientY -
+                                  this.scrollStartY) / this.scrollScale));
     let y={};
     this.producersPane.scrollBoxObject.getPosition({},y);
     this._canvas.offsetTop = y.value;
