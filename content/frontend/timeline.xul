@@ -48,7 +48,7 @@
                      class="devtools-closebutton"/>
     </toolbar>
     <hbox id="timeline-content" flex="1">
-      <vbox id="producers-pane" />
+    <arrowscrollbox orient="vertical" smoothscroll="true" id="producers-pane" />
       <splitter id="stack-panes-splitter" class="devtools-side-splitter" />
       <vbox id="timeline-container" flex="1">
         <hbox id="canvas-container" flex="1">

@@ -94,6 +94,7 @@ function TimelineView(aChromeWindow) {
   this.handleMouseout = this.handleMouseout.bind(this);
   this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
+  this.handleScrollbarMove = this.handleScrollbarMove.bind(this);
   this.handleTimeWindow = this.handleTimeWindow.bind(this);
   this.onProducersScroll = this.onProducersScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
@@ -107,6 +108,9 @@ function TimelineView(aChromeWindow) {
   this._onWindowStart = this._onWindowStart.bind(this);
   this._onWindowSelect = this._onWindowSelect.bind(this);
   this._onWindowEnd = this._onWindowEnd.bind(this);
+  this._onScrollbarDragStart = this._onScrollbarDragStart.bind(this);
+  this._onScrollbarDrag = this._onScrollbarDrag.bind(this);
+  this._onScrollbarDragEnd = this._onScrollbarDragEnd.bind(this);
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
@@ -409,20 +413,22 @@ TimelineView.prototype = {
 
   updateScrollbar: function TV_updateScrollbar(aPositionOnly)
   {
+    let width={}, y={};
+    this.producersPane.scrollBoxObject.getScrolledSize({},width);
+    this.producersPane.scrollBoxObject.getPosition({},y);
     if (aPositionOnly) {
       this.canvasScrollbar.style.top =
-        Math.floor(this.producersPane.scrollTop * this.scrollScale) + "px";
+        Math.floor(y.value * this.scrollScale) + "px";
     }
-    else if (this.producersPane.scrollHeight > this.producersPane.clientHeight) {
+    else if (width.value > this.producersPane.boxObject.height) {
       this.canvasScrollbar.style.opacity = 1;
-      let clientHeight = this.producersPane.clientHeight,
-          scrollHeight = this.producersPane.scrollHeight;
-      let height = Math.floor(Math.max(20, clientHeight * clientHeight /scrollHeight));
+      let clientHeight = this.producersPane.boxObject.height;
+      let height = Math.floor(Math.max(20, clientHeight * clientHeight /width.value));
       this.canvasScrollbar.style.height = height + "px";
       this.scrollScale = (clientHeight - height) /
-                         (scrollHeight - clientHeight);
+                         (width.value - clientHeight);
       this.canvasScrollbar.style.top =
-        Math.floor(this.producersPane.scrollTop * this.scrollScale) + "px";
+        Math.floor(y.value * this.scrollScale) + "px";
     }
     else {
       this.canvasScrollbar.style.opacity = 0;
@@ -514,6 +520,7 @@ TimelineView.prototype = {
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this.canvasStarted = true;
         this.handleScroll();
+        this.handleScrollbarMove();
         this.handleDetailClick();
         this.handleTimeWindow();
       }
@@ -546,6 +553,7 @@ TimelineView.prototype = {
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
       this.canvasStarted = true;
       this.handleScroll();
+      this.handleScrollbarMove();
       this.handleDetailClick();
       this.handleTimeWindow();
     }
@@ -647,22 +655,24 @@ TimelineView.prototype = {
     }
   },
 
-  onProducersScroll: function TV_onProducersScroll(aEvent)
+  onProducersScroll: function TV_onProducersScroll()
   {
-    if (aEvent.target.scrollTop) {
-      this._canvas.offsetTop = aEvent.target.scrollTop;
-      this.updateScrollbar(true);
-      this._canvas.waitForLineData = false;
-      this._canvas.waitForDotData = false;
-    }
+    let y={};
+    this.producersPane.scrollBoxObject.getPosition({},y);
+    this._canvas.offsetTop = y.value;
+    this.updateScrollbar(true);
+    this._canvas.waitForLineData = false;
+    this._canvas.waitForDotData = false;
   },
 
   onCanvasScroll: function TV_onCanvasScroll(aEvent)
   {
     if (aEvent.detail) {
       aEvent.preventDefault();
-      this.producersPane.scrollTop = Math.max(0, this._canvas.offsetTop + aEvent.detail);
-      this._canvas.offsetTop = this.producersPane.scrollTop;
+      this.producersPane.scrollBoxObject.scrollTo(0, Math.max(0, this._canvas.offsetTop + aEvent.detail));
+      let y={};
+      this.producersPane.scrollBoxObject.getPosition({},y);
+      this._canvas.offsetTop = y.value;
       this._canvas.waitForLineData = false;
       this._canvas.waitForDotData = false;
     }
@@ -1230,6 +1240,42 @@ TimelineView.prototype = {
     }
   },
 
+  _onScrollbarDragStart: function TV__onScrollbarDragStart(aEvent)
+  {
+    this.scrollStartY = aEvent.clientY;
+    this.originalScrollbarTop = this.canvasScrollbar.style.top.replace("px","")*1;
+    this.canvasScrollbar.removeEventListener("mousedown", this._onScrollbarDragStart, true);
+    this.$("canvas-container").addEventListener("mousemove", this._onScrollbarDrag, true);
+    this._frameDoc.addEventListener("mouseup", this._onScrollbarDragEnd, true);
+    this._frameDoc.addEventListener("click", this._onScrollbarDragEnd, true);
+  },
+
+  _onScrollbarDrag: function TV__onScrollbarDrag(aEvent)
+  {
+    this.producersPane.scrollBoxObject
+        .scrollTo(0, Math.max(0, this.scrollScale * (this.originalScrollbarTop +
+                                                     aEvent.clientY - this.scrollStartY)));
+    let y={};
+    this.producersPane.scrollBoxObject.getPosition({},y);
+    this._canvas.offsetTop = y.value;
+  },
+
+  _onScrollbarDragEnd: function TV__onScrollbarDragEnd(aEvent)
+  {
+    this.$("canvas-container").removeEventListener("mousemove", this._onScrollbarDrag, true);
+    this._frameDoc.removeEventListener("mouseup", this._onScrollbarDragEnd, true);
+    this._frameDoc.removeEventListener("click", this._onScrollbarDragEnd, true);
+    this.handleScrollbarMove();
+  },
+
+  /**
+   * Handles dragging of the scrollbar on the canvas.
+   */
+  handleScrollbarMove: function TV_handleScrollbarMove()
+  {
+    this.canvasScrollbar.addEventListener("mousedown", this._onScrollbarDragStart, true);
+  },
+
   _onDragStart: function TV__onDragStart(aEvent)
   {
     this.scrollStartX = aEvent.clientX;
@@ -1259,7 +1305,7 @@ TimelineView.prototype = {
   },
 
   /**
-   * Handles dragging of the current time vertical line to scroll to previous time.
+   * Handles dragging of the ruler to scroll to previous time.
    */
   handleScroll: function TV_handleScroll()
   {

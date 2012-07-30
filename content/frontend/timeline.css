@@ -243,7 +243,6 @@
   width: 250px;
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
-  overflow: auto;
   margin-bottom: 26px;
 }
 
@@ -259,6 +258,10 @@
   -moz-animation-duration: 0.25s;
   -moz-animation-name: slideleft;
   opacity: 0;
+}
+
+#producers-pane > .autorepeatbutton-up, #producers-pane > .autorepeatbutton-down {
+  display: none;
 }
 
 #stack-panes-splitter {
