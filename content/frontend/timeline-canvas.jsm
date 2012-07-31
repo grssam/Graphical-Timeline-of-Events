@@ -881,6 +881,7 @@ CanvasManager.prototype = {
   stopTimeWindowAt: function CM_stopTimeWindowAt(right)
   {
     this.timeWindowRight = this.getTimeForXPixels(right);
+    let zoomed = false;
     if (right - this.leftWindowLine > 3 ||
         this.timeWindowRight - this.timeWindowLeft > 200) {
       this.freezeCanvas();
@@ -890,8 +891,10 @@ CanvasManager.prototype = {
       try {
         this.doc.getElementById("overview").removeAttribute("checked");
       } catch (ex) {}
+      zoomed = true;
     }
     this.leftWindowLine = this.timeWindowLeft = this.timeWindowRight = null;
+    return zoomed;
   },
 
   displayDetailedData: function CM_displayDetailedData(aLeft)

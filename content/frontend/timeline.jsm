@@ -665,12 +665,14 @@ TimelineView.prototype = {
     }
     if (this.canvasStarted) {
       this._frameDoc.defaultView.setTimeout(function() {
-        this._canvas.offsetTop = this.producersPane.scrollTop;
+        let y={};
+        this.producersPane.scrollBoxObject.getPosition({},y);
+        this._canvas.offsetTop = y.value;
         this._canvas.updateGroupOffset();
         this._canvas.waitForLineData = false;
         this._canvas.waitForDotData = false;
         this.updateScrollbar();
-      }.bind(this), 500);
+      }.bind(this), 250);
     }
   },
 
@@ -1160,15 +1162,17 @@ TimelineView.prototype = {
     this.$("canvas-container").removeEventListener("mousemove", this._onWindowSelect, true);
     this._frameDoc.removeEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
-    this._canvas.stopTimeWindowAt(aEvent.clientX -
-      (!this.producersPaneOpened?0:this.producersPane.boxObject.width));
+    let zoomed = this._canvas.stopTimeWindowAt(aEvent.clientX -
+                  (!this.producersPaneOpened?0:this.producersPane.boxObject.width));
     try {
       this.timeWindow.removeAttribute("selecting");
     } catch (ex) {}
-    this.timeWindow.setAttribute("selected", true);
-    this._frameDoc.defaultView.setTimeout(function() {
-      this.timeWindow.removeAttribute("selected");
-    }.bind(this), 500);
+    if (zoomed) {
+      this.timeWindow.setAttribute("selected", true);
+      this._frameDoc.defaultView.setTimeout(function() {
+        this.timeWindow.removeAttribute("selected");
+      }.bind(this), 500);
+    }
     this.handleTimeWindow();
   },
 
