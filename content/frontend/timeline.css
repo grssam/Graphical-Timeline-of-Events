@@ -469,7 +469,11 @@
   bottom: 0px;
   left: 0px;
   z-index: 5;
-  cursor: e-resize;
+  cursor: -moz-grab;
+}
+
+#timeline-canvas-overlay:active {
+  cursor: -moz-grabbing;
 }
 
 #timeline-current-time {
