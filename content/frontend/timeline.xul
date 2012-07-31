@@ -21,16 +21,11 @@
         <toolbarbutton id="record"
                        class="devtools-toolbarbutton"
                        type="checkbox"
-                       tabindex="0"/>
+                       tabindex="1"/>
         <toolbarbutton id="overview"
                        class="devtools-toolbarbutton"
                        type="checkbox"
                        label="&timelineUI.toggleOverviewButton.label;"
-                       tabindex="1"/>
-        <toolbarbutton id="producers"
-                       class="devtools-toolbarbutton"
-                       type="checkbox"
-                       label="&timelineUI.toggleProducersButton.label;"
                        tabindex="2"/>
         <toolbarbutton id="infobox"
                        class="devtools-toolbarbutton"

@@ -133,7 +133,6 @@ TimelineView.prototype = {
     this.overviewButton = this.$("overview");
     this.infoBox = this.$("timeline-infobox");
     this.detailBox = this.$("timeline-detailbox");
-    this.producersButton = this.$("producers");
     this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
@@ -154,7 +153,6 @@ TimelineView.prototype = {
     this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
-    this.producersButton.addEventListener("command", this.toggleProducersPane, true);
     this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
     this.restartOnReload.addEventListener("command", this.toggleRestartOnReload, true);
     this._frame.addEventListener("unload", this._onUnload, true);
@@ -164,13 +162,11 @@ TimelineView.prototype = {
       this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
       this.producersPane.setAttribute("visible", false);
       this.producersPaneOpened = false;
-      this.producersButton.checked = false;
     }
     else {
       this.producersPane.style.marginLeft = "0px";
       this.producersPane.setAttribute("visible", true);
       this.producersPaneOpened = true;
-      this.producersButton.checked = true;
     }
     if (TimelinePreferences.visiblePanes.indexOf("infobox") == -1) {
       this.infoBox.setAttribute("visible", false);
