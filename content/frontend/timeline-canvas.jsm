@@ -41,7 +41,7 @@ const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f
 function CanvasManager(aDoc, aWindow) {
   this.doc = aDoc;
   this.window = aWindow;
-  this.currentTime = this.startTime = Date.now() - 50;
+  this.currentTime = this.startTime = Date.now();
   this.lastVisibleTime = null;
   this.offsetTop = 0;
   this.scrolling = false;
@@ -847,7 +847,7 @@ CanvasManager.prototype = {
     this.stopTime = null;
     this.lastFirstVisibleTime = this.lastLastVisibleTime = 0;
     this.render();
-    this.startTime = Date.now() - 50;
+    this.startTime = Date.now();
     this.timeFrozen = false;
     this.offsetTime = 0;
     this.scrollDistance = 0;
@@ -984,6 +984,10 @@ CanvasManager.prototype = {
     }
     this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
     this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
+    if (this.overview) {
+      this.firstVisibleTime -= 5*this.scale;
+      this.lastFirstVisibleTime -= 5*this.scale;
+    }
 
     this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
                                  this.currentTime)/this.scale:(this.timeFrozen?
