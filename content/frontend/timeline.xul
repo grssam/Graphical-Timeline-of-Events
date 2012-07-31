@@ -27,11 +27,6 @@
                        type="checkbox"
                        label="&timelineUI.toggleOverviewButton.label;"
                        tabindex="2"/>
-        <toolbarbutton id="infobox"
-                       class="devtools-toolbarbutton"
-                       type="checkbox"
-                       label="&timelineUI.toggleInfoBoxButton.label;"
-                       tabindex="3"/>
 
       </hbox>
       <checkbox id="restart-on-reload"
@@ -58,7 +53,6 @@
             <html:canvas id="ruler-canvas" height="25" width="100%">
             </html:canvas>
           </html:div>
-          <html:div id="timeline-infobox" class="absolute" />
           <html:div id="timeline-detailbox" class="absolute" />
           <html:div id="timeline-highlighter" class="absolute" />
           <html:div id="timeline-scrollbar" class="absolute" />

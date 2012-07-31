@@ -67,8 +67,6 @@ function TimelineView(aChromeWindow) {
   this.recording = false;
   this.producersPaneOpened = false;
   this.startingoffsetTime = null;
-  this.infoBoxHidden = false;
-  this.tickerGroups = [];
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -79,7 +77,6 @@ function TimelineView(aChromeWindow) {
 
   this.toggleProducersPane = this.toggleProducersPane.bind(this);
   this.toggleOverview = this.toggleOverview.bind(this);
-  this.toggleInfoBox = this.toggleInfoBox.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.forceRestart = this.forceRestart.bind(this);
   this.toggleFeature = this.toggleFeature.bind(this);
@@ -87,12 +84,10 @@ function TimelineView(aChromeWindow) {
   this.toggleProducer = this.toggleProducer.bind(this);
   this.toggleProducerBox = this.toggleProducerBox.bind(this);
   this.handleGroupClick = this.handleGroupClick.bind(this);
-  this.handleTickerClick = this.handleTickerClick.bind(this);
   this.pinUnpinDetailBox = this.pinUnpinDetailBox.bind(this);
   this.toggleRestartOnReload = this.toggleRestartOnReload.bind(this);
   this.handleMousemove = this.handleMousemove.bind(this);
   this.handleMouseout = this.handleMouseout.bind(this);
-  this.onTickerScroll = this.onTickerScroll.bind(this);
   this.handleScroll = this.handleScroll.bind(this);
   this.handleScrollbarMove = this.handleScrollbarMove.bind(this);
   this.handleTimeWindow = this.handleTimeWindow.bind(this);
@@ -131,9 +126,7 @@ TimelineView.prototype = {
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
-    this.infoBox = this.$("timeline-infobox");
     this.detailBox = this.$("timeline-detailbox");
-    this.infoBoxButton = this.$("infobox");
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
     this.restartOnReload = this.$("restart-on-reload");
@@ -149,11 +142,8 @@ TimelineView.prototype = {
     this.$("timeline-canvas-dots").addEventListener("mouseout", this.handleMouseout, true);
     this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
-    this.infoBox.addEventListener("click", this.handleTickerClick, true);
-    this.infoBox.addEventListener("MozMousePixelScroll", this.onTickerScroll, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
-    this.infoBoxButton.addEventListener("command", this.toggleInfoBox, true);
     this.restartOnReload.addEventListener("command", this.toggleRestartOnReload, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
@@ -167,16 +157,6 @@ TimelineView.prototype = {
       this.producersPane.style.marginLeft = "0px";
       this.producersPane.setAttribute("visible", true);
       this.producersPaneOpened = true;
-    }
-    if (TimelinePreferences.visiblePanes.indexOf("infobox") == -1) {
-      this.infoBox.setAttribute("visible", false);
-      this.infoBoxHidden = true;
-      this.infoBoxButton.checked = false;
-    }
-    else {
-      this.infoBox.setAttribute("visible", true);
-      this.infoBoxHidden = false;
-      this.infoBoxButton.checked = true;
     }
     this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
     this.updateScrollbar();
@@ -367,12 +347,6 @@ TimelineView.prototype = {
       }
       producerBox = producerBox.nextSibling;
     }
-    let feed = this.infoBox.firstChild;
-    while (feed) {
-      let temp = feed;
-      feed = temp.nextSibling;
-      this.infoBox.removeChild(temp);
-    }
     let details = this.detailBox.firstChild;
     while (details) {
       let temp = details;
@@ -389,11 +363,9 @@ TimelineView.prototype = {
     if (!this._canvas.timeFrozen) {
       this._canvas.freezeCanvas();
       this.overviewButton.setAttribute("checked", true);
-      this.freezeTicker();
     }
     else {
       this._canvas.moveToCurrentTime();
-      this.unfreezeTicker();
     }
   },
 
@@ -468,18 +440,6 @@ TimelineView.prototype = {
     if (this.canvasStarted) {
       this._canvas.height = this.$("canvas-container").boxObject.height - 25;
       this._canvas.width = this.$("timeline-content").boxObject.width;
-    }
-  },
-
-  toggleInfoBox: function TV_toggleInfoBox()
-  {
-    if (!this.infoBoxHidden) {
-      this.infoBox.setAttribute("visible", false);
-      this.infoBoxHidden = true;
-    }
-    else {
-      this.infoBox.setAttribute("visible", true);
-      this.infoBoxHidden = false;
     }
   },
 
@@ -685,43 +645,6 @@ TimelineView.prototype = {
     }
   },
 
-  onTickerScroll: function TV_onTickerScroll(aEvent)
-  {
-    if (aEvent.detail) {
-      aEvent.preventDefault();
-      aEvent.stopPropagation();
-      this.infoBox.scrollTop = Math.max(0, this.infoBox.scrollTop + aEvent.detail);
-    }
-  },
-
-  freezeTicker: function TV_freezeTicker()
-  {
-    this.infoBox.scrollTop = 1;
-  },
-
-  unfreezeTicker: function TV_unfreezeTicker()
-  {
-    this.infoBox.scrollTop = 0;
-  },
-
-  moveTickerToTime: function TV_moveTickerToTime(aTime)
-  {
-    try {
-      if (this.infoBox.firstChild.getAttribute("timestamp")*1 < aTime) {
-        return;
-      }
-      let child = this.infoBox.firstChild, height = 0;
-      while(child) {
-        if (child.getAttribute("timestamp")*1 < aTime) {
-          this.infoBox.scrollTop = height;
-          break;
-        }
-        height += child.boxObject.height;
-        child = child.nextSibling;
-      }
-    } catch (ex) {}
-  },
-
   /**
    * Toggles the producer box.
    *
@@ -758,7 +681,6 @@ TimelineView.prototype = {
       let groupId = group.getAttribute("groupId");
       let time = this._canvas.groupedData[groupId].timestamps[0];
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
-      this.moveTickerToTime(time);
       this._canvas.displayDetailedData(this.width*0.45);
       this.showDetailedInfoFor([], this._canvas.getGroupForTime(groupId, time));
       this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
@@ -889,110 +811,6 @@ TimelineView.prototype = {
           }
         }
       }
-    }
-  },
-
-  handleTickerClick: function TV_handleTickerClick(aEvent)
-  {
-    let group = aEvent.originalTarget;
-    if (group.localName == "label") {
-      group = group.parentNode;
-    }
-    if (group.hasAttribute("timestamp")) {
-      let time = group.getAttribute("timestamp")*1,
-          groupId = group.getAttribute("groupId");
-      this._canvas.moveToTime(time);
-      this._canvas.moveTopOffsetTo(this._canvas
-          .groupedData[groupId].y);
-      this._canvas.displayDetailedData(this.width*0.45);
-      this.showDetailedInfoFor([groupId], this._canvas.getGroupForTime(groupId, time));
-      this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
-      this.detailBox.setAttribute("pinned", true);
-    }
-  },
-
-  /**
-   * Adds a short summary of the event in the ticker box.
-   *
-   * @param object aData
-   *        Normalized event data.
-   * @param number aId
-   *        used to identify the color of text.
-   */
-  addToTicker: function TV_addToTicker(aData, aId)
-  {
-    if (this.infoBoxHidden) {
-      return;
-    }
-    if (aData.type != NORMALIZED_EVENT_TYPE.POINT_EVENT &&
-        this.tickerGroups.indexOf(aData.groupID) != -1) {
-      return;
-    }
-    let scrollTop = this.infoBox.scrollTop;
-    let feedItem = this._frameDoc.createElement("vbox");
-    if (scrollTop == 0) {
-      // Animate in
-      feedItem.setAttribute("class", "ticker-feed animate-in");
-    }
-    else {
-      feedItem.setAttribute("class", "ticker-feed");
-    }
-    feedItem.setAttribute("groupId", aData.groupID);
-    feedItem.setAttribute("timestamp", aData.time);
-    let label1 = this._frameDoc.createElement("label");
-    label1.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
-    let label2 = this._frameDoc.createElement("label");
-    label2.setAttribute("style", "color:" + COLOR_LIST[aId%12]);
-    let date = new Date(aData.time);
-    label2.setAttribute("tooltiptext", date.toLocaleString()
-      .replace(/\s([ap]m)/i, "." + date.getMilliseconds() + " " + "$1"));
-    let dateString = "+" + this.getScaledTime(aData.time - this._canvas.startTime);
-    label1.setAttribute("value", aData.name);
-    feedItem.appendChild(label1);
-    if (aData.details) {
-      for (let property in this.producerInfoList[aData.producer]
-                               .details) {
-        if (aData.details[property] == null || property.match(/(name|time)/i)){
-          continue;
-        }
-        if (this.producerInfoList[aData.producer]
-                .details[property].type != "nested") {
-          let {value:value} =
-            this.getPropertyInfo(aData.producer,
-                                 property,
-                                 aData.details[property]);
-          label2.setAttribute("value", value + " at " + dateString);
-          feedItem.appendChild(label2);
-        }
-        else {
-          for (let subProp in this.producerInfoList[
-                                aData.producer
-                              ].details[property].items) {
-            if (aData.details[property][subProp] == null || subProp.match(/(name|time)/i)){
-              continue;
-            }
-            let {value:value} =
-              this.getPropertyInfo(aData.producer,
-                                   property,
-                                   aData.details[property][subProp],
-                                   subProp);
-            label2.setAttribute("value", value + " at " + dateString);
-            feedItem.appendChild(label2);
-            break;
-          }
-        }
-        break;
-      }
-    }
-    this.tickerGroups.push(aData.groupID);
-    if (!this.infoBox.firstChild) {
-      this.infoBox.appendChild(feedItem);
-    }
-    else {
-      this.infoBox.insertBefore(feedItem, this.infoBox.firstChild);
-    }
-    if (scrollTop != 0) {
-      this.infoBox.scrollTop += feedItem.boxObject.height;
     }
   },
 
@@ -1243,7 +1061,6 @@ TimelineView.prototype = {
         this.addGroupBox(aData);
         this._canvas.updateGroupOffset();
       }
-      this.addToTicker(aData, id);
     }
   },
 
@@ -1307,7 +1124,6 @@ TimelineView.prototype = {
     this.$("canvas-container").removeEventListener("mousemove", this._onDrag, true);
     this._frameDoc.removeEventListener("mouseup", this._onDragEnd, true);
     this._frameDoc.removeEventListener("click", this._onDragEnd, true);
-    this.moveTickerToTime(this._canvas.lastVisibleTime);
     this.handleScroll();
   },
 
@@ -1346,11 +1162,6 @@ TimelineView.prototype = {
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
     this._canvas.stopTimeWindowAt(aEvent.clientX -
       (!this.producersPaneOpened?0:this.producersPane.boxObject.width));
-    if (!this._canvas.overview) {
-      this._frameDoc.defaultView.setTimeout(function() {
-        this.moveTickerToTime(this._canvas.lastVisibleTime);
-      }.bind(this), 50);
-    }
     try {
       this.timeWindow.removeAttribute("selecting");
     } catch (ex) {}
@@ -1383,9 +1194,6 @@ TimelineView.prototype = {
     let visiblePanes = [];
     if (this.producersPane.getAttribute("visible") == "true") {
       visiblePanes.push("producers");
-    }
-    if (this.infoBox.getAttribute("visible") == "true") {
-      visiblePanes.push("infobox");
     }
     TimelinePreferences.visiblePanes = visiblePanes;
     let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");

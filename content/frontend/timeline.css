@@ -167,23 +167,6 @@
   }
 }
 
-@-moz-keyframes addfeed {
-  0% {
-    max-height: 0px;
-    opacity: 0;
-  }
-
-  50% {
-    max-height: 50px;
-    opacity: 0;
-  }
-
-  100% {
-    max-height: 50px;
-    opacity: 1;
-  }
-}
-
 /**
  * Toolbar Controls
  */
@@ -489,69 +472,6 @@
   background: -moz-linear-gradient(left, transparent 5px, rgba(27,25,40,0.5) 8px,
                                    rgb(3,101,151) 9px, rgb(3,101,151) 11px,
                                    rgba(27,25,40,0.5) 12px, transparent 15px);
-}
-
-/**
- * Info box
- */
-
-#timeline-infobox {
-  background-color: rgb(22,33,43);
-  box-shadow: 0px 0px 8px 8px rgba(0,0,0,0.75), inset 0px 0px 1px 1px rgba(80,80,80,0.35);
-  color: rgb(183,193,205);
-  width: 200px;
-  height: 200px;
-  max-height: 300px;
-  overflow: hidden;
-  z-index: 20;
-  right: 25px;
-  top: -400px;
-  opacity: 0;
-}
-
-#timeline-infobox[visible=true] {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: slideup;
-  opacity: 1;
-  top: 25px;
-}
-
-#timeline-infobox:not([visible=true]) {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: slidedown;
-  opacity: 0;
-  top: -400px;
-}
-
-.animate-in {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: addfeed;
-}
-
-.ticker-feed {
-  width: 100%;
-  display: block;
-  min-height: 20px;
-  overflow: hidden;
-  border-bottom: 1px solid rgb(183,193,205);
-  -moz-user-focus: normal;
-}
-
-.ticker-feed:focus {
-  border-bottom: 1px solid rgb(10,92,133);
-  background-image: -moz-linear-gradient(top, rgb(0,110,165), rgb(0,86,129) 100%);
-}
-
-.ticker-feed > label {
-  display: block;
-  color: rgb(183,193,205);
-  font-size: 12px;
-  padding: 4px 5px;
-  margin: 0px;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
 }
 
 /**
