@@ -97,6 +97,7 @@ function TimelineView(aChromeWindow) {
   this.handleScrollbarMove = this.handleScrollbarMove.bind(this);
   this.handleTimeWindow = this.handleTimeWindow.bind(this);
   this.onProducersScroll = this.onProducersScroll.bind(this);
+  this.onProducersMouseScroll = this.onProducersMouseScroll.bind(this);
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
   this.resizeCanvas = this.resizeCanvas.bind(this);
@@ -143,6 +144,7 @@ TimelineView.prototype = {
     // Attaching events.
     this._frameDoc.defaultView.onresize = this.onFrameResize;
     this.producersPane.onscroll = this.onProducersScroll;
+    this.producersPane.addEventListener("DOMMouseScroll", this.onProducersMouseScroll, true);
     this.$("timeline-canvas-dots").addEventListener("MozMousePixelScroll", this.onCanvasScroll, true);
     this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
     this.$("timeline-canvas-dots").addEventListener("mouseout", this.handleMouseout, true);
@@ -663,6 +665,15 @@ TimelineView.prototype = {
     this.updateScrollbar(true);
     this._canvas.waitForLineData = false;
     this._canvas.waitForDotData = false;
+  },
+
+  onProducersMouseScroll: function TV_onProducersMouseScroll(aEvent)
+  {
+    if (aEvent.detail) {
+      aEvent.stopPropagation();
+      aEvent.preventDefault();
+      this.producersPane.scrollBoxObject.scrollByLine(aEvent.detail);
+    }
   },
 
   onCanvasScroll: function TV_onCanvasScroll(aEvent)
