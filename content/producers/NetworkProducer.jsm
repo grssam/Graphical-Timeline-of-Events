@@ -800,7 +800,6 @@ let NetworkProducer =
       details: {
         /* tabID: tabId, */
         startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first/1000,
-        stage: currentStage,
         timings: aHttpActivity.entry.timings,
         request: {
           method: aHttpActivity.entry.request.method,
@@ -1015,7 +1014,7 @@ let producerInfo = {
   //Id of the producer.
   id: "NetworkProducer",
   // Name of the producer.
-  name: "Network Producer",
+  name: "Network Events",
   // Type of events that this producer listens to (one type per producer).
   // All the continuous events types are considered same.
   type: DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID,
@@ -1025,7 +1024,6 @@ let producerInfo = {
   // detail view will show properties belonging represented by these names.
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
-    stage: {name: "Stage", type: "string"},
     startTime: {name: "Start Time", type: "date"},
     timings: {
       name: "Timings",

@@ -1302,7 +1302,7 @@ TimelineView.prototype = {
 
   _onDrag: function TV__onDrag(aEvent)
   {
-    this._canvas.scrollDistance = this.scrollStartX - aEvent.clientX;
+    this._canvas.scrollDistance = aEvent.clientX - this.scrollStartX;
   },
 
   _onDragEnd: function TV__onDragEnd(aEvent)

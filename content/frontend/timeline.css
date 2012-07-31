@@ -434,7 +434,6 @@
   max-height: 100%;
   max-width: 100%;
   background: url("images/background-noise.png");
-  box-shadow: 3px 0px 10px 5px rgba(4,30,53,.2) inset;
   overflow: hidden;
 }
 

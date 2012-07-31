@@ -437,7 +437,7 @@ let producerInfo = {
   // Id of the producer.
   id: "PageEventsProducer",
   // Name of the producer.
-  name: "Page Events Producer",
+  name: "Page Events",
   // Type of events that this producer listens to (one type per producer).
   type: DataSink.NormalizedEventType.POINT_EVENT,
   // Features of this producer that can be turned on or off.

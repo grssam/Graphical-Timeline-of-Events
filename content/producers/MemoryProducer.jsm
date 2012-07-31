@@ -230,7 +230,7 @@ let producerInfo = {
   // Id of the producer.
   id: "MemoryProducer",
   // Name of the producer.
-  name: "Memory Producer",
+  name: "Memory Events",
   // Type of events that this producer listens to (one type per producer).
   type: DataSink.NormalizedEventType.REPEATING_EVENT_MID,
   // Features of this producer that can be turned on or off.
