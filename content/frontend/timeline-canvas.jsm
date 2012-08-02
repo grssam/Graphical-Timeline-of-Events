@@ -1005,7 +1005,7 @@ CanvasManager.prototype = {
         this.lastVisibleTime == this.lastLastVisibleTime &&
         this.offsetTop == this.lastOffsetTop) {
       if (this.currentWidth >= this.width ||
-          (this.overview && this.activeGroups.length == 0) ||
+          (this.overview && (this.activeGroups.length == 0 || !this.stopTime)) ||
           (this.timeFrozen && date < this.lastVisibleTime &&
            this.waitForDotData && this.waitForLineData)) {
         leaveEarly = true;
