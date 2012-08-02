@@ -12,6 +12,7 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 let gAddon;
 let reload = function() {};
+let timelineWindow = null;
 const toolsMenuitemID = "graphical-timeline-tools-menu-item";
 const appMenuitemID = "graphical-timeline-app-menu-item";
 const keysetID = "graphical-timeline-keyset";
@@ -81,7 +82,10 @@ function addMenuItem(window) {
         notificationBox.removeAllNotifications(true);
         notificationBox.appendNotification("Timeline is open in another tab (" +
                                             timelineWindow.document.title +
-                                            "). What would you like to do?",
+                                            ")" + (window != Timeline._window
+                                                   ? " in another window"
+                                                   : "") +
+                                           ". What would you like to do?",
                                            "", null,
                                            notificationBox.PRIORITY_WARNING_MEDIUM,
                                            buttons,
@@ -91,6 +95,7 @@ function addMenuItem(window) {
         $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
       }
       else {
+        timelineWindow = null;
         Timeline.destroy();
       }
     }
@@ -101,8 +106,10 @@ function addMenuItem(window) {
     showHideUI();
   }
   function switchToTimelineTab() {
-    window.gBrowser.selectedTab = window.gBrowser.tabs[
-      window.gBrowser.getBrowserIndexForDocument(timelineWindow.document)
+    Timeline._window.focus();
+    Timeline._window.gBrowser.selectedTab = Timeline._window.gBrowser.tabs[
+      Timeline._window.gBrowser
+              .getBrowserIndexForDocument(timelineWindow.document)
     ];
   }
   function removeMenuItem() {
@@ -119,7 +126,7 @@ function addMenuItem(window) {
   removeKey();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-  let notificationBox, timelineWindow;
+  let notificationBox;
   unload(function() {
     notificationBox = timelineWindow = null;
   }, window);
