@@ -1015,7 +1015,7 @@ CanvasManager.prototype = {
     this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
     if (this.overview) {
       this.firstVisibleTime -= 5*this.scale;
-      this.lastFirstVisibleTime -= 5*this.scale;
+      this.lastVisibleTime -= 5*this.scale;
     }
 
     this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
@@ -1024,11 +1024,12 @@ CanvasManager.prototype = {
                                  :(this.offsetTime + date - this.currentTime)/this.scale)),
                                  this.width);
     // Preliminary check to see if at all anything changed that needs to be drawn
-    if (this.firstVisibleTime == this.lastFirstVisibleTime &&
+      if (this.firstVisibleTime == this.lastFirstVisibleTime &&
         this.lastVisibleTime == this.lastLastVisibleTime &&
         this.offsetTop == this.lastOffsetTop) {
       if (this.currentWidth >= this.width ||
-          (this.overview && (this.activeGroups.length == 0 || !this.stopTime)) ||
+          (this.overview && (this.activeGroups.length == 0 ||
+           this.stopTime != null)) ||
           (this.timeFrozen && date < this.lastVisibleTime &&
            this.waitForDotData && this.waitForLineData)) {
         leaveEarly = true;
