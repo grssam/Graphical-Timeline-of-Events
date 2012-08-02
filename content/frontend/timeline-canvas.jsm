@@ -254,6 +254,9 @@ CanvasManager.prototype = {
     if (this.timeFrozen) {
       return (this.frozenTime - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
     }
+    else if (this.overview) {
+      return (this.currentTime + (aXPixel + 5 - 0.8*this.width)*this.scale);
+    }
     else {
       return (this.currentTime + (aXPixel - 0.8*this.width)*this.scale);
     }
