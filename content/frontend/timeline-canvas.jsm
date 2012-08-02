@@ -258,7 +258,7 @@ CanvasManager.prototype = {
       return (this.frozenTime - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
     }
     else if (this.overview) {
-      return (this.currentTime + (aXPixel + 5 - 0.8*this.width)*this.scale);
+      return (this.currentTime + (aXPixel - 5 - 0.8*this.width)*this.scale);
     }
     else {
       return (this.currentTime + (aXPixel - 0.8*this.width)*this.scale);
@@ -1012,11 +1012,10 @@ CanvasManager.prototype = {
       this.currentTime = date - this.offsetTime;
     }
     this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
-    this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
     if (this.overview) {
       this.firstVisibleTime -= 5*this.scale;
-      this.lastVisibleTime -= 5*this.scale;
     }
+    this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
 
     this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
                                  this.currentTime)/this.scale:(this.timeFrozen?
