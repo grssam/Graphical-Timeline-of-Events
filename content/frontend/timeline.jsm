@@ -67,6 +67,7 @@ function TimelineView(aChromeWindow) {
   this.recording = false;
   this.producersPaneOpened = false;
   this.startingoffsetTime = null;
+  this.continuousInLine = false;
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -257,6 +258,11 @@ TimelineView.prototype = {
 
       if (TimelinePreferences.visibleProducers.indexOf(producer.id) == -1) {
         producerBox.setAttribute("visible", false);
+        if (producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID ||
+            producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
+            producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END) {
+          this.continuousInLine = true;
+        }
       }
       else {
         producerBox.setAttribute("visible", true);
@@ -476,6 +482,7 @@ TimelineView.prototype = {
         this._canvas.height = this.$("canvas-container").boxObject.height - 25;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+        this._canvas.continuousInLine = this.continuousInLine;
         this.canvasStarted = true;
         this.handleScroll();
         this.handleScrollbarMove();
@@ -509,6 +516,7 @@ TimelineView.prototype = {
       this._canvas.height = this.$("canvas-container").boxObject.height - 25;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+      this._canvas.continuousInLine = this.continuousInLine;
       this.canvasStarted = true;
       this.handleScroll();
       this.handleScrollbarMove();
@@ -659,9 +667,11 @@ TimelineView.prototype = {
     }
     if (producerBox.getAttribute("visible") == "true") {
       producerBox.setAttribute("visible", false);
+      this.continuousInLine = true;
     }
     else {
       producerBox.setAttribute("visible", true);
+      this.continuousInLine = false;
     }
     if (this.canvasStarted) {
       this._frameDoc.defaultView.setTimeout(function() {
@@ -671,8 +681,9 @@ TimelineView.prototype = {
         this._canvas.updateGroupOffset();
         this._canvas.waitForLineData = false;
         this._canvas.waitForDotData = false;
+        this._canvas.continuousInLine = this.continuousInLine;
         this.updateScrollbar();
-      }.bind(this), 250);
+      }.bind(this), 350);
     }
   },
 
