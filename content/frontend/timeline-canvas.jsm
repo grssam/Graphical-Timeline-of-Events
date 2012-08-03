@@ -1158,16 +1158,15 @@ CanvasManager.prototype = {
     if (this.forcePaint || (!this.waitForLineData && !leaveEarly)) {
       this.linesDrawn = 0;
 
-      let ([x,endx,y,endy,v] = this.dirtyZone) {
+      let ([x,endx,y,endy] = this.dirtyZone) {
         this.ctxL.clearRect(x-1,y-1,endx-x+12,endy-y+2);
-        this.ctxL.clearRect(v - 10,0,20,this.height);
-        this.dirtyZone = [5000,0,5000,0,0];
+        this.dirtyZone = [5000,0,5000,0];
       }
       //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
 
       let endx,x;
       for each (group in this.groupedData) {
-        if (group.y < this.offsetTop || group.y - this.offsetTop > this.width) {
+        if (group.y < this.offsetTop || group.y - this.offsetTop > this.height) {
           continue;
         }
         if (group.active && group.timestamps[group.timestamps.length - 1] <= this.firstVisibleTime) {
@@ -1207,20 +1206,18 @@ CanvasManager.prototype = {
           }
         }
       }
-
-      // Move the left bar of the time window if the timeline is moving.
-      if (this.timeWindowLeft != null && !this.timeFrozen) {
-        let width_o = this.timeWindow.style.width.replace("px", "")*1;
-        let left_o = this.timeWindow.style.left.replace("px", "")*1;
-        let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
-        this.timeWindow.style.width = (width_o + left_o - left) + "px";
-        this.timeWindow.style.left = left + "px";
-      }
-
       if (this.linesDrawn == 0 && !this.scrolling && this.offsetTime == 0 &&
           !this.timeFrozen) {
         this.waitForLineData = true;
       }
+    }
+    // Move the left bar of the time window if the timeline is moving.
+    if (this.timeWindowLeft != null && !this.timeFrozen) {
+      let width_o = this.timeWindow.style.width.replace("px", "")*1;
+      let left_o = this.timeWindow.style.left.replace("px", "")*1;
+      let left = (Math.max(this.timeWindowLeft, this.firstVisibleTime) - this.firstVisibleTime)/this.scale;
+      this.timeWindow.style.width = (width_o + left_o - left) + "px";
+      this.timeWindow.style.left = left + "px";
     }
     if (this.forcePaint || (!this.waitForDotData && !leaveEarly)) {
       this.dotsDrawn = 0;
@@ -1245,7 +1242,7 @@ CanvasManager.prototype = {
       // }
       // getting the current time, which will be at the center of the canvas.
 
-      if (this.continuousInLine) {
+      if (this.continuousInLine || !(this.overview && this.timeFrozen)) {
         let i = this.searchIndexForTime(this.lastVisibleTime, this.globalTiming);
         for (; i >= 0; i--) {
           if (this.globalTiming[i] >= this.firstVisibleTime) {
