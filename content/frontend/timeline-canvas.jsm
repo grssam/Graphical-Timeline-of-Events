@@ -257,9 +257,6 @@ CanvasManager.prototype = {
     if (this.timeFrozen) {
       return (this.frozenTime - this.offsetTime + (aXPixel - 0.8*this.width)*this.scale);
     }
-    else if (this.overview) {
-      return (this.currentTime + (aXPixel - 5 - 0.8*this.width)*this.scale);
-    }
     else {
       return (this.currentTime + (aXPixel - 0.8*this.width)*this.scale);
     }
@@ -1296,7 +1293,7 @@ CanvasManager.prototype = {
       }
       else {
         this.highlighter.style.opacity = 0.75;
-        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 1) + "px";
+        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 1 + 32) + "px";
         this.highlighter.style.left = Math.round(start - 2) + "px";
         this.highlighter.style.width = Math.round(width + 4) + "px";
         this.highlighter.style.boxShadow = "0px 0px 4px 4px " + this.highlightInfo.color;
