@@ -594,6 +594,7 @@ CanvasManager.prototype = {
     try {
       this.doc.getElementById("overview").removeAttribute("checked");
     } catch (ex) {}
+    this.doc.getElementById("canvas-toolbar").setAttribute("overscroll", true);
     this.waitForDotData = false;
     this.waitForLineData = false;
   },
@@ -837,6 +838,9 @@ CanvasManager.prototype = {
     this.scale = (Date.now() - this.startTime)/(0.8*this.width);
     this.waitForDotData = false;
     this.waitForLineData = false;
+    try {
+      this.doc.getElementById("canvas-toolbar").removeAttribute("overscroll");
+    } catch (ex) {}
   },
 
   moveToLive: function CM_moveToLive()
@@ -845,6 +849,7 @@ CanvasManager.prototype = {
     if (!this.timeFrozen) {
       this.scale = 5;
       this.moveToCurrentTime();
+      this.doc.getElementById("canvas-toolbar").setAttribute("overscroll", true);
     }
   },
 
@@ -852,8 +857,8 @@ CanvasManager.prototype = {
   {
     this.ctxL.clearRect(0,0,this.width,this.height);
     this.ctxD.clearRect(0,0,this.width,this.height);
-    this.ctxR.clearRect(0,0,this.width,25);
-    this.ctxO.clearRect(0,0,this.width,this.height + 30);
+    this.ctxR.clearRect(0,0,this.width,32);
+    this.ctxO.clearRect(0,0,this.width,this.height + 35);
     this.groupedData = {};
     this.activeGroups = [];
     this.dotsTimings = {};
@@ -1040,7 +1045,7 @@ CanvasManager.prototype = {
 
     if (this.forcePaint || !leaveEarly) {
       // Drawing the time ruler.
-      this.ctxR.clearRect(0,0,this.width,25);
+      this.ctxR.clearRect(0,0,this.width,32);
       this.ctxR.fillStyle = "rgb(3,101,151)";
       this.ctxR.font = "16px sans-serif";
       this.ctxR.lineWidth = 0.5;
@@ -1051,14 +1056,14 @@ CanvasManager.prototype = {
              i += 5000/this.scale, j++) {
           if (j%10 == 0) {
             this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                                 i + 2, 12);
-            this.ctxR.fillRect(i+0.5,5,1,20);
+                                 i + 2, 28);
+            this.ctxR.fillRect(i+0.5,0,1,28);
           }
           else if (j%5 == 0) {
-            this.ctxR.fillRect(i+0.5,10,1,15);
+            this.ctxR.fillRect(i+0.5,0,1,16);
           }
           else {
-            this.ctxR.fillRect(i+0.5,15,1,10);
+            this.ctxR.fillRect(i+0.5,0,1,12);
           }
         }
       }
@@ -1069,14 +1074,14 @@ CanvasManager.prototype = {
              i += 1000/this.scale, j++) {
           if (j%10 == 0) {
             this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                                 i + 2, 12);
-            this.ctxR.fillRect(i+0.5,5,1,20);
+                                 i + 2, 28);
+            this.ctxR.fillRect(i+0.5,0,1,28);
           }
           else if (j%5 == 0) {
-            this.ctxR.fillRect(i+0.5,10,1,15);
+            this.ctxR.fillRect(i+0.5,0,1,16);
           }
           else {
-            this.ctxR.fillRect(i+0.5,15,1,10);
+            this.ctxR.fillRect(i+0.5,0,1,12);
           }
         }
       }
@@ -1087,14 +1092,14 @@ CanvasManager.prototype = {
              i += 100/this.scale, j++) {
           if (j%10 == 0) {
             this.ctxR.fillText(Math.floor((this.firstVisibleTime + i*this.scale - this.startTime)/1000) + " s",
-                                 i + 2, 12);
-            this.ctxR.fillRect(i+0.5,5,1,20);
+                                 i + 2, 28);
+            this.ctxR.fillRect(i+0.5,0,1,28);
           }
           else if (j%5 == 0) {
-            this.ctxR.fillRect(i+0.5,10,1,15);
+            this.ctxR.fillRect(i+0.5,0,1,16);
           }
           else {
-            this.ctxR.fillRect(i+0.5,15,1,10);
+            this.ctxR.fillRect(i+0.5,0,1,12);
           }
         }
       }
@@ -1105,14 +1110,14 @@ CanvasManager.prototype = {
              i += 10/this.scale, j++) {
           if (j%10 == 0) {
             this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
-                                 i + 2, 12);
-            this.ctxR.fillRect(i+0.5,5,1,20);
+                                 i + 2, 28);
+            this.ctxR.fillRect(i+0.5,0,1,28);
           }
           else if (j%5 == 0) {
-            this.ctxR.fillRect(i+0.5,10,1,15);
+            this.ctxR.fillRect(i+0.5,0,1,16);
           }
           else {
-            this.ctxR.fillRect(i+0.5,15,1,10);
+            this.ctxR.fillRect(i+0.5,0,1,12);
           }
         }
       }
@@ -1123,21 +1128,21 @@ CanvasManager.prototype = {
              i += 1/this.scale, j++) {
           if (j%10 == 0) {
             this.ctxR.fillText((this.firstVisibleTime + i*this.scale - this.startTime) + " ms",
-                                 i + 2, 12);
-            this.ctxR.fillRect(i+0.5,5,1,20);
+                                 i + 2, 28);
+            this.ctxR.fillRect(i+0.5,0,1,28);
           }
           else if (j%5 == 0) {
-            this.ctxR.fillRect(i+0.5,10,1,15);
+            this.ctxR.fillRect(i+0.5,0,1,16);
           }
           else {
-            this.ctxR.fillRect(i+0.5,15,1,10);
+            this.ctxR.fillRect(i+0.5,0,1,12);
           }
         }
       }
     }
     if (this.mousePointerAt.time != 0 || this.currentWidth <= this.width + 2) {
-      this.ctxO.clearRect(this.lastMouseX,this.height,200,30);
-      this.ctxO.clearRect(this.lastTimeNeedleX - 1,0,4,this.height + 30);
+      this.ctxO.clearRect(this.lastMouseX,0,200,35);
+      this.ctxO.clearRect(this.lastTimeNeedleX - 1,0,4,this.height + 32);
       if (this.currentWidth < this.width) {
         // Moving the current time needle to appropriate position.
         this.ctxO.fillStyle = "rgb(3,101,151)";
@@ -1149,9 +1154,9 @@ CanvasManager.prototype = {
         this.ctxO.font = "16px sans-serif";
         this.ctxO.lineWidth = 0.5;
         this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
-        this.ctxO.fillRect(this.mousePointerAt.x,this.height + 4,1,25);
+        this.ctxO.fillRect(this.mousePointerAt.x,1,1,32);
         this.ctxO.fillText(Math.floor(this.mousePointerAt.time - this.startTime) + " ms",
-                           this.mousePointerAt.x + 2, this.height + 16);
+                           this.mousePointerAt.x + 2, 29);
         this.lastMouseX = this.mousePointerAt.x;
       }
     }
@@ -1306,7 +1311,7 @@ CanvasManager.prototype = {
     this.alive = false;
     this.ctxL.clearRect(0,0,this.width,this.height);
     this.ctxD.clearRect(0,0,this.width,this.height);
-    this.ctxR.clearRect(0,0,this.width,25);
+    this.ctxR.clearRect(0,0,this.width,32);
     this.groupedData = this.activeGroups = this.dotsTimings = this.lastDotTime =
       this.dirtyDots = this.dirtyZone = this.waitForDotData = this.waitForLineData =
       this.id = this.startTime = this.stopTime = this.timeFrozen = this.offsetTime =

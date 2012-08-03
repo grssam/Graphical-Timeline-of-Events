@@ -394,7 +394,7 @@ TimelineView.prototype = {
     this.producersPane.scrollBoxObject.getPosition({},y);
     if (aPositionOnly) {
       this.canvasScrollbar.style.top =
-        Math.floor(y.value * this.scrollScale) + "px";
+        Math.floor(32 + y.value * this.scrollScale) + "px";
     }
     else if (width.value > this.producersPane.boxObject.height) {
       this.canvasScrollbar.style.opacity = 1;
@@ -404,10 +404,14 @@ TimelineView.prototype = {
       this.scrollScale = (clientHeight - height) /
                          (width.value - clientHeight);
       this.canvasScrollbar.style.top =
-        Math.floor(y.value * this.scrollScale) + "px";
+        Math.floor(32 + y.value * this.scrollScale) + "px";
+      this.producersPane.setAttribute("overscroll", true);
     }
     else {
       this.canvasScrollbar.style.opacity = 0;
+      try {
+        this.producersPane.removeAttribute("overscroll");
+      } catch (ex) {}
     }
   },
 
@@ -433,7 +437,7 @@ TimelineView.prototype = {
     this.producersPane.style.marginLeft = "0px";
     this.producersPane.setAttribute("visible", true);
     if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width - this.producersPane.boxObject.width;
     }
   },
@@ -444,7 +448,7 @@ TimelineView.prototype = {
     this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
     this.producersPane.setAttribute("visible", false);
     if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width;
     }
   },
@@ -479,7 +483,7 @@ TimelineView.prototype = {
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc, this._window);
-        this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+        this._canvas.height = this.$("canvas-container").boxObject.height - 32;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.continuousInLine = this.continuousInLine;
@@ -490,7 +494,7 @@ TimelineView.prototype = {
         this.handleTimeWindow();
       }
       else {
-        this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+        this._canvas.height = this.$("canvas-container").boxObject.height - 32;
         this._canvas.width = this.$("timeline-content").boxObject.width -
                              (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
         this._canvas.startRendering();
@@ -513,7 +517,7 @@ TimelineView.prototype = {
     // Starting the canvas.
     if (!this.canvasStarted) {
       this._canvas = new CanvasManager(this._frameDoc, this._window);
-      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
       this._canvas.continuousInLine = this.continuousInLine;
@@ -524,7 +528,7 @@ TimelineView.prototype = {
       this.handleTimeWindow();
     }
     else {
-      this._canvas.height = this.$("canvas-container").boxObject.height - 25;
+      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
       this._canvas.startRendering();
@@ -1080,7 +1084,7 @@ TimelineView.prototype = {
   _onScrollbarDragStart: function TV__onScrollbarDragStart(aEvent)
   {
     this.scrollStartY = aEvent.clientY;
-    this.originalScrollbarTop = this.canvasScrollbar.style.top.replace("px","")*1;
+    this.originalScrollbarTop = this.canvasScrollbar.style.top.replace("px","")*1 - 32;
     this.canvasScrollbar.removeEventListener("mousedown", this._onScrollbarDragStart, true);
     this.$("canvas-container").addEventListener("mousemove", this._onScrollbarDrag, true);
     this._frameDoc.addEventListener("mouseup", this._onScrollbarDragEnd, true);
