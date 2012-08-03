@@ -1011,10 +1011,10 @@ CanvasManager.prototype = {
     else {
       this.currentTime = date - this.offsetTime;
     }
-    this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
     if (this.overview) {
-      this.firstVisibleTime -= 5*this.scale;
+      this.currentTime -= 5*this.scale;
     }
+    this.firstVisibleTime = this.currentTime - 0.8*this.width*this.scale;
     this.lastVisibleTime = this.firstVisibleTime + this.width*this.scale;
 
     this.currentWidth = Math.min(0.8*this.width + (this.scrolling? (date -
