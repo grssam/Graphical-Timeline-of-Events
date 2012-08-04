@@ -150,7 +150,9 @@ TimelineView.prototype = {
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     this.overviewButton.setAttribute("checked", true);
-    this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
+    if (TimelinePreferences.doRestartOnReload == true) {
+      this.restartOnReload.setAttribute("checked", true);
+    }
     this.updateScrollbar();
   },
 

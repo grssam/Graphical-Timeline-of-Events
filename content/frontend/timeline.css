@@ -8,7 +8,9 @@
 
 .devtools-toolbarbutton[checked=true],
 .devtools-toolbarbutton[checked=true]:hover:active ,
-.devtools-toolbarbutton:not([checked=true]):hover:active {
+.devtools-toolbarbutton:not([checked=true]):hover:active ,
+.devtools-toolbarbutton[open],
+.devtools-toolbarbutton:not([open]):hover:active{
   padding: 3px 6px !important;
 }
 
@@ -178,6 +180,19 @@
 
 #record[checked=true] {
   -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
+#options > .toolbarbutton-menu-dropmarker {
+  display: none;
+}
+
+#options {
+  list-style-image: url("chrome://browser/skin/devtools/inspector-option-icon.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+
+#options[open] {
+  -moz-image-region: rect(0px 32px 16px 16px);
 }
 
 #close {

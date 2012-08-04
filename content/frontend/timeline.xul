@@ -23,17 +23,32 @@
           <toolbarbutton id="record"
                          class="devtools-toolbarbutton"
                          type="checkbox"
-                         tabindex="1"/>
+                         tabindex="0"/>
           <toolbarbutton id="overview"
                          class="devtools-toolbarbutton"
                          type="checkbox"
                          label="&timelineUI.toggleOverviewButton.label;"
+                         tabindex="1"/>
+          <!--<toolbarbutton id="zoom-in"
+                         class="devtools-toolbarbutton"
+                         label="+"
                          tabindex="2"/>
-
+          <toolbarbutton id="zoom-out"
+                         class="devtools-toolbarbutton"
+                         label="-"
+          tabindex="3"/>-->
+          <toolbarbutton id="options"
+                         class="devtools-toolbarbutton"
+                         type="menu"
+                         tabindex="4">
+            <menupopup id="option-popup"
+                       position="after_start">
+              <menuitem id="restart-on-reload"
+                        type="checkbox"
+                        label="&timelineUI.restartOnReloadLabel;"/>
+            </menupopup>
+          </toolbarbutton>
         </hbox>
-        <checkbox id="restart-on-reload"
-                  class="devtools-checkbox"
-                  label="&timelineUI.restartOnReloadLabel;"/>
       </toolbar>
       <arrowscrollbox flex="1" orient="vertical" smoothscroll="true" id="producers-pane" />
     </vbox>
