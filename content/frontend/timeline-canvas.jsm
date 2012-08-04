@@ -922,15 +922,20 @@ CanvasManager.prototype = {
   displayDetailedData: function CM_displayDetailedData(aLeft)
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", true);
-    this.doc.getElementById("timeline-detailbox").style.left = (aLeft < 250 ? this.width - 260: 20) + "px";
   },
 
   hideDetailedData: function CM_hideDetailedData()
   {
-    this.doc.getElementById("timeline-detailbox").setAttribute("visible", false);
-    if (this.doc.getElementById("timeline-detailbox").getAttribute("pinned") == "false") {
+    let detailBox = this.doc.getElementById("timeline-detailbox");
+    if (detailBox.getAttribute("pinned") == "false" &&
+        this.highlighter.style.opacity != 0) {
       this.highlighter.style.opacity = 0;
       this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+      let child = detailBox.firstChild;
+      if (child) {
+        detailBox.removeChild(child);
+      }
+      detailBox.setAttribute("dataId", "")
     }
   },
 

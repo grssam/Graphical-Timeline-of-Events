@@ -56,7 +56,7 @@
       </html:canvas>
       <html:canvas id="timeline-canvas-overlay" class="absolute" height="100%" width="100%">
       </html:canvas>
-      <html:div id="timeline-detailbox" class="absolute" />
+      <vbox id="timeline-detailbox" class="absolute" />
       <html:div id="timeline-highlighter" class="absolute" />
       <html:div id="timeline-scrollbar" class="absolute" />
     </hbox>

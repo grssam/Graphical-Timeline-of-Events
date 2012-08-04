@@ -65,7 +65,6 @@ function TimelineView(aChromeWindow) {
   this.loaded = false;
   this.canvasStarted = false;
   this.recording = false;
-  this.producersPaneOpened = false;
   this.startingoffsetTime = null;
   this.continuousInLine = false;
 
@@ -76,7 +75,6 @@ function TimelineView(aChromeWindow) {
   this._nbox.appendChild(this._frame);
   this._canvas = null;
 
-  this.toggleProducersPane = this.toggleProducersPane.bind(this);
   this.toggleOverview = this.toggleOverview.bind(this);
   this.toggleRecording = this.toggleRecording.bind(this);
   this.forceRestart = this.forceRestart.bind(this);
@@ -149,16 +147,6 @@ TimelineView.prototype = {
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
     this.overviewButton.setAttribute("checked", true);
-    if (TimelinePreferences.visiblePanes.indexOf("producers") == -1) {
-      this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
-      this.producersPane.setAttribute("visible", false);
-      this.producersPaneOpened = false;
-    }
-    else {
-      this.producersPane.style.marginLeft = "0px";
-      this.producersPane.setAttribute("visible", true);
-      this.producersPaneOpened = true;
-    }
     this.restartOnReload.checked = TimelinePreferences.doRestartOnReload;
     this.updateScrollbar();
   },
@@ -380,6 +368,7 @@ TimelineView.prototype = {
     if (this.canvasStarted) {
       if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 5) {
         this._canvas.height = this.producersPane.clientHeight;
+        this.updateScrollbar();
       }
       if (Math.abs(this.$("canvas-container").boxObject.width - this._canvas.width) > 10) {
         this._canvas.width = this.$("canvas-container").boxObject.width;
@@ -392,6 +381,9 @@ TimelineView.prototype = {
     let width={}, y={};
     this.producersPane.scrollBoxObject.getScrolledSize({},width);
     this.producersPane.scrollBoxObject.getPosition({},y);
+    this.canvasScrollbar.style.right = (this.detailBoxOpened?
+                                        this.detailBox.boxObject.width + 5:
+                                        0) + "px";
     if (aPositionOnly) {
       this.canvasScrollbar.style.top =
         Math.floor(32 + y.value * this.scrollScale) + "px";
@@ -405,51 +397,9 @@ TimelineView.prototype = {
                          (width.value - clientHeight);
       this.canvasScrollbar.style.top =
         Math.floor(32 + y.value * this.scrollScale) + "px";
-      this.producersPane.setAttribute("overscroll", true);
     }
     else {
       this.canvasScrollbar.style.opacity = 0;
-      try {
-        this.producersPane.removeAttribute("overscroll");
-      } catch (ex) {}
-    }
-  },
-
-  /**
-   * Toggles the Producers Pane.
-   */
-  toggleProducersPane: function TV_toggleProducersPane()
-  {
-    if (!this.loaded) {
-      return;
-    }
-    if (this.producersPaneOpened) {
-      this._hideProducersPane();
-    }
-    else {
-     this._showProducersPane();
-    }
-  },
-
-  _showProducersPane: function TV__showProducersPane()
-  {
-    this.producersPaneOpened = true;
-    this.producersPane.style.marginLeft = "0px";
-    this.producersPane.setAttribute("visible", true);
-    if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
-      this._canvas.width = this.$("timeline-content").boxObject.width - this.producersPane.boxObject.width;
-    }
-  },
-
-  _hideProducersPane: function TV__hideProducersPane()
-  {
-    this.producersPaneOpened = false;
-    this.producersPane.style.marginLeft = (-1*this.producersPane.boxObject.width) + "px";
-    this.producersPane.setAttribute("visible", false);
-    if (this.canvasStarted) {
-      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
-      this._canvas.width = this.$("timeline-content").boxObject.width;
     }
   },
 
@@ -485,7 +435,8 @@ TimelineView.prototype = {
         this._canvas = new CanvasManager(this._frameDoc, this._window);
         this._canvas.height = this.$("canvas-container").boxObject.height - 32;
         this._canvas.width = this.$("timeline-content").boxObject.width -
-                             (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+                             this.producersPane.boxObject.width -
+                             (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
         this._canvas.continuousInLine = this.continuousInLine;
         this.canvasStarted = true;
         this.handleScroll();
@@ -496,7 +447,8 @@ TimelineView.prototype = {
       else {
         this._canvas.height = this.$("canvas-container").boxObject.height - 32;
         this._canvas.width = this.$("timeline-content").boxObject.width -
-                             (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+                             this.producersPane.boxObject.width -
+                             (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
         this._canvas.startRendering();
         if (!this.overviewButton.hasAttribute("checked")) {
           this._canvas.moveToLive();
@@ -519,7 +471,8 @@ TimelineView.prototype = {
       this._canvas = new CanvasManager(this._frameDoc, this._window);
       this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width -
-                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+                           this.producersPane.boxObject.width -
+                           (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
       this._canvas.continuousInLine = this.continuousInLine;
       this.canvasStarted = true;
       this.handleScroll();
@@ -530,7 +483,8 @@ TimelineView.prototype = {
     else {
       this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width -
-                           (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+                           this.producersPane.boxObject.width -
+                           (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
       this._canvas.startRendering();
       if (!this.overviewButton.hasAttribute("checked")) {
         this._canvas.moveToLive();
@@ -621,15 +575,18 @@ TimelineView.prototype = {
   {
     if (this.canvasStarted) {
       this._canvas.width = this.$("timeline-content").boxObject.width -
-        (this.producersPaneOpened? this.producersPane.boxObject.width: 0);
+        this.producersPane.boxObject.width -
+        (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
     }
   },
 
   onProducersScroll: function TV_onProducersScroll()
   {
-    let y={};
-    this.producersPane.scrollBoxObject.getPosition({},y);
-    this._canvas.offsetTop = y.value;
+    if (this.canvasStarted) {
+      let y={};
+      this.producersPane.scrollBoxObject.getPosition({},y);
+      this._canvas.offsetTop = y.value;
+    }
     this.updateScrollbar(true);
     this._canvas.waitForLineData = false;
     this._canvas.waitForDotData = false;
@@ -713,10 +670,6 @@ TimelineView.prototype = {
     }
     else {
       this.detailBox.setAttribute("pinned", false);
-      if (this.detailBox.getAttribute("visible") == "false") {
-        this._canvas.highlighter.style.opacity = 0;
-        this._canvas.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
-      }
     }
   },
 
@@ -730,8 +683,7 @@ TimelineView.prototype = {
     if (this.canvasStarted) {
       let [groupIds, ids] = this._canvas
                                  .mouseHoverAt(aEvent.clientX -
-                                               (!this.producersPaneOpened?
-                                                 0: this.producersPane.boxObject.width),
+                                               this.producersPane.boxObject.width,
                                                aEvent.clientY - 32);
       this.showDetailedInfoFor(groupIds, ids);
     }
@@ -771,6 +723,13 @@ TimelineView.prototype = {
       let temp = tmp.nextSibling;
       tmp.parentNode.removeChild(tmp);
       tmp = temp;
+    }
+    let width = this.$("timeline-content").boxObject.width -
+                this.producersPane.boxObject.width -
+                this.detailBox.boxObject.width;
+    if (width < this._canvas.width) {
+      this._canvas.width = width;
+      this.detailBoxOpened = true;
     }
     let propLabel = this._frameDoc.createElement("label");
     propLabel.setAttribute("class", "property-heading");
@@ -1156,7 +1115,7 @@ TimelineView.prototype = {
   {
     this.$("timeline-canvas-dots").removeEventListener("mousedown", this._onWindowStart, true);
     this.timeWindow.setAttribute("selecting", true);
-    let left = aEvent.clientX - (!this.producersPaneOpened?0:this.producersPane.boxObject.width);
+    let left = aEvent.clientX - this.producersPane.boxObject.width;
     this.timeWindow.style.right = this.timeWindow.style.left = left + "px";
     this.timeWindow.style.width = "0px";
     this.$("canvas-container").addEventListener("mousemove", this._onWindowSelect, true);
@@ -1168,7 +1127,7 @@ TimelineView.prototype = {
   _onWindowSelect: function TV__onWindowSelect(aEvent)
   {
     this.timeWindow.style.width = (aEvent.clientX -
-      (!this.producersPaneOpened?0:this.producersPane.boxObject.width) -
+      this.producersPane.boxObject.width -
       this.timeWindow.style.left.replace("px", "")*1) + "px";
   },
 
@@ -1178,7 +1137,7 @@ TimelineView.prototype = {
     this._frameDoc.removeEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.removeEventListener("click", this._onWindowEnd, true);
     let zoomed = this._canvas.stopTimeWindowAt(aEvent.clientX -
-                  (!this.producersPaneOpened?0:this.producersPane.boxObject.width));
+                  this.producersPane.boxObject.width);
     try {
       this.timeWindow.removeAttribute("selecting");
     } catch (ex) {}
@@ -1210,11 +1169,6 @@ TimelineView.prototype = {
 
     // Updating the preferences.
     TimelinePreferences.height = this._frame.height;
-    let visiblePanes = [];
-    if (this.producersPane.getAttribute("visible") == "true") {
-      visiblePanes.push("producers");
-    }
-    TimelinePreferences.visiblePanes = visiblePanes;
     let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
     let visibleProducers = [], activeFeatures = [], activeProducers = [];
     for (let i = 0; i < producerBoxes.length; i++) {
@@ -1672,27 +1626,6 @@ let TimelinePreferences = {
     Services.prefs.setCharPref("devtools.timeline.activeProducers",
                                JSON.stringify(producerList));
     this._activeProducers = producerList;
-  },
-
-  /**
-   * Gets all the visible Panes visible in the UI.
-   */
-  get visiblePanes() {
-    if (this._visiblePanes === undefined) {
-      this._visiblePanes = JSON.parse(
-        Services.prefs.getCharPref("devtools.timeline.visiblePanes"));
-    }
-    return this._visiblePanes;
-  },
-
-  /**
-   * Sets the preferred visible Panes in the UI.
-   * @param array panesList
-   */
-  set visiblePanes(panesList) {
-    Services.prefs.setCharPref("devtools.timeline.visiblePanes",
-                               JSON.stringify(panesList));
-    this._visiblePanes = panesList;
   },
 
   /**

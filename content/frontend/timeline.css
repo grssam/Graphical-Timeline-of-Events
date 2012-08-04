@@ -115,26 +115,26 @@
   }
 }
 
-@-moz-keyframes slideup {
+@-moz-keyframes slidein {
   from {
-    top: 50px;
+    right: -250px;
     opacity: 0;
   }
 
   to {
-    top: 25px;
+    right: 0px;
     opacity: 1;
   }
 }
 
-@-moz-keyframes slidedown {
+@-moz-keyframes slideout {
   from {
-    top: 25px;
+    right: 0px;
     opacity: 1;
   }
 
   to {
-    top: 50px;
+    right: -250px;
     opacity: 0;
   }
 }
@@ -226,33 +226,42 @@
  */
 
 #producers-pane {
-  max-width: 600px;
-  min-width: 200px;
-  width: 225px;
+  max-width: 500px;
+  min-width: 180px;
+  width: 200px;
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
 }
 
-#producers-pane[overscroll] {
-  box-shadow: inset 0px -20px 20px -15px highlight;
-}
-
-#producers-pane[visible=true] {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: slideright;
-  opacity: 1;
-  margin-left: 0px;
-  margin-right: 0px;
-}
-
-#producers-pane:not([visible=true]) {
-  -moz-animation-duration: 0.25s;
-  -moz-animation-name: slideleft;
-  opacity: 0;
-}
-
 #producers-pane > .autorepeatbutton-up, #producers-pane > .autorepeatbutton-down {
+  -moz-appearance: none;
+  height: 20px;
+  max-height: 20px;
+  min-height: 20px;
+  background: transparent;
+  opacity: 0.8;
+  border-width: 0px !important;
+  pointer-events: none;
+}
+
+#producers-pane > .autorepeatbutton-down > *, #producers-pane > .autorepeatbutton-up > * {
   display: none;
+}
+
+#producers-pane > .autorepeatbutton-down {
+  margin: -20px 0px 0px 0px !important;
+}
+
+#producers-pane > .autorepeatbutton-down:not([disabled="true"]) {
+  box-shadow: inset 0px -15px 15px -10px highlight;
+}
+
+#producers-pane > .autorepeatbutton-up {
+  margin: 0px 0px -20px 0px !important;
+}
+
+#producers-pane > .autorepeatbutton-up:not([disabled="true"]) {
+  box-shadow: inset 0px 15px 15px -10px highlight;
 }
 
 #stack-panes-splitter {
@@ -543,36 +552,34 @@
   background-color: rgb(22,33,43);
   color: rgb(183,193,205);
   width: 240px;
-  height: 200px;
-  max-height: 300px;
+  min-width: 200px;
+  max-width: 350px;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  right: 25px;
-  top: -400px;
+  top: 32px;
+  right: -350px;
   opacity: 0;
   z-index: 100;
-  background-color: rgb(22,33,43);
-  box-shadow: 0px 0px 4px 4px rgba(0,0,0,0.75);
 }
 
-#timeline-detailbox[visible=true]:not([pinned=true]) {
+#timeline-detailbox[visible=true] {
   -moz-animation-duration: 0.25s;
-  -moz-animation-name: slideup;
+  -moz-animation-name: slidein;
   opacity: 1;
-  top: 25px;
+  right: 0px;
 }
 
-#timeline-detailbox:not([visible=true]):not([pinned=true]) {
+#timeline-detailbox:not([visible=true]) {
   -moz-animation-duration: 0.25s;
-  -moz-animation-name: slidedown;
+  -moz-animation-name: slideout;
   opacity: 0;
-  top: -400px;
+  right: -350px;
 }
 
 #timeline-detailbox[pinned=true] {
-  box-shadow: 0px 0px 8px 8px rgba(0,0,0,0.75), inset 0px 0px 1px 1px rgba(80,80,80,0.35);
   opacity: 1;
-  top: 25px;
+  right: 0px;
 }
 
 .property-line {
