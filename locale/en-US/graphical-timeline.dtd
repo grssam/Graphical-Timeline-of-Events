@@ -31,6 +31,10 @@
   -  label for the button that toggles the Overview mode in the timeline UI. -->
 <!ENTITY timelineUI.toggleOverviewButton.label        "Overview">
 
+<!-- LOCALIZATION NOTE (timelineUI.noEventSelected): This is the placeholder
+  -  text for the empty details box. -->
+<!ENTITY timelineUI.noEventSelected                   "No event selected.">
+
 <!-- LOCALIZATION NOTE (timelineUI.emptyFilterText): This is the placeholder text
   -  for the search bar in the timeline UI. -->
 <!ENTITY timelineUI.emptyFilterText        "Click to Search">

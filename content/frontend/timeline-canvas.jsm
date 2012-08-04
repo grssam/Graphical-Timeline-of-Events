@@ -951,6 +951,7 @@ CanvasManager.prototype = {
   displayDetailedData: function CM_displayDetailedData(aLeft)
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", true);
+    this.doc.getElementById("timeline-detailbox").firstChild.firstChild.nextSibling.collapsed = true;
   },
 
   hideDetailedData: function CM_hideDetailedData()
@@ -960,9 +961,10 @@ CanvasManager.prototype = {
         this.highlighter.style.opacity != 0) {
       this.highlighter.style.opacity = 0;
       this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
-      let child = detailBox.firstChild;
-      if (child) {
+      let child = detailBox.lastChild;
+      if (child && child != detailBox.firstChild) {
         detailBox.removeChild(child);
+        detailBox.firstChild.firstChild.nextSibling.collapsed = false;
       }
       detailBox.setAttribute("dataId", "")
     }

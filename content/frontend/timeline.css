@@ -610,53 +610,63 @@
   right: -350px;
 }
 
-#timeline-detailbox[pinned=true] {
+#timeline-detailbox[pinned=true][visible=true] {
   opacity: 1;
   right: 0px;
 }
 
 .property-line {
-  width: 240px;
   margin: 0px;
   padding: 0px;
+  width: 100%;
 }
 
-.property-line > label {
-  overflow: hidden;
-  width: 120px;
+.property-line > td {
   text-align: right;
   color: rgb(183,193,205);
-  margin: 0px;
-  padding: 2px;
+  margin: 0px !important;
+  padding: 0px !important;
+  min-width: 40%;
 }
 
-.property-line > label:last-child {
+.property-line > td:last-child {
   text-align: left !important;
-  width: 100px !important;
   color: rgb(207,218,230);
+  margin: 0px !important;
+  padding: 0px !important;
 }
 
-.property-line > .text-link {
+.property-line > td  > .text-link {
   color: rgb(3,101,151) !important;
   margin: 0px !important;
-  padding: 0px 2px !important;
+  padding: 0px !important;
 }
 
-.property-line > .text-link:hover {
+.property-line > td  > .text-link:hover {
   color: rgb(20,150,175) !important;
 }
 
 .property-heading, .detailed-heading {
-  clear: both;
-  display: block;
   text-align: center;
-  width: 100%;
   color: rgb(207,218,230);
   font-weight: bold;
 }
 
 .property-heading {
   color: rgb(3,101,151);
+}
+
+#detailbox-button-container {
+  z-index: 100 !important;
+  width: 100% !important;
+  padding: 2px;
+}
+
+#timeline-detailbox > table {
+  display: block !important;
+  margin-top: -22px !important;
+  padding: 0px;
+  border-width: 0px !important;
 }
 
 #timeline-highlighter {

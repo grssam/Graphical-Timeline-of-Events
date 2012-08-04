@@ -69,9 +69,18 @@
       </html:canvas>
       <html:canvas id="timeline-canvas-overlay" class="absolute" height="100%" width="100%">
       </html:canvas>
-      <vbox id="timeline-detailbox" class="absolute" />
+      <vbox id="timeline-detailbox" class="absolute">
+        <hbox id="detailbox-button-container">
+          <spacer flex="1" />
+          <label value="&timelineUI.noEventSelected;" collapsed="true"/>
+          <spacer flex="1" />
+          <toolbarbutton id="detailbox-closebutton"
+                         class="devtools-closebutton"
+                         tooltiptext="&timelineUI.closeButton.tooltip;" />
+        </hbox>
+      </vbox>
       <html:div id="timeline-highlighter" class="absolute" />
       <html:div id="timeline-scrollbar" class="absolute" />
     </hbox>
-  </hbox>
+    </hbox>
 </window>
