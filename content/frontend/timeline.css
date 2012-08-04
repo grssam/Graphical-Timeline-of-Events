@@ -587,7 +587,7 @@
   width: 240px;
   min-width: 200px;
   max-width: 350px;
-  height: 100%;
+  height: -moz-calc(100% - 32px);
   overflow-y: auto;
   overflow-x: hidden;
   top: 32px;
@@ -665,7 +665,6 @@
 #timeline-detailbox > table {
   display: block !important;
   margin-top: -22px !important;
-  margin-bottom: 30px !important;
   padding: 0px;
   border-width: 0px !important;
 }
