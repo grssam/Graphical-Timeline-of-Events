@@ -602,6 +602,35 @@ CanvasManager.prototype = {
   },
 
   /**
+   * Zooms the canvas by specified amount.
+   *
+   * @param number aRelativeAmount
+   *        relative percent by which the scale should be mofified.
+   *        positive if you want to zoom in, else negative.
+  */
+  zoomBy: function CM_zoomBy(aRelativeAmount)
+  {
+    let centerTime = 0.5 * (this.firstVisibleTime + this.lastVisibleTime);
+    let maxScale;
+    if (this.activeGroups.length == 0 && this.lastDotTime != null) {
+      maxScale = (this.lastDotTime - this.startTime)/(0.8*this.width);
+    }
+    else {
+      maxScale = (Date.now() - this.startTime)/(0.8*this.width);
+    }
+    this.scale = Math.max(0.05, Math.min(maxScale, this.scale*(1 - 0.01 * aRelativeAmount)));
+    if (this.scale == maxScale) {
+      this.moveToOverview();
+      this.doc.getElementById("overview").setAttribute("checked", true)
+    }
+    else {
+      this.freezeCanvas();
+      this.frozenTime = Math.max(this.startTime, centerTime - 0.5 * this.width * this.scale) +
+                        0.8 * this.scale * this.width;
+    }
+  },
+
+  /**
    * Moves the view to current time.
    *
    * @param boolean aAnimate

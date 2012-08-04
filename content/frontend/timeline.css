@@ -182,6 +182,24 @@
   -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 
+#zoom-in {
+  list-style-image: url("images/zoom-in.png");
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+#zoom-in:active {
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
+#zoom-out {
+  list-style-image: url("images/zoom-out.png");
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+#zoom-out:active {
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
 #options > .toolbarbutton-menu-dropmarker {
   display: none;
 }

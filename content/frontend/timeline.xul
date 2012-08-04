@@ -29,14 +29,12 @@
                          type="checkbox"
                          label="&timelineUI.toggleOverviewButton.label;"
                          tabindex="1"/>
-          <!--<toolbarbutton id="zoom-in"
+          <toolbarbutton id="zoom-in"
                          class="devtools-toolbarbutton"
-                         label="+"
                          tabindex="2"/>
           <toolbarbutton id="zoom-out"
                          class="devtools-toolbarbutton"
-                         label="-"
-          tabindex="3"/>-->
+                         tabindex="3"/>
           <toolbarbutton id="options"
                          class="devtools-toolbarbutton"
                          type="menu"

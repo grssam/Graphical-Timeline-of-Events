@@ -98,6 +98,8 @@ function TimelineView(aChromeWindow) {
   this.onFrameResize = this.onFrameResize.bind(this);
   this.resizeCanvas = this.resizeCanvas.bind(this);
   this.toggleCompactView = this.toggleCompactView.bind(this);
+  this.zoomIn = this.zoom.bind(this, true);
+  this.zoomOut = this.zoom.bind(this, false);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
@@ -143,6 +145,8 @@ TimelineView.prototype = {
     this.$("timeline-canvas-dots").addEventListener("mousemove", this.handleMousemove, true);
     this.$("timeline-canvas-dots").addEventListener("mouseout", this.handleMouseout, true);
     this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
+    this.$("zoom-in").addEventListener("command", this.zoomIn, true);
+    this.$("zoom-out").addEventListener("command", this.zoomOut, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
@@ -1082,6 +1086,13 @@ TimelineView.prototype = {
     }
     else {
       return false;
+    }
+  },
+
+  zoom: function TV_zoom(aZoomIn)
+  {
+    if (this.canvasStarted) {
+      this._canvas.zoomBy(aZoomIn?20:-20);
     }
   },
 
