@@ -67,6 +67,8 @@ function TimelineView(aChromeWindow) {
   this.recording = false;
   this.startingoffsetTime = null;
   this.continuousInLine = false;
+  this.compactHeight = 120;
+  this.compactMode = TimelinePreferences.compactMode;
 
   this._frame = ownerDocument.createElement("iframe");
   this._frame.height = TimelinePreferences.height;
@@ -95,6 +97,7 @@ function TimelineView(aChromeWindow) {
   this.onCanvasScroll = this.onCanvasScroll.bind(this);
   this.onFrameResize = this.onFrameResize.bind(this);
   this.resizeCanvas = this.resizeCanvas.bind(this);
+  this.toggleCompactView = this.toggleCompactView.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
@@ -363,15 +366,72 @@ TimelineView.prototype = {
     }
   },
 
+  toggleCompactView: function TV_toggleCompactView()
+  {
+    if (this.producersPane.boxObject.height <= this.compactHeight &&
+        this.compactMode == false) {
+      this.compactMode = true;
+      this.beforeCompactVisibleProducers = [];
+      for each (let producer in this.producerInfoList) {
+        let producerBox = this.$(producer.id + "-box");
+        if (producerBox.getAttribute("visible") == "true") {
+          this.beforeCompactVisibleProducers.push(producer.id);
+        }
+        producerBox.setAttribute("visible", false);
+        if (producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_MID ||
+            producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_START ||
+            producer.type == NORMALIZED_EVENT_TYPE.CONTINUOUS_EVENT_END) {
+          this.continuousInLine = true;
+        }
+      }
+      if (this.canvasStarted) {
+        this._frameDoc.defaultView.setTimeout(function() {
+          let y={};
+          this.producersPane.scrollBoxObject.getPosition({},y);
+          this._canvas.offsetTop = y.value;
+          this._canvas.updateGroupOffset();
+          this._canvas.waitForLineData = false;
+          this._canvas.waitForDotData = false;
+          this._canvas.continuousInLine = this.continuousInLine;
+          this.updateScrollbar();
+        }.bind(this), 350);
+      }
+    }
+    else if (this.producersPane.boxObject.height > this.compactHeight &&
+             this.compactMode == true) {
+      this.compactMode = false;
+      for each (let producer in this.producerInfoList) {
+        let producerBox = this.$(producer.id + "-box");
+        if (this.beforeCompactVisibleProducers.indexOf(producer.id) != -1) {
+          producerBox.setAttribute("visible", true);
+        }
+      }
+      if (this.canvasStarted) {
+        this._frameDoc.defaultView.setTimeout(function() {
+          let y={};
+          this.producersPane.scrollBoxObject.getPosition({},y);
+          this._canvas.offsetTop = y.value;
+          this._canvas.updateGroupOffset();
+          this._canvas.waitForLineData = false;
+          this._canvas.waitForDotData = false;
+          this._canvas.continuousInLine = this.continuousInLine;
+          this.updateScrollbar();
+        }.bind(this), 350);
+      }
+    }
+  },
+
   onFrameResize: function TV_onFrameResize()
   {
+    this.toggleCompactView();
     if (this.canvasStarted) {
       if (Math.abs(this.producersPane.clientHeight - this._canvas.height) > 5) {
-        this._canvas.height = this.producersPane.clientHeight;
+        this._canvas.height = this.producersPane.boxObject.height;
         this.updateScrollbar();
       }
       if (Math.abs(this.$("canvas-container").boxObject.width - this._canvas.width) > 10) {
-        this._canvas.width = this.$("canvas-container").boxObject.width;
+        this._canvas.width = this.$("canvas-container").boxObject.width -
+                             (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
       }
     }
   },
@@ -1169,6 +1229,7 @@ TimelineView.prototype = {
 
     // Updating the preferences.
     TimelinePreferences.height = this._frame.height;
+    TimelinePreferences.compactMode = this.compactMode;
     let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
     let visibleProducers = [], activeFeatures = [], activeProducers = [];
     for (let i = 0; i < producerBoxes.length; i++) {
@@ -1561,6 +1622,26 @@ let TimelinePreferences = {
   set height(value) {
     Services.prefs.setCharPref("devtools.timeline.height", value);
     this._height = value;
+  },
+
+  /**
+   * Gets the preferred compact mode status of the timeline UI.
+   * @return bool
+   */
+  get compactMode() {
+    if (this._compactMode === undefined) {
+      this._compactMode = Services.prefs.getBoolPref("devtools.timeline.compactMode");
+    }
+    return this._compactMode;
+  },
+
+  /**
+   * Sets the preferred compact mode status of the timeline UI.
+   * @param bool value
+   */
+  set compactMode(value) {
+    Services.prefs.setBoolPref("devtools.timeline.compactMode", value);
+    this._compactMode = value;
   },
 
   /**

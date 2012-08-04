@@ -226,9 +226,9 @@
  */
 
 #producers-pane {
-  max-width: 500px;
+  max-width: 250px;
   min-width: 180px;
-  width: 200px;
+  width: 180px !important;
   background: rgb(22,33,43);
   border-right: 1px solid rgb(26,38,51);
 }

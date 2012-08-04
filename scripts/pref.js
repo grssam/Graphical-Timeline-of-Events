@@ -39,11 +39,11 @@ function pref(key, val) {
 pref.root = "devtools.timeline.";
 pref.defaults = {
   height: "300px",
+  compactMode: false,
   restartOnReload: false,
   activeProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
   activeFeatures: JSON.stringify(["PageEventsProducer:LoadEvents",
                                     "PageEventsProducer:MouseEvents"]),
-  visiblePanes: JSON.stringify(["producers", "infobox"]),
   visibleProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
 };
 
