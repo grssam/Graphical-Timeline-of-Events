@@ -665,6 +665,7 @@
 #timeline-detailbox > table {
   display: block !important;
   margin-top: -22px !important;
+  margin-bottom: 30px !important;
   padding: 0px;
   border-width: 0px !important;
 }
