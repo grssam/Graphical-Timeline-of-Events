@@ -626,7 +626,7 @@
   color: rgb(183,193,205);
   margin: 0px !important;
   padding: 0px !important;
-  min-width: 40%;
+  min-width: 20%;
 }
 
 .property-line > td:last-child {
@@ -667,6 +667,17 @@
   margin-top: -22px !important;
   padding: 0px;
   border-width: 0px !important;
+}
+
+#detailbox-splitter {
+  top: 0px;
+  left: 0px;
+  width: 2px;
+  min-width: 2px;
+  background: transparent;
+  height: 100%;
+  cursor: e-resize;
+  z-index: 100;
 }
 
 #timeline-highlighter {

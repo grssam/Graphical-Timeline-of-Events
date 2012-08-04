@@ -78,6 +78,7 @@
                          class="devtools-closebutton"
                          tooltiptext="&timelineUI.closeButton.tooltip;" />
         </hbox>
+        <html:div id="detailbox-splitter" class="absolute" />
       </vbox>
       <html:div id="timeline-highlighter" class="absolute" />
       <html:div id="timeline-scrollbar" class="absolute" />

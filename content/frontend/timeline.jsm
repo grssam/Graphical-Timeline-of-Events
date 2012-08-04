@@ -101,6 +101,7 @@ function TimelineView(aChromeWindow) {
   this.zoomIn = this.zoom.bind(this, true);
   this.zoomOut = this.zoom.bind(this, false);
   this.closeDetailBox = this.closeDetailBox.bind(this);
+  this.handleDetailBoxResize = this.handleDetailBoxResize.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
@@ -112,6 +113,9 @@ function TimelineView(aChromeWindow) {
   this._onScrollbarDragStart = this._onScrollbarDragStart.bind(this);
   this._onScrollbarDrag = this._onScrollbarDrag.bind(this);
   this._onScrollbarDragEnd = this._onScrollbarDragEnd.bind(this);
+  this._onDetailBoxResizeStart = this._onDetailBoxResizeStart.bind(this);
+  this._onDetailBoxResize = this._onDetailBoxResize.bind(this);
+  this._onDetailBoxResizeStop = this._onDetailBoxResizeStop.bind(this);
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
@@ -353,7 +357,7 @@ TimelineView.prototype = {
       producerBox = producerBox.nextSibling;
     }
     try {
-      if (this.detailBox.lastChild != this.detailBox.firstChild) {
+      if (this.detailBox.lastChild.id == "detailbox-table") {
         this.detailBox.removeChild(this.detailBox.lastChild);
       }
     } catch (ex) {}
@@ -510,6 +514,7 @@ TimelineView.prototype = {
         this.handleScrollbarMove();
         this.handleDetailClick();
         this.handleTimeWindow();
+        this.handleDetailBoxResize();
       }
       else {
         this._canvas.height = this.$("canvas-container").boxObject.height - 32;
@@ -546,6 +551,7 @@ TimelineView.prototype = {
       this.handleScrollbarMove();
       this.handleDetailClick();
       this.handleTimeWindow();
+      this.handleDetailBoxResize();
     }
     else {
       this._canvas.height = this.$("canvas-container").boxObject.height - 32;
@@ -793,7 +799,7 @@ TimelineView.prototype = {
       } catch(ex) {}
     }
     try {
-      if (this.detailBox.lastChild != this.detailBox.firstChild) {
+      if (this.detailBox.lastChild.id == "detailbox-table") {
         this.detailBox.removeChild(this.detailBox.lastChild);
       }
     } catch (ex) {}
@@ -805,6 +811,7 @@ TimelineView.prototype = {
       this.detailBoxOpened = true;
     }
     let table = this._frameDoc.createElementNS(HTML, "table");
+    table.setAttribute("id", "detailbox-table");
     let topCell = this._frameDoc.createElementNS(HTML, "th");
     topCell.setAttribute("class", "property-heading");
     topCell.setAttribute("colspan", 2);
@@ -1209,6 +1216,40 @@ TimelineView.prototype = {
   handleScroll: function TV_handleScroll()
   {
     this.$("timeline-canvas-overlay").addEventListener("mousedown", this._onDragStart, true);
+  },
+
+  _onDetailBoxResizeStart: function TV__onDetailBoxResizeStart(aEvent)
+  {
+    this.resizeStartX = aEvent.clientX;
+    this.originalDetailBoxWidth = this.detailBox.boxObject.width;
+    this.$("detailbox-splitter").removeEventListener("mousedown", this._onDetailBoxResizeStart, true);
+    this._frameDoc.addEventListener("mousemove", this._onDetailBoxResize, true);
+    this._frameDoc.addEventListener("mouseup", this._onDetailBoxResizeStop, true);
+    this._frameDoc.addEventListener("click", this._onDetailBoxResizeStop, true);
+  },
+
+  _onDetailBoxResize: function TV__onDetailBoxResize(aEvent)
+  {
+    this.detailBox.style.width = (this.originalDetailBoxWidth + this.resizeStartX -
+                                  aEvent.clientX) + "px"
+  },
+
+  _onDetailBoxResizeStop: function TV__onDetailBoxResizeStop(aEvent)
+  {
+    this._frameDoc.removeEventListener("mousemove", this._onDetailBoxResize, true);
+    this._frameDoc.removeEventListener("mouseup", this._onDetailBoxResizeStop, true);
+    this._frameDoc.removeEventListener("click", this._onDetailBoxResizeStop, true);
+    this._canvas.width = this.$("canvas-container").boxObject.width -
+                         (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
+    this.handleDetailBoxResize();
+  },
+
+  /**
+   * Handles dragging of the detailbox splitter.
+   */
+  handleDetailBoxResize: function TV_handleDetailBoxResize()
+  {
+    this.$("detailbox-splitter").addEventListener("mousedown", this._onDetailBoxResizeStart, true);
   },
 
   _onWindowStart: function TV__onWindowStart(aEvent)

@@ -962,7 +962,7 @@ CanvasManager.prototype = {
       this.highlighter.style.opacity = 0;
       this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
       let child = detailBox.lastChild;
-      if (child && child != detailBox.firstChild) {
+      if (child && child.id == "detailbox-table") {
         detailBox.removeChild(child);
         detailBox.firstChild.firstChild.nextSibling.collapsed = false;
       }
