@@ -320,6 +320,7 @@
 }
 
 .producer-name-box {
+  cursor: pointer !important;
   min-height: 25px;
   max-height: 25px;
   width: 100%;
@@ -328,7 +329,12 @@
   border-bottom: 1px solid rgb(48,62,76);
 }
 
+.producer-name-box:focus, .producer-name-box:active {
+  background: rgba(78,93,109,0.8);
+}
+
 .producer-name-box .producer-name-label {
+  cursor: pointer !important;
   color: rgb(15,27,38);
   margin: 0px;
   padding: 4px 5px 2px 5px;
@@ -337,33 +343,11 @@
 }
 
 /**
- * Collapse button
+ * Namebox checkbox
  */
 
-.producer-collapse-button {
-  -moz-appearance: none;
-  min-width: 10px;
-  min-height: 15px;
-  list-style-image: url("images/timeline-toggle.png");
-  border-width: 0px;
-  -moz-image-region: rect(0px, 10px, 15px, 0px);
-}
-
-.producer-box:not([visible=true]) .producer-collapse-button {
-  -moz-image-region: rect(0px, 20px, 15px, 10px);
-}
-
-.producer-collapse-button:-moz-focusring {
-  outline: 1px dotted hsla(210,30%,85%,0.4);
-  outline-offset: -4px;
-}
-
-.producer-box:not([visible=true]) .producer-collapse-button:hover:active {
-  background-color: hsla(210,18%,9%,.1);
-}
-
-.producer-box[visible=true] .producer-collapse-button:hover:active {
-  background-color: hsla(211,68%,6%,.2);
+.producer-name-box > checkbox {
+  z-index: 200 !important;
 }
 
 /**

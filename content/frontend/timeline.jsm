@@ -242,8 +242,8 @@ TimelineView.prototype = {
   createProducersPane: function TV_createProducersPane(aProducerInfoList)
   {
     if (!this.loaded) {
-      this._frame.addEventListener("load", function nvCreatePane() {
-        this._frame.removeEventListener("load", nvCreatePane, true);
+      this._frame.addEventListener("load", function tvCreatePane() {
+        this._frame.removeEventListener("load", tvCreatePane, true);
         this.createProducersPane(aProducerInfoList);
       }.bind(this), true);
       return;
@@ -290,6 +290,8 @@ TimelineView.prototype = {
       let spacer = this._frameDoc.createElement("spacer");
       spacer.setAttribute("flex", "1");
       nameBox.appendChild(spacer);
+      nameLabel.addEventListener("click", this.toggleProducerBox, true);
+      spacer.addEventListener("click", this.toggleProducerBox, true);
       let enableButton = this._frameDoc.createElement("checkbox");
       enableButton.setAttribute("class", "devtools-checkbox");
       if (TimelinePreferences.activeProducers.indexOf(producer.id) != -1) {
@@ -297,10 +299,6 @@ TimelineView.prototype = {
       }
       enableButton.addEventListener("command", this.toggleProducer, true);
       nameBox.appendChild(enableButton);
-      let collapseButton = this._frameDoc.createElement("toolbarbutton");
-      collapseButton.setAttribute("class", "producer-collapse-button");
-      collapseButton.addEventListener("command", this.toggleProducerBox, true);
-      nameBox.appendChild(collapseButton);
       producerBox.appendChild(nameBox);
 
       // The features box contains list of each feature and a checkbox to toggle
