@@ -16,6 +16,7 @@ let timelineWindow = null;
 const toolsMenuitemID = "graphical-timeline-tools-menu-item";
 const appMenuitemID = "graphical-timeline-app-menu-item";
 const keyID = "graphical-timeline-key";
+const keyseyID = "graphical-timeline-keyset";
 const toolbarButtonID = "developer-toolbar-timelineui";
 const commandID = "Tools:TimelineUI";
 const broadcasterID = "devtoolsMenuBroadcaster_TimelineUI";
@@ -69,8 +70,6 @@ function addMenuItem(window) {
     }
     else {
       if (window.content.window != timelineWindow) {
-        // Check the checkboxes again.
-        $(broadcasterID).setAttribute("checked", "true");
         notificationBox = window.gBrowser.getNotificationBox();
         let buttons = [{
           label: 'Open it in this tab',
@@ -120,8 +119,8 @@ function addMenuItem(window) {
     toolbitem && toolbitem.parentNode.removeChild(toolbitem);
   }
   function removeKey() {
-    let key = $(keyID);
-    key && key.parentNode.removeChild(key);
+    let keyset = $(keysetID);
+    keyset && keyset.parentNode.removeChild(keyset);
     let command = $(commandID);
     command && command.parentNode.removeChild(command);
   }
@@ -161,12 +160,14 @@ function addMenuItem(window) {
     appmenuPopup.insertBefore(appmenuitem, $("appmenu_webConsole").nextSibling);
   }
 
-  let key = window.document.createElement("key");
+  let keyset = window.document.createElementNS(XUL, "keyset");
+  keyset.id = keyseyID;
+  let key = window.document.createElementNS(XUL, "key");
   key.id = keyID;
   key.setAttribute("key", "Q");
   key.setAttribute("command", commandID);
   key.setAttribute("modifiers", "accel,shift")
-  $("mainKeyset").appendChild(key);
+  $("mainKeyset").parentNode.appendChild(keyset).appendChild(key);
 
   let button = window.document.createElement("toolbarbutton");
   button.setAttribute("observes", broadcasterID);
@@ -181,6 +182,18 @@ function addMenuItem(window) {
 
   unload(removeMenuItem, window);
   unload(removeKey, window);
+
+  // Tab switch handler.
+  listen(window, window.gBrowser.tabContainer, "TabSelect", function() {
+    if (global.Timeline.UIOpened) {
+      if (window.gBrowser.selectedTab.linkedBrowser.contentWindow == timelineWindow){ 
+        $(broadcasterID).setAttribute("checked", "true");
+      }
+      else {
+        $(broadcasterID).setAttribute("checked", "false");
+      }
+    }
+  });
 }
 
 function disable(id) {
