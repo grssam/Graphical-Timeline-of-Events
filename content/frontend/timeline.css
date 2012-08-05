@@ -599,6 +599,10 @@
   right: 0px;
 }
 
+#timeline-detailbox:not([pinned=true]) {
+  box-shadow: -8px 0px 6px -1px rgba(0,0,0,0.75);
+}
+
 .property-line {
   margin: 0px;
   padding: 0px;
@@ -653,6 +657,10 @@
   border-width: 0px !important;
 }
 
+#timeline-detailbox:not([pinned=true]) > hbox:first-child {
+  opacity: 0;
+}
+
 #detailbox-splitter {
   top: 0px;
   left: 0px;
@@ -665,13 +673,15 @@
 }
 
 #timeline-highlighter {
-  min-height: 1px;
-  max-height: 1px;
+  min-height: 4px;
+  max-height: 4px;
   padding: 0;
   margin: 0;
-  height: 1px;
+  height: 4px;
   opacity: 0;
   -moz-transition: opacity 500ms;
+  cursor: pointer !important;
+  z-index: 200 !important;
 }
 
 #timeline-scrollbar {

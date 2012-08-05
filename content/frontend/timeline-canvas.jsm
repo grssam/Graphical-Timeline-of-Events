@@ -961,12 +961,13 @@ CanvasManager.prototype = {
         this.highlighter.style.opacity != 0) {
       this.highlighter.style.opacity = 0;
       this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
+      detailBox.setAttribute("dataId", "");
+      detailBox.setAttribute("visible", false);
       let child = detailBox.lastChild;
       if (child && child.id == "detailbox-table") {
         detailBox.removeChild(child);
         detailBox.firstChild.firstChild.nextSibling.collapsed = false;
       }
-      detailBox.setAttribute("dataId", "")
     }
   },
 
@@ -1329,10 +1330,13 @@ CanvasManager.prototype = {
       }
       else {
         this.highlighter.style.opacity = 0.75;
-        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 1 + 32) + "px";
+        this.highlighter.style.top = (this.highlightInfo.y - this.offsetTop - 2 + 32) + "px";
         this.highlighter.style.left = Math.round(start - 2) + "px";
         this.highlighter.style.width = Math.round(width + 4) + "px";
-        this.highlighter.style.boxShadow = "0px 0px 4px 4px " + this.highlightInfo.color;
+        this.highlighter.style.boxShadow = "inset 0px 0px 2px 2px " +
+                                           this.highlightInfo.color +
+                                           ",0px 0px 4px 4px " +
+                                           this.highlightInfo.color;
       }
     }
     this.forcePaint = false;

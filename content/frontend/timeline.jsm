@@ -730,6 +730,16 @@ TimelineView.prototype = {
       this.showDetailedInfoFor([], this._canvas.getGroupForTime(groupId, time));
       this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
       this.detailBox.setAttribute("pinned", true);
+      let width = this.$("timeline-content").boxObject.width -
+            this.producersPane.boxObject.width -
+            this.detailBox.boxObject.width;
+      if (width < this._canvas.width) {
+        this._canvas.scale = (this._canvas.lastVisibleTime -
+                              this._canvas.firstVisibleTime) /
+                             width;
+        this._canvas.width = width;
+        this.detailBoxOpened = true;
+      }
     }
   },
 
@@ -738,22 +748,33 @@ TimelineView.prototype = {
     if (this.detailBox.getAttribute("pinned") == "false" &&
         this.detailBox.getAttribute("visible") == "true") {
       this.detailBox.setAttribute("pinned", true);
-    }
-    else {
-      this.detailBox.setAttribute("pinned", false);
+      let width = this.$("timeline-content").boxObject.width -
+                  this.producersPane.boxObject.width -
+                  this.detailBox.boxObject.width;
+      if (width < this._canvas.width) {
+        this._canvas.scale = (this._canvas.lastVisibleTime -
+                              this._canvas.firstVisibleTime) /
+                             width;
+        this._canvas.width = width;
+        this.detailBoxOpened = true;
+      }
     }
   },
 
   closeDetailBox: function TV_closeDetailBox()
   {
     this.detailBox.setAttribute("visible", false);
+    this.detailBox.setAttribute("pinned", false);
     this._canvas.width = this.$("timeline-content").boxObject.width -
                          this.producersPane.boxObject.width
+    this._canvas.scale = (this._canvas.lastVisibleTime -
+                          this._canvas.firstVisibleTime) /
+                         this._canvas.width;
   },
 
   handleDetailClick: function TV_handleDetailClick()
   {
-    this.$("timeline-canvas-dots").addEventListener("mousedown", this.pinUnpinDetailBox);
+    this.$("timeline-highlighter").addEventListener("mousedown", this.pinUnpinDetailBox);
   },
 
   handleMousemove: function TV_handleMousemove(aEvent)
@@ -801,13 +822,6 @@ TimelineView.prototype = {
         this.detailBox.removeChild(this.detailBox.lastChild);
       }
     } catch (ex) {}
-    let width = this.$("timeline-content").boxObject.width -
-                this.producersPane.boxObject.width -
-                this.detailBox.boxObject.width;
-    if (width < this._canvas.width) {
-      this._canvas.width = width;
-      this.detailBoxOpened = true;
-    }
     let table = this._frameDoc.createElementNS(HTML, "table");
     table.setAttribute("id", "detailbox-table");
     let topCell = this._frameDoc.createElementNS(HTML, "th");
