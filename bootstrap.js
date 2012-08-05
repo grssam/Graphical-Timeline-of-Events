@@ -15,8 +15,10 @@ let reload = function() {};
 let timelineWindow = null;
 const toolsMenuitemID = "graphical-timeline-tools-menu-item";
 const appMenuitemID = "graphical-timeline-app-menu-item";
-const keysetID = "graphical-timeline-keyset";
 const keyID = "graphical-timeline-key";
+const toolbarButtonID = "developer-toolbar-timelineui";
+const commandID = "Tools:TimelineUI";
+const broadcasterID = "devtoolsMenuBroadcaster_TimelineUI";
 
 // Function to run on every window which detects customizations
 function handleCustomization(window) {
@@ -34,15 +36,15 @@ function handleCustomization(window) {
 function addMenuItem(window) {
   function $(id) window.document.getElementById(id);
 
-  function showHideUI() {
+  function toggleTimelineUI() {
+    //window.alert("as");
     if (Timeline.UIOpened != true) {
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
       Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
       DataSink.addRemoteListener(window);
-      Timeline.init(function () { // temporary function to be called at destroy
-                                  // This is done to avoide memory leak while closing via close button
+      Timeline.init(function () {
         global.DataSink.removeRemoteListener(window);
         try {
           Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
@@ -59,12 +61,10 @@ function addMenuItem(window) {
           Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
         } catch (e) {}
         try {
-          $(toolsMenuitemID).removeAttribute("checked");
-          $(appMenuitemID) && $(appMenuitemID).removeAttribute("checked");
+          $(broadcasterID).setAttribute("checked", "false");
         } catch (ex) {}
       });
-      $(toolsMenuitemID).setAttribute("checked", true);
-      $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
+      $(broadcasterID).setAttribute("checked", "true");
       timelineWindow = window.content.window;
     }
     else {
@@ -91,8 +91,7 @@ function addMenuItem(window) {
                                            buttons,
                                            null);
         // Check the checkboxes again.
-        $(toolsMenuitemID).setAttribute("checked", true);
-        $(appMenuitemID) && $(appMenuitemID).setAttribute("checked", true);
+        $(broadcasterID).setAttribute("checked", "true");
       }
       else {
         timelineWindow = null;
@@ -103,7 +102,7 @@ function addMenuItem(window) {
 
   function reopenTimeline() {
     Timeline.destroy();
-    showHideUI();
+    toggleTimelineUI();
   }
   function switchToTimelineTab() {
     Timeline._window.focus();
@@ -117,52 +116,71 @@ function addMenuItem(window) {
     menuitem && menuitem.parentNode.removeChild(menuitem);
     let appitem = $(appMenuitemID);
     appitem && appitem.parentNode.removeChild(appitem);
+    let toolbitem = $(toolbarButtonID);
+    toolbitem && toolbitem.parentNode.removeChild(toolbitem);
   }
   function removeKey() {
-    let keyset = $(keysetID);
-    keyset && keyset.parentNode.removeChild(keyset);
+    let key = $(keyID);
+    key && key.parentNode.removeChild(key);
+    let command = $(commandID);
+    command && command.parentNode.removeChild(command);
   }
   removeMenuItem();
   removeKey();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
   let notificationBox;
+  window.toggleTimelineUI = toggleTimelineUI;
   unload(function() {
     notificationBox = timelineWindow = null;
   }, window);
-  let TimelineKeyset = window.document.createElementNS(XUL, "keyset");
-  TimelineKeyset.setAttribute("id", keysetID);
-  // add hotkey
-  let TimelineHotkey = window.document.createElementNS(XUL, "key");
-  TimelineHotkey.setAttribute("id", keyID);
-  TimelineHotkey.setAttribute("key", "Q");
-  TimelineHotkey.setAttribute("modifiers", "accel, shift");
-  TimelineHotkey.setAttribute("oncommand", "void(0)");
-  TimelineHotkey.addEventListener("command", showHideUI);
-  $("mainKeyset").parentNode.appendChild(TimelineKeyset).appendChild(TimelineHotkey);
 
-  let menuitem = window.document.createElementNS(XUL, "menuitem");
-  menuitem.setAttribute("id", toolsMenuitemID);
-  menuitem.setAttribute("type", "checkbox");
-  menuitem.setAttribute("label", "Graphical Timeline");
-  menuitem.setAttribute("accesskey", "G");
-  menuitem.setAttribute("key", keyID);
-  menuitem.addEventListener("command", showHideUI);
-  $("menuWebDeveloperPopup").insertBefore(menuitem, $("webConsole"));
+  let command = window.document.createElement("command");
+  command.id = commandID;
+  command.setAttribute("oncommand", "toggleTimelineUI()");
+  $("mainCommandSet").appendChild(command);
 
-  if (window.navigator.oscpu.search(/^mac/i) != 0) {
-    let appMenu = $("appmenu_webDeveloper_popup");
-    if (appMenu) {
-      let appMenuItem = window.document.createElementNS(XUL, "menuitem");
-      appMenuItem.setAttribute("id", appMenuitemID);
-      appMenuItem.setAttribute("type", "checkbox");
-      appMenuItem.setAttribute("label", "Graphical Timeline");
-      appMenuItem.setAttribute("accesskey", "G");
-      appMenuItem.setAttribute("key", keyID);
-      appMenuItem.addEventListener("command", showHideUI);
-      appMenu.insertBefore(appMenuItem, $("appmenu_webConsole"));
-    }
+  let broadcaster = window.document.createElement("broadcaster");
+  broadcaster.id = broadcasterID;
+  broadcaster.setAttribute("label", "Graphical Timeline");
+  broadcaster.setAttribute("accesskey", "G");
+  broadcaster.setAttribute("type", "checkbox");
+  broadcaster.setAttribute("autocheck", "false");
+  broadcaster.setAttribute("key", keyID);
+  broadcaster.setAttribute("command", commandID);
+  $("mainBroadcasterSet").appendChild(broadcaster);
+
+  let menubaritem = window.document.createElement("menuitem");
+  menubaritem.id = toolsMenuitemID;
+  menubaritem.setAttribute("observes", broadcasterID);
+  $("menuWebDeveloperPopup").insertBefore(menubaritem, $("webConsole").nextSibling);
+
+  let appmenuPopup = $("appmenu_webDeveloper_popup");
+  if (appmenuPopup) {
+    let appmenuitem = window.document.createElement("menuitem");
+    appmenuitem.id = appMenuitemID;
+    appmenuitem.setAttribute("observes", broadcasterID);
+    appmenuPopup.insertBefore(appmenuitem, $("appmenu_webConsole").nextSibling);
   }
+
+  let key = window.document.createElement("key");
+  key.id = keyID;
+  key.setAttribute("key", "Q");
+  key.setAttribute("command", commandID);
+  key.setAttribute("modifiers", "accel,shift")
+  $("mainKeyset").appendChild(key);
+
+  let button = window.document.createElement("toolbarbutton");
+  button.setAttribute("observes", broadcasterID);
+  button.setAttribute("label", "Timeline");
+  button.classList.add("developer-toolbar-button");
+  button.id = toolbarButtonID;
+  button.setAttribute("style", "list-style-image: " +
+                               "url('chrome://graphical-timeline/content/frontend" +
+                               "/images/tools-icons-small.png');" +
+                               "-moz-image-region: rect(0, 16px, 16px, 0);");
+  $("developer-toolbar").insertBefore(button, $("developer-toolbar-webconsole").nextSibling);
+
   unload(removeMenuItem, window);
   unload(removeKey, window);
 }
