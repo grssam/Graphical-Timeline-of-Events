@@ -69,6 +69,8 @@ function addMenuItem(window) {
     }
     else {
       if (window.content.window != timelineWindow) {
+        // Check the checkboxes again.
+        $(broadcasterID).setAttribute("checked", "true");
         notificationBox = window.gBrowser.getNotificationBox();
         let buttons = [{
           label: 'Open it in this tab',
@@ -90,8 +92,6 @@ function addMenuItem(window) {
                                            notificationBox.PRIORITY_WARNING_MEDIUM,
                                            buttons,
                                            null);
-        // Check the checkboxes again.
-        $(broadcasterID).setAttribute("checked", "true");
       }
       else {
         timelineWindow = null;
@@ -125,8 +125,6 @@ function addMenuItem(window) {
     let command = $(commandID);
     command && command.parentNode.removeChild(command);
   }
-  removeMenuItem();
-  removeKey();
 
   let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
   let notificationBox;

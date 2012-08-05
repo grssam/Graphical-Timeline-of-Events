@@ -27,9 +27,25 @@
   -  the button that closes the timeline UI. -->
 <!ENTITY timelineUI.closeButton.tooltip        "Close">
 
-<!-- LOCALIZATION NOTE (timelineUI.toggleOverviewButton.label): This is the
-  -  label for the button that toggles the Overview mode in the timeline UI. -->
-<!ENTITY timelineUI.toggleOverviewButton.label        "Overview">
+<!-- LOCALIZATION NOTE (timelineUI.toggleOverviewButton.tooltiptext): This is the
+  -  tooltip text for the button that toggles the Overview mode in the timeline UI. -->
+<!ENTITY timelineUI.toggleOverviewButton.tooltiptext        "Overview">
+
+<!-- LOCALIZATION NOTE (timelineUI.toggleRecording.tooltiptext): This is the
+  -  tooltip text for the button that toggles the Recording in the timeline UI. -->
+<!ENTITY timelineUI.toggleRecording.tooltiptext        "Toggle Recording">
+
+<!-- LOCALIZATION NOTE (timelineUI.zoomIn.tooltiptext): This is the
+  -  tooltip text for the [+] zoom in button in the timeline UI. -->
+<!ENTITY timelineUI.zoomIn.tooltiptext        "Zoom In">
+
+<!-- LOCALIZATION NOTE (timelineUI.zoomOut.tooltiptext): This is the
+  -  tooltip text for the [-] zoom out button in the timeline UI. -->
+<!ENTITY timelineUI.zoomOut.tooltiptext        "Zoom Out">
+
+<!-- LOCALIZATION NOTE (timelineUI.options.tooltiptext): This is the
+  -  tooltip text for the Options cog wheel. -->
+<!ENTITY timelineUI.options.tooltiptext        "Options">
 
 <!-- LOCALIZATION NOTE (timelineUI.noEventSelected): This is the placeholder
   -  text for the empty details box. -->

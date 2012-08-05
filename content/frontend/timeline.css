@@ -182,6 +182,15 @@
   -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 
+#overview {
+  list-style-image: url("images/timeline-overview.png");
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+#overview[checked=true] {
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
 #zoom-in {
   list-style-image: url("images/zoom-in.png");
   -moz-image-region: rect(0px, 16px, 16px, 0px);
