@@ -565,7 +565,7 @@
 /**
  * Detail Box
  */
-#timeline-detailbox {
+#timeline-detailbox, #timeline-property-detail {
   background-color: rgb(22,33,43);
   color: rgb(183,193,205);
   width: 240px;
@@ -580,15 +580,15 @@
   z-index: 100;
 }
 
-#timeline-detailbox[visible=true] {
+#timeline-detailbox[visible=true], #timeline-property-detail[visible=true] {
   -moz-animation-duration: 0.25s;
   -moz-animation-name: slidein;
   opacity: 1;
   right: 0px;
 }
 
-#timeline-detailbox:not([visible=true]) {
-  -moz-animation-duration: 0.25s;
+#timeline-detailbox:not([visible=true]), #timeline-property-detail:not([visible=true]) {
+  -moz-animation-duration: 0.35s;
   -moz-animation-name: slideout;
   opacity: 0;
   right: -350px;
@@ -599,7 +599,7 @@
   right: 0px;
 }
 
-#timeline-detailbox:not([pinned=true]) {
+#timeline-detailbox:not([pinned=true]), #timeline-property-detail {
   box-shadow: -8px 0px 6px -1px rgba(0,0,0,0.75);
 }
 
@@ -644,7 +644,7 @@
   color: rgb(3,101,151);
 }
 
-#detailbox-button-container {
+#detailbox-button-container, #property-detail-button-container {
   z-index: 100 !important;
   width: 100% !important;
   padding: 2px;

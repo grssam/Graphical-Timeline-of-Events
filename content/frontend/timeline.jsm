@@ -101,6 +101,7 @@ function TimelineView(aChromeWindow) {
   this.zoomIn = this.zoom.bind(this, true);
   this.zoomOut = this.zoom.bind(this, false);
   this.closeDetailBox = this.closeDetailBox.bind(this);
+  this.closePropertyDetailBox = this.closePropertyDetailBox.bind(this);
   this.handleDetailBoxResize = this.handleDetailBoxResize.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
@@ -136,6 +137,7 @@ TimelineView.prototype = {
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
     this.detailBox = this.$("timeline-detailbox");
+    this.propertyDetailBox = this.$("timeline-property-detail");
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
     this.restartOnReload = this.$("restart-on-reload");
@@ -153,6 +155,7 @@ TimelineView.prototype = {
     this.$("zoom-in").addEventListener("command", this.zoomIn, true);
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
     this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
+    this.$("property-detail-closebutton").addEventListener("command", this.closePropertyDetailBox, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
@@ -900,6 +903,38 @@ TimelineView.prototype = {
         }
       }
     }
+    this.$("detailbox-splitter").style.height = table.scrollHeight + "px";
+  },
+
+  /**
+   * Displays the detailed property information in an overlay to details box.
+   *
+   * @param object aProperty
+   *        { name, value} : the name and value of the property.
+   */
+  showPropertyDetails: function TV_showPropertyDetails(aProperty)
+  {
+    this.propertyDetailBox.setAttribute("visible", true);
+    this.propertyDetailBox.style.width = (this.detailBox.boxObject.width - 10) + "px";
+    let vbox = this._frameDoc.createElement("vbox");
+    vbox.setAttribute("id", "property-detail-info");
+    vbox.setAttribute("style", "padding: 0px 2px;");
+    let nameLabel = this._frameDoc.createElement("label");
+    nameLabel.setAttribute("value", aProperty.name);
+    let valueLabel = this._frameDoc.createElement("label");
+    valueLabel.textContent = JSON.stringify(aProperty.value);
+    vbox.appendChild(nameLabel);
+    vbox.appendChild(valueLabel);
+    this.propertyDetailBox.appendChild(vbox);
+  },
+
+  closePropertyDetailBox: function TV_closePropertyDetialBox()
+  {
+    this.propertyDetailBox.setAttribute("visible", false);
+    let child = this.propertyDetailBox.lastChild;
+    if (child.id == "property-detail-info") {
+      this.propertyDetailBox.removeChild(child);
+    }
   },
 
   /**
@@ -1069,7 +1104,10 @@ TimelineView.prototype = {
         case "object":
           value = aValue;
           valueLabel.setAttribute("value", value);
-          valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
+          //valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
+          valueLabel.setAttribute("class", "text-link");
+          valueLabel.addEventListener("click", this.showPropertyDetails
+                                                   .bind(this, {name: name, value: value}), true);
           break;
 
         default:
