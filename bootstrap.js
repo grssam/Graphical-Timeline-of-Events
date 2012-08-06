@@ -182,6 +182,9 @@ function addMenuItem(window) {
 
   unload(removeMenuItem, window);
   unload(removeKey, window);
+  unload(function() {
+    delete window.toggleTimelineUI;
+  }, window);
 
   // Tab switch handler.
   listen(window, window.gBrowser.tabContainer, "TabSelect", function() {
