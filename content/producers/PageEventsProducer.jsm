@@ -11,6 +11,7 @@ Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
 var EXPORTED_SYMBOLS = ["PageEventsProducer"];
 
 /**
+ * The page events producer.
  */
 let PageEventsProducer =
 {
@@ -407,6 +408,9 @@ let PageEventsProducer =
     });
   },
 
+  /**
+   * Progress listener to reattach events on page refresh.
+   */
   progressListner: {
     onLocationChange: function PEP_PL_onLocationChange(aBrowser, aWebProgress,
                                                        aRequest, aLocation) {

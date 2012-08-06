@@ -12,6 +12,7 @@ var EXPORTED_SYMBOLS = ["MemoryProducer"];
 
 /**
  * Memory Producer to record CC, GC and memory statistics.
+ * Memory statistics not implemented yet.
  */
 let MemoryProducer =
 {
@@ -22,6 +23,13 @@ let MemoryProducer =
    */
   get sequenceId() "MemoryProducer-" + (++this._sequence),
 
+  /**
+   * A getter to be used by DataSink.
+   * This getter should list out the list of enabled features ([] if none).
+   * The array should contain the ids of the features as provided while
+   * registering this producer to the DataSink.
+   * @required
+   */
   get enabledFeatures() this.enabledEvents,
 
   // Default set which will be neabled if nothing specified in the init call.
@@ -49,6 +57,7 @@ let MemoryProducer =
    * @param array aEnabledEvents (optional)
    *        List of enabled events type. defaultEvents array will be used if
    *        nothing specified.
+   * @required
    */
   init: function MP_init(aWindowList, aEnabledEvents)
   {
@@ -80,6 +89,7 @@ let MemoryProducer =
    *
    * @param array aFeatures
    *        List of strings containing the type name of the events to start.
+   * @required
    */
   enableFeatures: function MP_enableFeatures(aFeatures)
   {
@@ -101,6 +111,7 @@ let MemoryProducer =
    *
    * @param array aFeatures
    *        List of strings containing the type name of the events to stop.
+   * @required
    */
   disableFeatures: function MP_disableFeatures(aFeatures)
   {
@@ -206,6 +217,7 @@ let MemoryProducer =
 
   /**
    * Stops the Page Events Producer.
+   * @required
    */
   destroy: function MP_destroy()
   {

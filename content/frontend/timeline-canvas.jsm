@@ -25,6 +25,9 @@ const CANVAS_POSITION = {
   END: 2, // Represents end of view.
 };
 
+/**
+ * List of bright colors, dots andlines would choose a color from thsi list.
+ */
 const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f7ff",
                     "#f9b4ff", "#f770ff", "#ff0000", "#ff61fd", "#ffaf60", "#fffc04"];
 
@@ -141,14 +144,6 @@ CanvasManager.prototype = {
     this.forcePaint = true;
   },
 
-  get paneHeight()
-  {
-    if (this._paneHeight === undefined) {
-      this._paneHeight = this.producerPane.scrollHeight;
-    }
-    return this._paneHeight;
-  },
-
   /**
    * Gets the Y offset of the group residing in the Producers Pane.
    *
@@ -251,6 +246,8 @@ CanvasManager.prototype = {
    *
    * @param number aXPixel
    *        Number of pixels from start of timeline view.
+   *
+   * @return number UTC time in ms corresponding to the pixel.
    */
   getTimeForXPixels: function CM_getTimeForXPixels(aXPixel)
   {
@@ -267,6 +264,8 @@ CanvasManager.prototype = {
    *
    * @param number aYPixel
    *        Number of pixels from top of timeline view.
+   *
+   * @return array Array of group ids that have their Y offset as aYPixel.
    */
   getGroupsForYPixels: function CM_getGroupsForYPixels(aYPixel)
   {
@@ -279,6 +278,17 @@ CanvasManager.prototype = {
     return matchedGroups;
   },
 
+  /**
+   * Provided a group id and time, this function returns the data ids for the
+   * events that are just below the time.
+   *
+   * @param string aGroupId
+   *        Id of the group for which the function should find the data ids.
+   * @param number aTime
+   *        The time for which the function should find the data ids.
+   *
+   * @return [string] List of data ids that correspond to the time and group id.
+   */
   getGroupForTime: function CM_getGroupForTime(aGroupId, aTime)
   {
     let group = this.groupedData[aGroupId];
@@ -325,6 +335,11 @@ CanvasManager.prototype = {
 
   /**
    * Handles mouse hover at (x, y) on the timeline view.
+   *
+   * @return [[string[],[string]]
+   *         [[groups ids], [data ids]]
+   *         The list of groups that can fall below the specified x,y coordinates.
+   *         The list of data ids corresponding to the group ids and the x,y .
    */
   mouseHoverAt: function CM_mouseHoverAt(X,Y)
   {
@@ -365,6 +380,11 @@ CanvasManager.prototype = {
     return [null, null];
   },
 
+  /**
+   * For a given list of group ids and corresponding data ids, this function
+   * chooses the most appropriate dot/line to be highlighted that is most likely
+   * to be directly under the mouse.
+   */
   highlightGroup: function CM_highlightGroup(aGroupIds, aIds)
   {
     for (let groupId of aGroupIds) {
@@ -423,6 +443,10 @@ CanvasManager.prototype = {
     }
   },
 
+  /**
+   * Inserts the group id and time at the correct position in a sorted
+   * globalTmings and dotsTimings array. Sorted based on time.
+   */
   insertAtCorrectPosition: function CM_insertAtCorrectPosition(aTime, aGroupId)
   {
     let length;
@@ -583,6 +607,10 @@ CanvasManager.prototype = {
     return this.groupedData[groupId].id;
   },
 
+  /**
+   * Freezes the canvas as soon as its called. This means that the canvas would
+   * not automatically move with time.
+   */
   freezeCanvas: function CM_freezeCanvas()
   {
     this.frozenTime = this.currentTime;
@@ -596,6 +624,9 @@ CanvasManager.prototype = {
     this.waitForLineData = false;
   },
 
+  /**
+   * Unfreezes the canvas to either switch back to overview mode or live mode.
+   */
   unfreezeCanvas: function CM_unfreezeCanvas()
   {
     this.timeFrozen = false;
@@ -857,6 +888,11 @@ CanvasManager.prototype = {
     }
   },
 
+  /**
+   * Moves the canvas to the overview mode. This mode shows all the possible
+   * event dots and lines (but not generally all the time, the timeline has been
+   * recording).
+   */
   moveToOverview: function CM_moveToOverview()
   {
     this.unfreezeCanvas();
@@ -869,6 +905,11 @@ CanvasManager.prototype = {
     } catch (ex) {}
   },
 
+  /**
+   * Moves the canvas to Live mode. This mode has a constantly runnign ruler and
+   * only the recent activities are visible until they move to extreme left, and
+   * finally out of the view.
+   */
   moveToLive: function CM_moveToLive()
   {
     this.overview = false;
@@ -879,6 +920,9 @@ CanvasManager.prototype = {
     }
   },
 
+  /**
+   * Starts drawing on canvas.
+   */
   startRendering: function CM_startRendering()
   {
     this.ctxL.clearRect(0,0,this.width,this.height);
@@ -904,11 +948,18 @@ CanvasManager.prototype = {
     this.scrollDistance = 0;
   },
 
+  /**
+   * Stops drawing on canvas. Well, actually it does stops drawingon canvas, but
+   * nothing new is drawn on the canvas.
+   */
   stopRendering: function CM_stopRendering()
   {
     this.stopTime = Date.now();
   },
 
+  /**
+   * Called when the user starts dragging the time ruler.
+   */
   startScrolling: function CM_startScrolling()
   {
     this.scrolling = true;
@@ -916,6 +967,9 @@ CanvasManager.prototype = {
     this.waitForLineData = false;
   },
 
+  /**
+   * Called when the user stops dragging the time ruler.
+   */
   stopScrolling: function CM_stopScrolling()
   {
     this.offsetTime = this.frozenTime - this.currentTime;
@@ -923,17 +977,35 @@ CanvasManager.prototype = {
     this.scrolling = false;
   },
 
-  startTimeWindowAt: function CM_startTimeWindowAt(left)
+  /**
+   * Called to start the dragging of the time window.
+   * This functin notes the starting time to maintain the left edge of the window
+   * to move if time move to left.
+   *
+   * @param number aLeft
+   *        the x pixels, relative to canvas start, at which the user clicked to
+   *        start the creation of the time window.
+   */
+  startTimeWindowAt: function CM_startTimeWindowAt(aLeft)
   {
-    this.timeWindowLeft = this.getTimeForXPixels(left);
-    this.leftWindowLine = left;
+    this.timeWindowLeft = this.getTimeForXPixels(aLeft);
+    this.leftWindowLine = aLeft;
   },
 
-  stopTimeWindowAt: function CM_stopTimeWindowAt(right)
+  /**
+   * Called when the user mouse ups after dragging and selecting a time range.
+   * This function decides whether the time range is valid or not and zooms the
+   * canvas accordingly.
+   *
+   * @param number aRight
+   *        the x pixels, relative to canvas start, at which the user clicked to
+   *        stop the creation of the time window.
+   */
+  stopTimeWindowAt: function CM_stopTimeWindowAt(aRight)
   {
-    this.timeWindowRight = this.getTimeForXPixels(right);
+    this.timeWindowRight = this.getTimeForXPixels(aRight);
     let zoomed = false;
-    if (right - this.leftWindowLine > 3 ||
+    if (aRight - this.leftWindowLine > 3 ||
         this.timeWindowRight - this.timeWindowLeft > 200) {
       this.freezeCanvas();
       this.scale = (this.timeWindowRight - this.timeWindowLeft)/this.width;
@@ -948,12 +1020,19 @@ CanvasManager.prototype = {
     return zoomed;
   },
 
+  /**
+   * Shows the details box.
+   * This function only shows the pane, and does not populate it with details.
+   */
   displayDetailedData: function CM_displayDetailedData(aLeft)
   {
     this.doc.getElementById("timeline-detailbox").setAttribute("visible", true);
     this.doc.getElementById("timeline-detailbox").firstChild.firstChild.nextSibling.collapsed = true;
   },
 
+  /**
+   * Hides the details pane and removes the data from it.
+   */
   hideDetailedData: function CM_hideDetailedData()
   {
     let detailBox = this.doc.getElementById("timeline-detailbox");
@@ -1343,6 +1422,9 @@ CanvasManager.prototype = {
     this.window.mozRequestAnimationFrame(this.render);
   },
 
+  /**
+   * Destroy the canvas and clean up.
+   */
   destroy: function CM_destroy()
   {
     this.alive = false;

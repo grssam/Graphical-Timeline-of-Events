@@ -39,6 +39,10 @@ const DataSinkEventMessageType = {
   PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
 };
 
+/**
+ * List of normlaized event types. Any producer should have events falling into
+ * one (or more in case of continuous and repeating) of the following events.
+ */
 const NORMALIZED_EVENT_TYPE = {
   POINT_EVENT: 0, // An instantaneous event like a mouse click.
   CONTINUOUS_EVENT_START: 1, // Start of a process like reloading of a page.
@@ -50,6 +54,9 @@ const NORMALIZED_EVENT_TYPE = {
   REPEATING_EVENT_STOP: 6, // End of a repeating event.
 };
 
+/**
+ * List of known errors that a UI can cause.
+ */
 const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
 };
@@ -68,10 +75,12 @@ let DataSink = {
   _producerInfoList: {},
   _sequenceId: 0,
 
+  // Local reference to teh const.
   NormalizedEventType: NORMALIZED_EVENT_TYPE,
 
   get sequenceId() (++this._sequenceId),
 
+  // Chrome window getter.
   get _chromeWindowForGraph() Cc["@mozilla.org/appshell/window-mediator;1"]
                                 .getService(Ci.nsIWindowMediator)
                                 .getMostRecentWindow("navigator:browser"),

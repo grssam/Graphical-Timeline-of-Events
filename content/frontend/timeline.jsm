@@ -211,6 +211,12 @@ TimelineView.prototype = {
     TimelinePreferences.activeProducers = enabledProducers;
   },
 
+  /**
+   * Adds a label and vertical space for an event group.
+   * Mainly used for continuous event types.
+   *
+   * @param |normalized event data| aData
+   */
   addGroupBox: function TV_addGroupBox(aData)
   {
     let producerBox = this.$(aData.producer + "-box");
@@ -378,6 +384,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Collapses the producer boxes at a threshold height to switch to the
+   * comapct view and vice versa.
+   */
   toggleCompactView: function TV_toggleCompactView()
   {
     if (this.producersPane.boxObject.height <= this.compactHeight &&
@@ -433,6 +443,9 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Resize handler for the iframe.
+   */
   onFrameResize: function TV_onFrameResize()
   {
     this.toggleCompactView();
@@ -448,6 +461,13 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Updates the height and vertical offset (style.top) for the scrollbar.
+   *
+   * @param boolean aPositionOnly
+   *        true if you only want to update the vertical offset and do not want
+   *        recalculate the height (used for better performance).
+   */
   updateScrollbar: function TV_updateScrollbar(aPositionOnly)
   {
     let width={}, y={};
@@ -535,6 +555,9 @@ TimelineView.prototype = {
     this.recording = !this.recording;
   },
 
+  /**
+   * Forcefully rstarts the canvas from time 0 forgetting about any pending events.
+   */
   forceRestart: function TV_forceRestart()
   {
     this.cleanUI();
@@ -566,6 +589,9 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Click handler for the Overview button. Toggles the overview mode.
+   */
   toggleOverview: function TV_toggleOverview()
   {
     if (!this.canvasStarted) {
@@ -640,11 +666,17 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Click handler for the restart-on-reload checkbox.
+   */
   toggleRestartOnReload: function TV_toggleRestartOnReload()
   {
     TimelinePreferences.doRestartOnReload = !TimelinePreferences.doRestartOnReload;
   },
 
+  /**
+   * Updates the canvas's width.
+   */
   resizeCanvas: function TV_resizeCanvas()
   {
     if (this.canvasStarted) {
@@ -654,6 +686,11 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Scroll handler on the producers pane. Updates the vertical offset of the
+   * canvas so that the event name on the producers pane and the corresponding
+   * dots/lines match up vertically.
+   */
   onProducersScroll: function TV_onProducersScroll()
   {
     if (this.canvasStarted) {
@@ -666,6 +703,11 @@ TimelineView.prototype = {
     this._canvas.waitForDotData = false;
   },
 
+  /**
+   * This function prevents the default behaviors of an arrowscrollbox to
+   * happen. ArrowScrollBox, upon a single tick of mouse wheel, scrolls to the
+   * very end. This function makes a single tick to scroll only one line.
+   */
   onProducersMouseScroll: function TV_onProducersMouseScroll(aEvent)
   {
     if (aEvent.detail) {
@@ -675,6 +717,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Scroll handler on the canvas. This function updates the vertical scroll
+   * offset for the producers pane to vertically match up with the dots and lines.
+   */
   onCanvasScroll: function TV_onCanvasScroll(aEvent)
   {
     if (aEvent.detail) {
@@ -722,6 +768,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Handles the click on the name of the event (if not a checkbox) and centers
+   * the corresponding dot or line, opening the details pane alongside.
+   */
   handleGroupClick: function TV_handleGroupClick(aEvent)
   {
     let group = aEvent.originalTarget;
@@ -746,6 +796,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Toggles the pinned status of the details pane.
+   * If the details pane is not pinned, it acts as a floating box above the canvas.
+   */
   pinUnpinDetailBox: function TV_pinUnpinDetailBox()
   {
     if (this.detailBox.getAttribute("pinned") == "false" &&
@@ -764,6 +818,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Click handler for the close button on the details pane. Closes it and moves
+   * it away from the viewport.
+   */
   closeDetailBox: function TV_closeDetailBox()
   {
     this.detailBox.setAttribute("visible", false);
@@ -775,11 +833,18 @@ TimelineView.prototype = {
                          this._canvas.width;
   },
 
+  /**
+   * Adds the event listener to toggle the pinned status of the details pane.
+   */
   handleDetailClick: function TV_handleDetailClick()
   {
     this.$("timeline-highlighter").addEventListener("mousedown", this.pinUnpinDetailBox);
   },
 
+  /**
+   * Handles the mousemove on the canvas to highlight corresponding dots and
+   * show their details.
+   */
   handleMousemove: function TV_handleMousemove(aEvent)
   {
     if (this.canvasStarted) {
@@ -791,6 +856,10 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Mouse out handler on the canvas so as to stop displaying the time
+   * corresponding to mouse location.
+   */
   handleMouseout: function TV_handleMouseout(aEvent)
   {
     if (this.canvasStarted) {
@@ -798,6 +867,16 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Populates the details pane with the information of the event corresponding
+   * to the geoup id and data id provided.
+   *
+   * @param [string] aGroupIds
+   *        List of group ids. While only the first id would be chosen.
+   * @param [string] aIds
+   *        List of data ids corresponding to the group ids. While only the most
+   *        relevant data id would be chosen to display.
+   */
   showDetailedInfoFor: function TV_showDetailedInfoFor(aGroupIds, aIds)
   {
     if (!aIds || aIds.length == 0) {
@@ -1152,6 +1231,13 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Checks whether a label for the group id is there or not.
+   *
+   * @param |normalized event data| aData
+   *
+   * @return boolean true if the label is present.
+   */
   hasGroup: function TV_hasGroup(aData)
   {
     let groupBox = null;
@@ -1174,6 +1260,12 @@ TimelineView.prototype = {
     }
   },
 
+  /**
+   * Alias function used by zoom in and out to zoom in and out of the canvas.
+   *
+   * @param boolean aZoomIn
+   *        true if you want to zoom in to the canvas.
+   */
   zoom: function TV_zoom(aZoomIn)
   {
     if (this.canvasStarted) {
@@ -1758,7 +1850,7 @@ let TimelinePreferences = {
 
   /**
    * Gets the preferred compact mode status of the timeline UI.
-   * @return bool
+   * @return boolean
    */
   get compactMode() {
     if (this._compactMode === undefined) {
@@ -1769,7 +1861,7 @@ let TimelinePreferences = {
 
   /**
    * Sets the preferred compact mode status of the timeline UI.
-   * @param bool value
+   * @param boolean value
    */
   set compactMode(value) {
     Services.prefs.setBoolPref("devtools.timeline.compactMode", value);

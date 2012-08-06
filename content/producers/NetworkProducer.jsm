@@ -31,9 +31,8 @@ const PR_UINT32_MAX = 4294967295;
  *
  * @constructor
  * @param object aHttpActivity
- *        HttpActivity object associated with this request (see
- *        HS_httpObserverFactory). As the response is done, the response header,
- *        body and status is stored on aHttpActivity.
+ *        HttpActivity object associated with this request. As the response is
+ *        done, the response header and status is stored on aHttpActivity.
  */
 function NetworkResponseListener(aHttpActivity) {
   this.httpActivity = aHttpActivity;
@@ -147,7 +146,7 @@ NetworkResponseListener.prototype = {
    * NetworkProducer.httpResponseExaminer() method saves the response headers in
    * NetworkProducer.openResponses. This method takes the data from the open
    * response object and puts it into the HTTP activity object, then sends it to
-   * the remote Web Console instance.
+   * the remote Timeline UI instance.
    *
    * @private
    */
@@ -294,7 +293,7 @@ NetworkResponseListener.prototype = {
  * The network producer uses the nsIHttpActivityDistributor to monitor network
  * requests. The nsIObserverService is also used for monitoring
  * http-on-examine-response notifications. All network request information is
- * routed to the remote Web Console.
+ * routed to the remote Timeline UI.
  */
 let NetworkProducer =
 {
@@ -639,11 +638,6 @@ let NetworkProducer =
   /**
    * Create the empty HTTP activity object. This object is used for storing all
    * the request and response information.
-   *
-   * This is a HAR-like object. Conformance to the spec is not guaranteed at
-   * this point.
-   *
-   * TODO: Bug 708717 - Add support for network log export to HAR
    *
    * @see http://www.softwareishard.com/blog/har-12-spec
    * @param nsIHttpChannel aChannel
