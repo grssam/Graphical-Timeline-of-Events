@@ -903,7 +903,8 @@ TimelineView.prototype = {
         }
       }
     }
-    this.$("detailbox-splitter").style.height = table.scrollHeight + "px";
+    this.$("detailbox-splitter").style.height = Math.max(this.detailBox.boxObject.height,
+                                                         table.scrollHeight) + "px";
   },
 
   /**
