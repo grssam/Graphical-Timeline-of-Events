@@ -307,16 +307,16 @@
 }
 
 #stack-panes-splitter {
-  z-index: 100;
-  max-width: 2px;
-  min-width: 0px;
-  width: 2px;
-  border-width: 0px !important;
-  background-size: 2px 33px !important;
+  z-index: 1000 !important;
+  max-width: 4px;
+  min-width: 4px;
+  border: 0px solid transparent !important;
+  width: 4px;
+  background-size: 4px 32px !important;
   background-position: 0px 0px !important;
-  background-repeat:no-repeat;
+  background-repeat: no-repeat;
   background-color: transparent;
-  margin: 0px !important;
+  margin: 0px -1px !important;
   padding: 0px !important;
 }
 
@@ -489,7 +489,7 @@
   min-width: 100%;
   max-width: 100%;
   margin: 0px !important;
-  min-height: 33px;
+  min-height: 32px;
   border-width: 0px !important;
 }
 
@@ -506,6 +506,7 @@
   min-width: 100%;
   max-width: 100%;
   min-height: 32px;
+  max-height: 32px;
 }
 
 #timeline-ruler > canvas {
@@ -619,7 +620,7 @@
 }
 
 .property-line > td {
-  text-align: right;
+  text-align: left;
   color: rgb(183,193,205);
   margin: 0px !important;
   padding: 0px !important;
@@ -627,7 +628,6 @@
 }
 
 .property-line > td:last-child {
-  text-align: left !important;
   color: rgb(207,218,230);
   margin: 0px !important;
   padding: 0px !important;
