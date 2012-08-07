@@ -617,7 +617,7 @@
 .property-line {
   margin: 0px;
   padding: 0px;
-  width: 100%;
+  width: auto;
 }
 
 .property-line > td {
@@ -625,7 +625,10 @@
   color: rgb(183,193,205);
   margin: 0px !important;
   padding: 0px !important;
-  min-width: 20%;
+}
+
+.property-line > td:first-child {
+  width: auto;
 }
 
 .property-line > td:last-child {
@@ -645,7 +648,7 @@
 }
 
 .property-heading, .detailed-heading {
-  text-align: center;
+  text-align: left;
   color: rgb(207,218,230);
   font-weight: bold;
 }
@@ -662,8 +665,14 @@
 
 #timeline-detailbox > table {
   display: block !important;
-  margin-top: -22px !important;
-  padding: 0px;
+  margin: -22px 0px 0px 0px !important;
+  padding: 0px 0px 5px 5px !important;
+  border-width: 0px !important;
+}
+
+#timeline-detailbox > table *{
+  padding: 0px !important;
+  margin: 0px;
   border-width: 0px !important;
 }
 
@@ -674,8 +683,8 @@
 #detailbox-splitter {
   top: 0px;
   left: 0px;
-  width: 2px;
-  min-width: 2px;
+  width: 3px;
+  min-width: 3px;
   background: transparent;
   height: 100%;
   cursor: e-resize;

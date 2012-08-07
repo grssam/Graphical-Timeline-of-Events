@@ -645,6 +645,16 @@ TimelineView.prototype = {
     else {
       target.parentNode.parentNode.setAttribute("enabled", false);
     }
+    if (this.canvasStarted) {
+      this._frameDoc.defaultView.setTimeout(function() {
+        let y={};
+        this.producersPane.scrollBoxObject.getPosition({},y);
+        this._canvas.offsetTop = y.value;
+        this._canvas.updateGroupOffset();
+        this._canvas.forcePaint = true;
+        this.updateScrollbar();
+      }.bind(this), 350);
+    }
     if (!this.recording) {
       return;
     }
@@ -929,8 +939,7 @@ TimelineView.prototype = {
           let propRow = this._frameDoc.createElementNS(HTML, "tr");
           let nameLabel = this._frameDoc.createElement("label");
           nameLabel.setAttribute("value", name + " :");
-          nameLabel.setAttribute("crop", "start");
-          valueLabel.setAttribute("crop", "center");
+          valueLabel.setAttribute("crop", "end");
           let (td = this._frameDoc.createElementNS(HTML, "td")) {
             td.appendChild(nameLabel);
             propRow.appendChild(td);
@@ -966,8 +975,7 @@ TimelineView.prototype = {
             let propRow = this._frameDoc.createElementNS(HTML, "tr");
             let nameLabel = this._frameDoc.createElement("label");
             nameLabel.setAttribute("value", name + " :");
-            nameLabel.setAttribute("crop", "start");
-            valueLabel.setAttribute("crop", "center");
+            valueLabel.setAttribute("crop", "end");
             let (td = this._frameDoc.createElementNS(HTML, "td")) {
               td.appendChild(nameLabel);
               propRow.appendChild(td);
@@ -1183,7 +1191,7 @@ TimelineView.prototype = {
 
         case "object":
           value = aValue;
-          valueLabel.setAttribute("value", value);
+          valueLabel.setAttribute("value", "Click to View");
           //valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
           valueLabel.setAttribute("class", "text-link");
           valueLabel.addEventListener("click", this.showPropertyDetails
@@ -1213,21 +1221,21 @@ TimelineView.prototype = {
     if (aTime > 3600000) {
       let seconds = Math.round(aTime/1000);
       let minutes = Math.floor(seconds/60);
-      return Math.floor(minutes/60) + "h" +
-             (minutes%60 > 0?(" " + minutes%60 + "m"):"") +
-             (seconds > 0? " " + seconds + "s":"");
+      return Math.floor(minutes/60) + " h" +
+             (minutes%60 > 0?(" " + minutes%60 + " m"):"") +
+             (seconds > 0? " " + seconds + " s":"");
     }
     else if (aTime > 60000) {
       let seconds = Math.round(aTime/1000);
       let minutes = Math.floor(seconds/60);
-      return minutes + "m" + (seconds > 0? " " + seconds + "s":"");
+      return minutes + " m" + (seconds > 0? " " + seconds + " s":"");
     }
     else if (aTime > 10000) {
       let seconds = Math.floor(aTime/1000);
-      return seconds + "s" + (aTime%1000 > 0? " " + aTime%1000 + "ms":"");
+      return seconds + " s" + (aTime%1000 > 0? " " + aTime%1000 + " ms":"");
     }
     else {
-      return aTime + "ms";
+      return aTime + " ms";
     }
   },
 

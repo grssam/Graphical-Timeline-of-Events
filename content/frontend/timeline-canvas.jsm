@@ -164,15 +164,16 @@ CanvasManager.prototype = {
         continue;
       }
 
-      if (producerBox.getAttribute("visible") == "false") {
+      if (producerBox.getAttribute("visible") == "false" ||
+          producerBox.getAttribute("enabled") == "false") {
         return (producerBox.firstChild.boxObject.y +
-                producerBox.firstChild.boxObject.height/2 - 32);
+                producerBox.firstChild.boxObject.height/2 - 34);
       }
 
       let feature = producerBox.firstChild.nextSibling.firstChild;
       while (feature) {
         if (feature.getAttribute("groupId") == aGroupId) {
-          return (feature.boxObject.y + feature.boxObject.height/2 - 32);
+          return (feature.boxObject.y + feature.boxObject.height/2 - 34);
         }
         feature = feature.nextSibling;
       }
