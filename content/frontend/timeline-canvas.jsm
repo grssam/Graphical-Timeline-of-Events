@@ -52,6 +52,7 @@ function CanvasManager(aDoc, aWindow) {
   this.scrollDistance = 0;
   this.dirtyDots = {};
   this.dirtyZone = [];
+  this.dirtyDotsZone = [];
 
   /**
    *  This will be the storage for the timestamp of events occuring ina group.
@@ -72,6 +73,7 @@ function CanvasManager(aDoc, aWindow) {
   this.globalGroup = [];
 
   this.dotsTimings = {};
+  this.coloredDots = {};
   this.activeGroups = [];
   this.mousePointerAt = {x: 0, time: 0};
   this.highlightInfo = {y: 0, startTime: 0, endTime: 0, color: 0};
@@ -704,7 +706,7 @@ CanvasManager.prototype = {
         this.startingoffsetTime = this.offsetTime;
       }
       this.offsetTime -= this.startingoffsetTime/20;
-      this.window.mozRequestAnimationFrame(this.moveToCurrentTime);
+      this.window.setTimeout(this.moveToCurrentTime, 35);
       this.waitForLineData = false;
       this.waitForDotData = false;
     }
@@ -938,6 +940,7 @@ CanvasManager.prototype = {
     this.lastDotTime = null;
     this.dirtyDots = {};
     this.dirtyZone = [];
+    this.dirtyDotsZone = [];
     this.waitForDotData = this.waitForLineData = false;
     this.id = 0;
     this.stopTime = null;
@@ -1052,32 +1055,21 @@ CanvasManager.prototype = {
   },
 
   /**
-   * Draws a dot to represnt an event at the x,y.
+   * Draw all the dots color-wise to represent an event at the x,y.
    */
-  drawDot: function CM_drawDot(x, y, id)
+  drawDots: function CM_drawDots()
   {
-    if (this.offsetTop > y || y - this.offsetTop > this.height ||
-        x < 0 || x > this.width) {
-      return;
-    }
-    if (this.continuousInLine && this.dirtyDots[y - this.offsetTop]) {
-      let tmp = this.dirtyDots[y - this.offsetTop];
-      let lastX = tmp[tmp.length - 1];
-      if (Math.abs(x - lastX) < 5.5) {
-        return;
+    for (let color in this.coloredDots) {
+      this.ctxD.beginPath();
+      this.ctxD.fillStyle = color;
+      for each (let [x,y] in this.coloredDots[color]) {
+        this.ctxD.moveTo(x - 3,y);
+        this.ctxD.arc(x,y, 3, 0, 6.2842,true);
+        this.dotsDrawn++;
       }
+      this.ctxD.fill();
     }
-    this.ctxD.beginPath();
-    this.ctxD.fillStyle = COLOR_LIST[id%12];
-    if (!this.dirtyDots[y-this.offsetTop]) {
-      this.dirtyDots[y-this.offsetTop] = [x];
-    }
-    else {
-      this.dirtyDots[y-this.offsetTop].push(x);
-    }
-    this.ctxD.arc(x,y - this.offsetTop -0.5, 3, 0, 6.2842,true);
-    this.ctxD.fill();
-    this.dotsDrawn++;
+    this.coloredDots = {};
   },
 
   /**
@@ -1341,33 +1333,46 @@ CanvasManager.prototype = {
     if (this.forcePaint || (!this.waitForDotData && !leaveEarly)) {
       this.dotsDrawn = 0;
 
-      this.ctxD.shadowOffsetY = 2;
-      this.ctxD.shadowColor = "rgba(10,10,10,0.5)";
-      this.ctxD.shadowBlur = 2;
-
-      for (let y in this.dirtyDots) {
-        for (let i = 0; i < this.dirtyDots[y].length; i++) {
-          this.ctxD.clearRect(this.dirtyDots[y][i]-6,y-5,14,18);
-        }
+      let ([x,endx,y,endy] = this.dirtyDotsZone) {
+        this.ctxD.clearRect(x-5,y-5,endx-x+10,endy-y+10);
+        this.dirtyDotsZone = [5000,0,5000,0];
       }
       this.dirtyDots = {};
-      // if (this.offsetTime > 0 || this.scrollStartTime != null) {
-        // this.ctxD.clearRect(0,0,this.width,this.height);
-      // }
-      // else {
-        // this.ctxD.clearRect(0,0,0.5*this.width + (this.scrolling?
-                            // (Date.now() - this.currentTime)/this.scale
-                            // :this.offsetTime/this.scale) + 10,this.height);
-      // }
-      // getting the current time, which will be at the center of the canvas.
 
       if (this.continuousInLine || !(this.overview && this.timeFrozen)) {
         let i = this.searchIndexForTime(this.lastVisibleTime, this.globalTiming);
         for (; i >= 0; i--) {
           if (this.globalTiming[i] >= this.firstVisibleTime) {
-            this.drawDot((this.globalTiming[i] - this.firstVisibleTime)/this.scale,
-                         this.groupedData[this.globalGroup[i]].y,
-                         this.groupedData[this.globalGroup[i]].id);
+            let y = this.groupedData[this.globalGroup[i]].y,
+                x = (this.globalTiming[i] - this.firstVisibleTime)/this.scale,
+                color = COLOR_LIST[this.groupedData[this.globalGroup[i]].id%12];
+            if (this.offsetTop > y || y - this.offsetTop > this.height ||
+                x < 0 || x > this.width) {
+              continue;
+            }
+            if (this.continuousInLine && this.dirtyDots[y - this.offsetTop]) {
+              let tmp = this.dirtyDots[y - this.offsetTop];
+              let lastX = tmp[tmp.length - 1];
+              if (Math.abs(x - lastX) < 5.5) {
+                continue;
+              }
+            }
+            if (!this.coloredDots[color]) {
+              this.coloredDots[color] = [[x,y-this.offsetTop]];
+            }
+            else {
+              this.coloredDots[color].push([x,y-this.offsetTop]);
+            }
+            if (!this.dirtyDots[y-this.offsetTop]) {
+              this.dirtyDots[y-this.offsetTop] = [x];
+            }
+            else {
+              this.dirtyDots[y-this.offsetTop].push(x);
+            }
+            this.dirtyDotsZone[0] = Math.min(this.dirtyDotsZone[0],x);
+            this.dirtyDotsZone[1] = Math.max(this.dirtyDotsZone[1],x);
+            this.dirtyDotsZone[2] = Math.min(this.dirtyDotsZone[2],y - this.offsetTop);
+            this.dirtyDotsZone[3] = Math.max(this.dirtyDotsZone[3],y - this.offsetTop);
           }
           else {
             break;
@@ -1385,9 +1390,26 @@ CanvasManager.prototype = {
                                           this.dotsTimings[groupId]);
           for (; i >= 0; i--) {
             if (this.dotsTimings[groupId][i] >= this.firstVisibleTime) {
-              this.drawDot((this.dotsTimings[groupId][i] - this.firstVisibleTime)/this.scale,
-                           this.groupedData[groupId].y,
-                           this.groupedData[groupId].id);
+              let x = (this.dotsTimings[groupId][i] - this.firstVisibleTime)/this.scale,
+                  y = this.groupedData[groupId].y,
+                  color = COLOR_LIST[this.groupedData[groupId].id%12];
+              if (this.offsetTop > y || y - this.offsetTop > this.height ||
+                  x < 0 || x > this.width) {
+                continue;
+              }
+              if (this.continuousInLine && this.dirtyDots[y - this.offsetTop]) {
+                let tmp = this.dirtyDots[y - this.offsetTop];
+                let lastX = tmp[tmp.length - 1];
+                if (Math.abs(x - lastX) < 5.5) {
+                  continue;
+                }
+              }
+              if (!this.coloredDots[color]) {
+                this.coloredDots[color] = [[x,y-this.offsetTop]];
+              }
+              else {
+                this.coloredDots[color].push([x,y-this.offsetTop]);
+              }
             }
             // No need of going down further as time is already below visible state.
             else {
@@ -1397,6 +1419,7 @@ CanvasManager.prototype = {
         }
       }
 
+      this.drawDots();
       if (this.dotsDrawn == 0 && !this.scrolling && this.offsetTime == 0) {
         this.waitForDotData = true;
       }
@@ -1420,7 +1443,7 @@ CanvasManager.prototype = {
       }
     }
     this.forcePaint = false;
-    this.window.mozRequestAnimationFrame(this.render);
+    this.window.setTimeout(this.render, 30);
   },
 
   /**
@@ -1436,6 +1459,6 @@ CanvasManager.prototype = {
       this.dirtyDots = this.dirtyZone = this.waitForDotData = this.waitForLineData =
       this.id = this.startTime = this.stopTime = this.timeFrozen = this.offsetTime =
       this.scrollDistance = this.globalTiming = this.globalGroup =
-      this.continuousInLine = null;
+      this.continuousInLine = this.dirtyDotsZone = null;
   }
 };
