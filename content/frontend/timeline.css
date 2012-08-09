@@ -615,8 +615,8 @@
 }
 
 .property-line {
-  margin: 0px;
   padding: 0px;
+  margin: 0px;
   width: auto;
 }
 
@@ -629,6 +629,10 @@
 
 .property-line > td:first-child {
   width: auto;
+}
+
+.property-line > td:first-child > label {
+  margin: 0px 0px 0px 4px !important;
 }
 
 .property-line > td:last-child {
@@ -655,6 +659,15 @@
 
 .property-heading {
   color: rgb(3,101,151);
+}
+
+.detailed-heading > label {
+  margin: 0px 0px 0px 4px !important;
+  padding: 0px !important
+}
+
+.detailed-property-line > td:first-child > label {
+  margin: 0px 0px 0px 16px !important;
 }
 
 #detailbox-button-container, #property-detail-button-container {

@@ -486,9 +486,9 @@ TimelineView.prototype = {
       let clientHeight = this._frame.height.replace("px", "")*1 - 32;
       let height = Math.floor(Math.max(20, clientHeight * clientHeight /
                                            scrollHeight.value));
-      this.canvasScrollbar.style.height = (height - 1) + "px";
+      this.canvasScrollbar.style.height = (height - 2) + "px";
       this.scrollScale = (clientHeight - height) /
-                         (scrollHeight.value - clientHeight);
+                         (scrollHeight.value + 2 - clientHeight);
       this.canvasScrollbar.style.top =
         Math.floor(32 + y.value * this.scrollScale) + "px";
     }
@@ -839,7 +839,8 @@ TimelineView.prototype = {
     this.detailBox.setAttribute("visible", false);
     this.detailBox.setAttribute("pinned", false);
     this._canvas.width = this.$("timeline-content").boxObject.width -
-                         this.producersPane.boxObject.width
+                         this.producersPane.boxObject.width;
+    this.detailBoxOpened = false;
     this.updateScrollbar();
     this._canvas.scale = (this._canvas.lastVisibleTime -
                           this._canvas.firstVisibleTime) /
@@ -957,19 +958,23 @@ TimelineView.prototype = {
         else {
           let headingRow = this._frameDoc.createElementNS(HTML, "tr");
           let headingCell = this._frameDoc.createElementNS(HTML, "td");
-          headingCell.textContent = this.producerInfoList[
-                                     Timeline.data[id].producer
-                                   ].details[property].name;
+          let headingLabel = this._frameDoc.createElement("label");
+          headingLabel.setAttribute("value", this.producerInfoList[
+                                               Timeline.data[id].producer
+                                             ].details[property].name);
+          headingCell.appendChild(headingLabel);
           headingCell.setAttribute("colspan", 2);
           headingCell.setAttribute("class", "detailed-heading");
           headingRow.appendChild(headingCell);
           table.appendChild(headingRow);
+          let anythingPresent = false;
           for (let subProp in this.producerInfoList[
                                 Timeline.data[id].producer
                               ].details[property].items) {
             if (Timeline.data[id].details[property][subProp] == null){
               continue;
             }
+            anythingPresent = true;
             let {name:name, valueLabel:valueLabel} =
               this.getPropertyInfo(Timeline.data[id].producer,
                                    property,
@@ -987,8 +992,11 @@ TimelineView.prototype = {
               td.appendChild(valueLabel);
               propRow.appendChild(td);
             }
-            propRow.setAttribute("class", "property-line");
+            propRow.setAttribute("class", "detailed-property-line");
             table.appendChild(propRow);
+          }
+          if (!anythingPresent) {
+            table.removeChild(headingRow);
           }
         }
       }

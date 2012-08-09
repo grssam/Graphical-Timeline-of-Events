@@ -1260,9 +1260,9 @@ CanvasManager.prototype = {
         this.ctxO.font = "16px sans-serif";
         this.ctxO.lineWidth = 0.5;
         this.mousePointerAt.time = this.getTimeForXPixels(this.mousePointerAt.x);
-        this.ctxO.fillRect(this.mousePointerAt.x,1,1,32);
+        this.ctxO.fillRect(this.mousePointerAt.x,0,1,32);
         this.ctxO.fillText(Math.floor(this.mousePointerAt.time - this.startTime) + " ms",
-                           this.mousePointerAt.x + 2, 29);
+                           this.mousePointerAt.x + 2, 28);
         this.lastMouseX = this.mousePointerAt.x;
       }
     }
