@@ -473,7 +473,6 @@ TimelineView.prototype = {
   {
     let scrollHeight={}, y={};
     this.producersPane.scrollBoxObject.getScrolledSize({},scrollHeight);
-    scrollHeight.value += 4;
     this.producersPane.scrollBoxObject.getPosition({},y);
     this.canvasScrollbar.style.right = (this.detailBoxOpened?
                                         this.detailBox.boxObject.width + 5:

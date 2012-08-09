@@ -784,6 +784,11 @@ let NetworkProducer =
       eventType = DataSink.NormalizedEventType.CONTINUOUS_EVENT_MID;
     }
 
+    let totalTime = 0;
+    for each (let time in aHttpActivity.entry.timings) {
+      totalTime += time;
+    }
+
     DataSink.addEvent("NetworkProducer", {
       type: eventType,
       name: aHttpActivity.entry.request.method.toUpperCase() + " " +
@@ -794,6 +799,7 @@ let NetworkProducer =
       details: {
         /* tabID: tabId, */
         startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first/1000,
+        totalTime: totalTime,
         timings: aHttpActivity.entry.timings,
         request: {
           method: aHttpActivity.entry.request.method,
@@ -1019,8 +1025,9 @@ let producerInfo = {
   // "propertyName": {name: "display name", type: "boolean", values:{true: "Yes", false: "No"}]
   details: {
     startTime: {name: "Start Time", type: "date"},
+    totalTime: {name: "Total Time", type: "ms"},
     timings: {
-      name: "Timings",
+      name: "Total time Breakdown",
       type: "nested",
       items: {
         blocked: {name: "Blocking", type: "ms"},
