@@ -483,8 +483,8 @@ TimelineView.prototype = {
     else if (width.value > this.producersPane.boxObject.height) {
       this.canvasScrollbar.style.opacity = 1;
       let clientHeight = this.producersPane.boxObject.height;
-      let height = Math.floor(Math.max(20, clientHeight * clientHeight /width.value));
-      this.canvasScrollbar.style.height = height + "px";
+      let height = Math.floor(Math.max(20, clientHeight * clientHeight / width.value));
+      this.canvasScrollbar.style.height = (height - 4) + "px";
       this.scrollScale = (clientHeight - height) /
                          (width.value - clientHeight);
       this.canvasScrollbar.style.top =
