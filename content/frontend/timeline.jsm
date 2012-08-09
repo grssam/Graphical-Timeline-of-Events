@@ -103,6 +103,7 @@ function TimelineView(aChromeWindow) {
   this.closeDetailBox = this.closeDetailBox.bind(this);
   this.closePropertyDetailBox = this.closePropertyDetailBox.bind(this);
   this.handleDetailBoxResize = this.handleDetailBoxResize.bind(this);
+  this.updateScrollbar = this.updateScrollbar.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
   this._onDragStart = this._onDragStart.bind(this);
@@ -234,7 +235,7 @@ TimelineView.prototype = {
     urlLabel.setAttribute("flex", "0");
     urlLabel.setAttribute("crop", "center");
     featureBox.appendChild(urlLabel);
-    this.updateScrollbar();
+    this._window.setTimeout(this.updateScrollbar, 100);
   },
 
   /**
@@ -470,23 +471,25 @@ TimelineView.prototype = {
    */
   updateScrollbar: function TV_updateScrollbar(aPositionOnly)
   {
-    let width={}, y={};
-    this.producersPane.scrollBoxObject.getScrolledSize({},width);
+    let scrollHeight={}, y={};
+    this.producersPane.scrollBoxObject.getScrolledSize({},scrollHeight);
+    scrollHeight.value += 4;
     this.producersPane.scrollBoxObject.getPosition({},y);
     this.canvasScrollbar.style.right = (this.detailBoxOpened?
                                         this.detailBox.boxObject.width + 5:
-                                        0) + "px";
+                                        5) + "px";
     if (aPositionOnly) {
       this.canvasScrollbar.style.top =
         Math.floor(32 + y.value * this.scrollScale) + "px";
     }
-    else if (width.value > this.producersPane.boxObject.height) {
+    else if (scrollHeight.value > this.producersPane.boxObject.height) {
       this.canvasScrollbar.style.opacity = 1;
-      let clientHeight = this.producersPane.boxObject.height;
-      let height = Math.floor(Math.max(20, clientHeight * clientHeight / width.value));
-      this.canvasScrollbar.style.height = (height - 4) + "px";
+      let clientHeight = this._frame.height.replace("px", "")*1 - 32;
+      let height = Math.floor(Math.max(20, clientHeight * clientHeight /
+                                           scrollHeight.value));
+      this.canvasScrollbar.style.height = (height - 1) + "px";
       this.scrollScale = (clientHeight - height) /
-                         (width.value - clientHeight);
+                         (scrollHeight.value - clientHeight);
       this.canvasScrollbar.style.top =
         Math.floor(32 + y.value * this.scrollScale) + "px";
     }
@@ -838,6 +841,7 @@ TimelineView.prototype = {
     this.detailBox.setAttribute("pinned", false);
     this._canvas.width = this.$("timeline-content").boxObject.width -
                          this.producersPane.boxObject.width
+    this.updateScrollbar();
     this._canvas.scale = (this._canvas.lastVisibleTime -
                           this._canvas.firstVisibleTime) /
                          this._canvas.width;
@@ -1392,6 +1396,7 @@ TimelineView.prototype = {
     this._frameDoc.removeEventListener("click", this._onDetailBoxResizeStop, true);
     this._canvas.width = this.$("canvas-container").boxObject.width -
                          (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
+    this.updateScrollbar();
     this.handleDetailBoxResize();
   },
 
