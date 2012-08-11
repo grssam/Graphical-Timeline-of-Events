@@ -364,10 +364,6 @@
  * Producers option menu
  */
 
-.producer-options-menu > .toolbarbutton-menu-dropmarker {
-  display: none;
-}
-
 .producer-options-menu {
   list-style-image: url("images/devtools-dropdown.png");
   -moz-image-region: rect(0px 16px 16px 0px);
@@ -386,7 +382,7 @@
   box-shadow: none !important;
 }
 
-.producer-options-menu[open] {
+.producer-options-menu[checked] {
   -moz-image-region: rect(0px 32px 16px 16px);
 }
 

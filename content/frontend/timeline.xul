@@ -95,5 +95,5 @@
       <html:div id="timeline-highlighter" class="absolute" />
       <html:div id="timeline-scrollbar" class="absolute" />
     </hbox>
-    </hbox>
+  </hbox>
 </window>

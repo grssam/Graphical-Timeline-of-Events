@@ -257,7 +257,7 @@ TimelineView.prototype = {
       return;
     }
     this.producerInfoList = aProducerInfoList;
-
+    let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
     // Iterating over each producer and adding a vbox containing producer name
     // and its features.
     for each (let producer in this.producerInfoList) {
@@ -307,17 +307,21 @@ TimelineView.prototype = {
       nameBox.appendChild(spacer);
       nameLabel.addEventListener("click", this.toggleProducerBox, true);
       spacer.addEventListener("click", this.toggleProducerBox, true);
-      let optionDropDown = this._frameDoc.createElement("toolbarbutton");
+      let optionDropDown = this._frameDoc.createElementNS(XUL, "toolbarbutton");
       optionDropDown.setAttribute("class", "devtools-toolbarbutton producer-options-menu");
-      optionDropDown.setAttribute("type", "menu");
-      let optionsPopup = this._frameDoc.createElement("menupopup");
+      optionDropDown.setAttribute("producerId", producer.id);
+      optionDropDown.setAttribute("type", "checkbox");
+      let optionsPopup = this._frameDoc.createElementNS(XUL, "menupopup");
       optionsPopup.setAttribute("producerId", producer.id);
       optionsPopup.setAttribute("id", producer.id + "-options-popup");
       optionsPopup.setAttribute("position", "after_start");
-      optionsPopup.addEventListener("popupshowing",
-                                    this.showOptionsForProducer.bind(this, producer.id),
-                                    true);
-      optionDropDown.appendChild(optionsPopup);
+      optionsPopup.addEventListener("popuphiding", function() {
+        optionDropDown.removeAttribute("checked");
+      }, true);
+      this.$("timeline-content").parentNode.appendChild(optionsPopup);
+      optionDropDown.addEventListener("command", function(event) {
+        this.toggleOptionsForProducer(event, event.target.getAttribute("producerId"));
+      }.bind(this), true);
       nameBox.appendChild(optionDropDown);
       producerBox.appendChild(nameBox);
 
@@ -328,20 +332,41 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       featureBox.addEventListener("click", this.handleGroupClick, true);
       for each (let feature in producer.features) {
-        let featureCheckbox = this._frameDoc.createElement("label");
-        featureCheckbox.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
-        featureCheckbox.setAttribute("flex", "1");
-        featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
-        featureCheckbox.setAttribute("class", "producer-feature");
-        featureCheckbox.setAttribute("value", feature);
+        let featureLabel = this._frameDoc.createElement("label");
+        featureLabel.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
+        featureLabel.setAttribute("flex", "1");
+        featureLabel.setAttribute("groupId", feature.replace(" ", "_"));
+        featureLabel.setAttribute("class", "producer-feature");
+        featureLabel.setAttribute("value", feature);
         if (TimelinePreferences.activeFeatures
                                .indexOf(producer.id + ":" + feature) == -1) {
-          featureCheckbox.setAttribute("enabled", false);
+          featureLabel.setAttribute("enabled", false);
         }
         else {
-          featureCheckbox.setAttribute("enabled", true);
+          featureLabel.setAttribute("enabled", true);
         }
-        featureBox.appendChild(featureCheckbox);
+        featureBox.appendChild(featureLabel);
+        // Adding the checkbox in the options popup
+        let featureCheckbox = this._frameDoc.createElement("menuitem");
+        featureCheckbox.setAttribute("label", feature);
+        featureCheckbox.setAttribute("type", "checkbox");
+        featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
+        featureCheckbox.addEventListener("command", this.toggleFeature, true);
+        if (TimelinePreferences.activeFeatures
+                               .indexOf(producer.id + ":" + feature) == -1) {
+          try {
+            featureCheckbox.removeAttribute("checked");
+          } catch (ex) {}
+        }
+        else {
+          featureCheckbox.setAttribute("checked", true);
+        }
+        optionsPopup.appendChild(featureCheckbox);
+      }
+      if (!producer.features || producer.features.length == 0) {
+        let emptyLabel = this._frameDoc.createElement("menuitem");
+        emptyLabel.setAttribute("label", "No option to show");
+        optionsPopup.appendChild(emptyLabel);
       }
       producerBox.appendChild(featureBox);
 
@@ -909,28 +934,24 @@ TimelineView.prototype = {
   },
 
   /**
-   * Populates the options drop down menu popup for the corresponding producer.
+   * Toggles the options drop down menu popup for the corresponding producer.
    *
    * @param string aProducerId
    *        Id of the producer for which the popup is to be populated.
    */
-  showOptionsForProducer: function TV_showOptionsForProducer(aProducerId)
+  toggleOptionsForProducer: function TV_toggleOptionsForProducer(aEvent, aProducerId)
   {
     let popup = this.$(aProducerId + "-options-popup");
-    if (popup.firstChild) {
-      while (popup.firstChild) {
-        popup.removeChild(popup.firstChild);
-      }
+    if (popup.state == "open") {
+      popup.hidePopup();
+      return;
     }
+    popup.openPopup(aEvent.target , "after_start");
     let producer = Timeline.producerInfoList[aProducerId];
-    for each (let feature in producer.features) {
-      let featureCheckbox = this._frameDoc.createElement("menuitem");
-      featureCheckbox.setAttribute("label", feature);
-      featureCheckbox.setAttribute("type", "checkbox");
-      featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
-      featureCheckbox.addEventListener("command", this.toggleFeature, true);
-      if (TimelinePreferences.activeFeatures
-                             .indexOf(aProducerId + ":" + feature) == -1) {
+    let featureCheckbox = popup.firstChild;
+    while (featureCheckbox) {
+      if (TimelinePreferences.activeFeatures.indexOf(
+            aProducerId + ":" + featureCheckbox.getAttribute("label")) == -1) {
         try {
           featureCheckbox.removeAttribute("checked");
         } catch (ex) {}
@@ -938,12 +959,7 @@ TimelineView.prototype = {
       else {
         featureCheckbox.setAttribute("checked", true);
       }
-      popup.appendChild(featureCheckbox);
-    }
-    if (!producer.features || producer.features.length == 0) {
-      let emptyLabel = this._frameDoc.createElement("menuitem");
-      emptyLabel.setAttribute("label", "No option to show");
-      popup.appendChild(emptyLabel);
+      featureCheckbox = featureCheckbox.nextSibling;
     }
   },
 
