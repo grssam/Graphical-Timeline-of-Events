@@ -801,6 +801,7 @@ let NetworkProducer =
         startTime: aHttpActivity.timings[aHttpActivity.stages[0]].first/1000,
         totalTime: totalTime,
         timings: aHttpActivity.entry.timings,
+        stages: aHttpActivity.stages,
         request: {
           method: aHttpActivity.entry.request.method,
           url: aHttpActivity.entry.request.url,

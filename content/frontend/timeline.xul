@@ -78,6 +78,9 @@
           <spacer flex="1" />
           <label value="&timelineUI.noEventSelected;" collapsed="true"/>
           <spacer flex="1" />
+          <label class="text-link"
+                 value="[+]"
+                 collapsed="true" />
           <toolbarbutton id="detailbox-closebutton"
                          class="devtools-closebutton"
                          tooltiptext="&timelineUI.closeButton.tooltip;" />

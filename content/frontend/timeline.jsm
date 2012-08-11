@@ -5,6 +5,7 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource://gre/modules/NetworkPanel.jsm");
 
 var EXPORTED_SYMBOLS = ["Timeline"];
 
@@ -961,6 +962,39 @@ TimelineView.prototype = {
   },
 
   /**
+   * Opens a NetworkPanel for the network producer event.
+   *
+   * @param nsIDOMNode aNode
+   *        The node you want the panel to be anchored to.
+   * @param |Normalized Event Data| aData
+   *        The data from which aHttpActivity would be build.
+   */
+  _showNetworkPanel: function TV__showNetworkPanel(aNode, aData)
+  {
+    let httpActivity = {
+      log: {
+        entries: [{
+          startedDateTime: new Date(aData.details.startTime).toISOString(),
+          request: aData.details.request,
+          response: aData.details.response,
+          timings: aData.details.timings
+        }],
+      },
+      meta: {
+        stages: aData.details.stages,
+      }
+    };
+    // Adding cookie entry as null
+    httpActivity.log.entries[0].response.cookies = [];
+    httpActivity.log.entries[0].request.cookies = [];
+    let netPanel = new NetworkPanel(this.$("timeline-content").parentNode, httpActivity);
+
+    let panel = netPanel.panel;
+    panel.openPopup(aNode, "after_pointer", 0, 0, false, false);
+    panel.sizeTo(450, 500);
+  },
+
+  /**
    * Populates the details pane with the information of the event corresponding
    * to the geoup id and data id provided.
    *
@@ -997,6 +1031,16 @@ TimelineView.prototype = {
         this.detailBox.removeChild(this.detailBox.lastChild);
       }
     } catch (ex) {}
+    /* Hard coded starts */
+    if (Timeline.data[id].producer == "NetworkProducer") {
+      let more = this.$("detailbox-closebutton").previousSibling;
+      more.collapsed = false;
+      more.onclick = this._showNetworkPanel.bind(this, more, Timeline.data[id]);
+    }
+    else {
+      this.$("detailbox-closebutton").previousSibling.collapsed = true;
+    }
+    /* Hard coded ends */
     let table = this._frameDoc.createElementNS(HTML, "table");
     table.setAttribute("id", "detailbox-table");
     let topCell = this._frameDoc.createElementNS(HTML, "th");
