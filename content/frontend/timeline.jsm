@@ -1385,6 +1385,12 @@ TimelineView.prototype = {
                                                         ), true);
           break;
 
+        case "rect":
+          value = "rect(" + aValue.left.toFixed(1) + ", " + aValue.top.toFixed(1) +
+                  ", " + aValue.width.toFixed(1) + ", " + aValue.height.toFixed(1) + ")";
+          valueLabel.setAttribute("value", value);
+          break;
+
         default:
           return null;
       }

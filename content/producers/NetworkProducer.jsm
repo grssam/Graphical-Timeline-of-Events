@@ -807,17 +807,19 @@ let NetworkProducer =
           httpVersion: aHttpActivity.entry.request.httpVersion,
           headers: aHttpActivity.entry.request.headers,
           headersSize: aHttpActivity.entry.request.headersSize,
-          bodySize:aHttpActivity.entry.request.bodySize,
-          postData: aHttpActivity.entry.request.postData,
+          //bodySize:aHttpActivity.entry.request.bodySize,
+          //postData: aHttpActivity.entry.request.postData,
         },
         response: {
           status: aHttpActivity.entry.response.status,
           statusText: aHttpActivity.entry.response.statusText,
           headers: aHttpActivity.entry.response.headers,
           content: aHttpActivity.entry.response.content,
-          redirectURL: aHttpActivity.entry.response.redirectURL,
+          redirectURL: aHttpActivity.entry.response.redirectURL != ""?
+                       aHttpActivity.entry.response.redirectURL:
+                       null,
           headersSize: aHttpActivity.entry.response.headersSize,
-          bodySize: aHttpActivity.entry.response.bodySize,
+          //bodySize: aHttpActivity.entry.response.bodySize,
         },
         charset: aHttpActivity.charset,
       }
@@ -1027,7 +1029,7 @@ let producerInfo = {
     startTime: {name: "Start Time", type: "date"},
     totalTime: {name: "Total Time", type: "ms"},
     timings: {
-      name: "Total time Breakdown",
+      name: "Time Breakdown",
       type: "nested",
       items: {
         blocked: {name: "Blocking", type: "ms"},
@@ -1048,8 +1050,8 @@ let producerInfo = {
         httpVersion: {name: "HTTP Version", type: "string"},
         headers: {name: "Headers", type: "object"},
         headersSize: {name: "Header Size", type: "number"},
-        bodySize: {name: "Body Size", type: "number"},
-        postData: {name: "Post Data", type: "string"},
+        //bodySize: {name: "Body Size", type: "number"},
+        //postData: {name: "Post Data", type: "string"},
       }
     },
     response: {
@@ -1062,7 +1064,7 @@ let producerInfo = {
         content: {name: "Content", type: "string"},
         redirectURL: {name: "Redirect URL", type: "url"},
         headersSize: {name: "Header Size", type: "number"},
-        bodySize: {name: "Body Size", type: "number"},
+        //bodySize: {name: "Body Size", type: "number"},
       }
     },
     charset: {name: "Character Set", type: "string"},

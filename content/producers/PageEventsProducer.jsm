@@ -391,6 +391,9 @@ let PageEventsProducer =
           case "DragEvent":
             eventDetail.data = aEvent.dataTransfer.getData("text/plain");
             break;
+
+          case "PaintEvent":
+            eventDetail.rect = aEvent.boundingClientRect;
         }
       }
     }
@@ -467,6 +470,7 @@ let producerInfo = {
     screenY: {name: "Screen Y", type: "px"},
     clientX: {name: "Client X", type: "px"},
     clientY: {name: "Client Y", type: "px"},
+    rect: {name: "Painted Box", type: "rect"},
     shiftKey: {name: "Shift", type: "string"},
     altKey: {name: "Alt", type: "string"},
     metaKey: {name: "Meta", type: "string"},
