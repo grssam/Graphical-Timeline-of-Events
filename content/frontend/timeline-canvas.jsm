@@ -175,7 +175,14 @@ CanvasManager.prototype = {
       let feature = producerBox.firstChild.nextSibling.firstChild;
       while (feature) {
         if (feature.getAttribute("groupId") == aGroupId) {
-          return (feature.boxObject.y + feature.boxObject.height/2 - 34);
+          if (feature.hasAttribute("enabled") &&
+              feature.getAttribute("enabled") == "false") {
+            return (producerBox.firstChild.boxObject.y +
+                    producerBox.firstChild.boxObject.height/2 - 34);
+          }
+          else {
+            return (feature.boxObject.y + feature.boxObject.height/2 - 34);
+          }
         }
         feature = feature.nextSibling;
       }

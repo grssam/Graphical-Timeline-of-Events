@@ -42,8 +42,7 @@ pref.defaults = {
   compactMode: false,
   restartOnReload: false,
   activeProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
-  activeFeatures: JSON.stringify(["PageEventsProducer:LoadEvents",
-                                    "PageEventsProducer:MouseEvents"]),
+  activeFeatures: JSON.stringify(["PageEventsProducer:PageEvent"]),
   visibleProducers: JSON.stringify(["NetoworkProducer", "PageEventsProducer"]),
 };
 

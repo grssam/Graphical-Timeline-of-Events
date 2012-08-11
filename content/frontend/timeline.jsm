@@ -191,14 +191,12 @@ TimelineView.prototype = {
         let feature = producerBox.firstChild.nextSibling.firstChild;
         while (feature) {
           if (aMessage.enabledProducers[id].features
-                      .indexOf(feature.getAttribute("label")) == -1) {
-            try {
-              feature.removeAttribute("checked");
-            } catch (ex) {}
+                      .indexOf(feature.getAttribute("value")) == -1) {
+            feature.setAttribute("enabled", false);
           }
           else {
-            enabledFeatures.push(id + ":" + feature.getAttribute("label"));
-            feature.setAttribute("checked", true);
+            enabledFeatures.push(id + ":" + feature.getAttribute("value"));
+            feature.setAttribute("enabled", true);
           }
           feature = feature.nextSibling;
         }
@@ -293,6 +291,13 @@ TimelineView.prototype = {
       let nameBox = this._frameDoc.createElement("hbox");
       nameBox.setAttribute("class", "producer-name-box");
       nameBox.setAttribute("producerId", producer.id);
+      let enableButton = this._frameDoc.createElement("checkbox");
+      enableButton.setAttribute("class", "devtools-checkbox");
+      if (TimelinePreferences.activeProducers.indexOf(producer.id) != -1) {
+        enableButton.setAttribute("checked", true);
+      }
+      enableButton.addEventListener("command", this.toggleProducer, true);
+      nameBox.appendChild(enableButton);
       let nameLabel = this._frameDoc.createElement("label");
       nameLabel.setAttribute("class", "producer-name-label");
       nameLabel.setAttribute("value", producer.name);
@@ -302,13 +307,18 @@ TimelineView.prototype = {
       nameBox.appendChild(spacer);
       nameLabel.addEventListener("click", this.toggleProducerBox, true);
       spacer.addEventListener("click", this.toggleProducerBox, true);
-      let enableButton = this._frameDoc.createElement("checkbox");
-      enableButton.setAttribute("class", "devtools-checkbox");
-      if (TimelinePreferences.activeProducers.indexOf(producer.id) != -1) {
-        enableButton.setAttribute("checked", true);
-      }
-      enableButton.addEventListener("command", this.toggleProducer, true);
-      nameBox.appendChild(enableButton);
+      let optionDropDown = this._frameDoc.createElement("toolbarbutton");
+      optionDropDown.setAttribute("class", "devtools-toolbarbutton producer-options-menu");
+      optionDropDown.setAttribute("type", "menu");
+      let optionsPopup = this._frameDoc.createElement("menupopup");
+      optionsPopup.setAttribute("producerId", producer.id);
+      optionsPopup.setAttribute("id", producer.id + "-options-popup");
+      optionsPopup.setAttribute("position", "after_start");
+      optionsPopup.addEventListener("popupshowing",
+                                    this.showOptionsForProducer.bind(this, producer.id),
+                                    true);
+      optionDropDown.appendChild(optionsPopup);
+      nameBox.appendChild(optionDropDown);
       producerBox.appendChild(nameBox);
 
       // The features box contains list of each feature and a checkbox to toggle
@@ -318,22 +328,18 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       featureBox.addEventListener("click", this.handleGroupClick, true);
       for each (let feature in producer.features) {
-        let featureCheckbox = this._frameDoc.createElement("checkbox");
+        let featureCheckbox = this._frameDoc.createElement("label");
         featureCheckbox.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
-        featureCheckbox.setAttribute("class", "devtools-checkbox");
         featureCheckbox.setAttribute("flex", "1");
-        featureCheckbox.setAttribute("label", feature);
         featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
-        featureCheckbox.addEventListener("command", this.toggleFeature, true);
+        featureCheckbox.setAttribute("class", "producer-feature");
+        featureCheckbox.setAttribute("value", feature);
         if (TimelinePreferences.activeFeatures
                                .indexOf(producer.id + ":" + feature) == -1) {
-          try {
-            featureCheckbox.removeAttribute("checked");
-          }
-          catch (e) {}
+          featureCheckbox.setAttribute("enabled", false);
         }
         else {
-          featureCheckbox.setAttribute("checked", true);
+          featureCheckbox.setAttribute("enabled", true);
         }
         featureBox.appendChild(featureCheckbox);
       }
@@ -515,8 +521,8 @@ TimelineView.prototype = {
           message.enabledProducers[id] = {features: []};
           let feature = producerBox.firstChild.nextSibling.firstChild;
           while (feature) {
-            if (feature.hasAttribute("checked")) {
-              message.enabledProducers[id].features.push(feature.getAttribute("label"));
+            if (feature.getAttribute("enabled") == "true") {
+              message.enabledProducers[id].features.push(feature.getAttribute("value"));
             }
             feature = feature.nextSibling;
           }
@@ -618,17 +624,35 @@ TimelineView.prototype = {
    */
   toggleFeature: function TV_toggleFeature(aEvent)
   {
-    if (!this.recording) {
-      return;
-    }
     let target = aEvent.target;
     let linkedProducerId = target.parentNode.getAttribute("producerId");
     let feature = target.getAttribute("label");
     if (target.hasAttribute("checked")) {
-      Timeline.enableFeatures(linkedProducerId, [feature]);
+      if (this.recording) {
+        Timeline.enableFeatures(linkedProducerId, [feature]);
+      }
+      if (TimelinePreferences.activeFeatures
+                             .indexOf(linkedProducerId + ":" + feature) == -1) {
+        let activeFeatures = TimelinePreferences.activeFeatures;
+        activeFeatures.push(linkedProducerId + ":" + feature);
+        TimelinePreferences.activeFeatures = activeFeatures;
+      }
+      this.$(target.getAttribute("groupId") + "-groupbox").setAttribute("enabled", true);
     }
     else {
-      Timeline.disableFeatures(linkedProducerId, [feature]);
+      if (this.recording) {
+        Timeline.disableFeatures(linkedProducerId, [feature]);
+      }
+      if (TimelinePreferences.activeFeatures
+                             .indexOf(linkedProducerId + ":" + feature) != -1) {
+        let activeFeatures = TimelinePreferences.activeFeatures;
+        activeFeatures.splice(activeFeatures.indexOf(linkedProducerId + ":" + feature), 1);
+        TimelinePreferences.activeFeatures = activeFeatures;
+      }
+      this.$(target.getAttribute("groupId") + "-groupbox").setAttribute("enabled", false);
+    }
+    if (this.canvasStarted) {
+      this._canvas.updateGroupOffset();
     }
   },
 
@@ -664,12 +688,12 @@ TimelineView.prototype = {
     if (target.hasAttribute("checked")) {
       let features = [];
       let featureBox = target.parentNode.parentNode.lastChild;
-      let checkbox = featureBox.firstChild;
-      while (checkbox) {
-        if (checkbox.hasAttribute("checked")) {
-          features.push(checkbox.getAttribute("label"));
+      let feature = featureBox.firstChild;
+      while (feature) {
+        if (feature.getAttribute("enabled") == "true") {
+          features.push(feature.getAttribute("value"));
         }
-        checkbox = checkbox.nextSibling;
+        feature = feature.nextSibling;
       }
       Timeline.startProducer(producerId, features);
     }
@@ -786,13 +810,16 @@ TimelineView.prototype = {
    */
   handleGroupClick: function TV_handleGroupClick(aEvent)
   {
+    if (!this.canvasStarted) {
+      return;
+    }
     let group = aEvent.originalTarget;
-    if (group.localName == "label" && group.hasAttribute("groupId")) {
+    if (!group.hasAttribute("enabled") && group.hasAttribute("groupId")) {
       let groupId = group.getAttribute("groupId");
       let time = this._canvas.groupedData[groupId].timestamps[0];
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
       this._canvas.displayDetailedData(this.width*0.45);
-      this.showDetailedInfoFor([], this._canvas.getGroupForTime(groupId, time));
+      this.showDetailedInfoFor([groupId], this._canvas.getGroupForTime(groupId, time));
       this._canvas.highlightGroup([groupId], this._canvas.getGroupForTime(groupId, time));
       this.detailBox.setAttribute("pinned", true);
       let width = this.$("timeline-content").boxObject.width -
@@ -878,6 +905,45 @@ TimelineView.prototype = {
   {
     if (this.canvasStarted) {
       this._canvas.mousePointerAt = {x: 0, time: 0};
+    }
+  },
+
+  /**
+   * Populates the options drop down menu popup for the corresponding producer.
+   *
+   * @param string aProducerId
+   *        Id of the producer for which the popup is to be populated.
+   */
+  showOptionsForProducer: function TV_showOptionsForProducer(aProducerId)
+  {
+    let popup = this.$(aProducerId + "-options-popup");
+    if (popup.firstChild) {
+      while (popup.firstChild) {
+        popup.removeChild(popup.firstChild);
+      }
+    }
+    let producer = Timeline.producerInfoList[aProducerId];
+    for each (let feature in producer.features) {
+      let featureCheckbox = this._frameDoc.createElement("menuitem");
+      featureCheckbox.setAttribute("label", feature);
+      featureCheckbox.setAttribute("type", "checkbox");
+      featureCheckbox.setAttribute("groupId", feature.replace(" ", "_"));
+      featureCheckbox.addEventListener("command", this.toggleFeature, true);
+      if (TimelinePreferences.activeFeatures
+                             .indexOf(aProducerId + ":" + feature) == -1) {
+        try {
+          featureCheckbox.removeAttribute("checked");
+        } catch (ex) {}
+      }
+      else {
+        featureCheckbox.setAttribute("checked", true);
+      }
+      popup.appendChild(featureCheckbox);
+    }
+    if (!producer.features || producer.features.length == 0) {
+      let emptyLabel = this._frameDoc.createElement("menuitem");
+      emptyLabel.setAttribute("label", "No option to show");
+      popup.appendChild(emptyLabel);
     }
   },
 
@@ -1487,8 +1553,8 @@ TimelineView.prototype = {
       }
       let feature = producerBox.firstChild.nextSibling.firstChild;
       while (feature) {
-        if (feature.hasAttribute("checked")) {
-          activeFeatures.push(id + ":" + feature.getAttribute("label"));
+        if (feature.getAttribute("enabled") == "true") {
+          activeFeatures.push(id + ":" + feature.getAttribute("value"));
         }
         feature = feature.nextSibling;
       }
