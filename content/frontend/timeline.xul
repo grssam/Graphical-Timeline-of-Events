@@ -84,14 +84,6 @@
         </hbox>
         <html:div id="detailbox-splitter" class="absolute" />
       </vbox>
-      <vbox id="timeline-property-detail" class="absolute">
-        <hbox id="property-detail-button-container">
-          <spacer flex="1" />
-          <toolbarbutton id="property-detail-closebutton"
-                         class="devtools-closebutton"
-                         tooltiptext="&timelineUI.closeButton.tooltip;" />
-        </hbox>
-      </vbox>
       <html:div id="timeline-highlighter" class="absolute" />
       <html:div id="timeline-scrollbar" class="absolute" />
     </hbox>

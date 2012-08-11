@@ -101,7 +101,6 @@ function TimelineView(aChromeWindow) {
   this.zoomIn = this.zoom.bind(this, true);
   this.zoomOut = this.zoom.bind(this, false);
   this.closeDetailBox = this.closeDetailBox.bind(this);
-  this.closePropertyDetailBox = this.closePropertyDetailBox.bind(this);
   this.handleDetailBoxResize = this.handleDetailBoxResize.bind(this);
   this.updateScrollbar = this.updateScrollbar.bind(this);
   this.$ = this.$.bind(this);
@@ -138,7 +137,6 @@ TimelineView.prototype = {
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
     this.detailBox = this.$("timeline-detailbox");
-    this.propertyDetailBox = this.$("timeline-property-detail");
     this.producersPane = this.$("producers-pane");
     this.timeWindow = this.$("timeline-time-window");
     this.restartOnReload = this.$("restart-on-reload");
@@ -156,7 +154,6 @@ TimelineView.prototype = {
     this.$("zoom-in").addEventListener("command", this.zoomIn, true);
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
     this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
-    this.$("property-detail-closebutton").addEventListener("command", this.closePropertyDetailBox, true);
     this.closeButton.addEventListener("command", Timeline.destroy, true);
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
@@ -1088,34 +1085,128 @@ TimelineView.prototype = {
   },
 
   /**
-   * Displays the detailed property information in an overlay to details box.
+   * Creates an overlapping pane to show the JSON in a tabular form.
+   *
+   *   <vbox id="timeline-property-detail" class="absolute">
+   *     <hbox id="property-detail-button-container">
+   *       <hbox>
+   *         <label class="detail-levels" />
+   *       </hbox>
+   *       <spacer flex="1" />
+   *       <toolbarbutton id="property-detail-closebutton"
+   *                      class="devtools-closebutton"
+   *                      tooltiptext="&timelineUI.closeButton.tooltip;" />
+   *     </hbox>
+   *     <html:table />
+   *   </vbox>
    *
    * @param object aProperty
    *        { name, value} : the name and value of the property.
+   * @param [string] aLevels
+   *        The level heirarchy of the detail view.
    */
-  showPropertyDetails: function TV_showPropertyDetails(aProperty)
+  createNextLevelJSONView: function TV_createNextLevelJSONView(aProperty, aLevels)
   {
-    this.propertyDetailBox.setAttribute("visible", true);
-    this.propertyDetailBox.style.width = (this.detailBox.boxObject.width - 10) + "px";
-    let vbox = this._frameDoc.createElement("vbox");
-    vbox.setAttribute("id", "property-detail-info");
-    vbox.setAttribute("style", "padding: 0px 2px;");
-    let nameLabel = this._frameDoc.createElement("label");
-    nameLabel.setAttribute("value", aProperty.name);
-    let valueLabel = this._frameDoc.createElement("label");
-    valueLabel.textContent = JSON.stringify(aProperty.value);
-    vbox.appendChild(nameLabel);
-    vbox.appendChild(valueLabel);
-    this.propertyDetailBox.appendChild(vbox);
+    // Building the initial XUL
+    let propertyDetailBox = this._frameDoc.createElement("vbox");
+    propertyDetailBox.setAttribute("class", "absolute timeline-property-detail");
+    propertyDetailBox.style.width = (this.detailBox.boxObject.width - 10) + "px";
+    let hbox = this._frameDoc.createElement("hbox");
+    hbox.setAttribute("class", "property-detail-button-container");
+    let labelHBox = this._frameDoc.createElement("hbox");
+    labelHBox.setAttribute("flex", 1);
+    let close = this._frameDoc.createElement("toolbarbutton");
+    close.setAttribute("class", "devtools-closebutton");
+    close.setAttribute("tooltiptext", "Close");
+    hbox.appendChild(labelHBox);
+    hbox.appendChild(close);
+    let table = this._frameDoc.createElementNS(HTML, "table");
+    propertyDetailBox.appendChild(hbox);
+    propertyDetailBox.appendChild(table);
+    //Filling up the level labels
+    for each (let level in aLevels) {
+      let levelLabel = this._frameDoc.createElement("label");
+      levelLabel.setAttribute("class", "level-label");
+      levelLabel.setAttribute("value", level + " > ");
+      labelHBox.appendChild(levelLabel);
+    }
+    // Building up the table.
+    // Converting the object string to an object
+    let anythingPresent = false;
+    for each (let object in aProperty.value) {
+      let headingRow = this._frameDoc.createElementNS(HTML, "tr");
+      let headingCell = this._frameDoc.createElementNS(HTML, "td");
+      let bracketStart = this._frameDoc.createElement("label");
+      bracketStart.setAttribute("value", "{");
+      headingCell.appendChild(bracketStart);
+      headingCell.setAttribute("colspan", 2);
+      headingCell.setAttribute("class", "detailed-heading");
+      headingRow.appendChild(headingCell);
+      table.appendChild(headingRow);
+      anythingPresent = true;
+      for (let property in object) {
+        let propRow = this._frameDoc.createElementNS(HTML, "tr");
+        let nameLabel = this._frameDoc.createElement("label");
+        let valueLabel = this._frameDoc.createElement("label");
+        nameLabel.setAttribute("value", property + " :");
+        valueLabel.setAttribute("crop", "end");
+        if (typeof object[property] != "object") {
+          valueLabel.setAttribute("value", object[property]);
+          valueLabel.setAttribute("tooltiptext", object[property]);
+        }
+        else {
+          valueLabel.setAttribute("value", "Click to View");
+          valueLabel.setAttribute("class", "text-link");
+          aLevels.push(property);
+          valueLabel.addEventListener("click", this.createNextLevelJSONView
+                                                   .bind(this,
+                                                         {name: property, value: object[property]},
+                                                         aLevels
+                                                        ), true);
+        }
+        let (td = this._frameDoc.createElementNS(HTML, "td")) {
+          td.appendChild(nameLabel);
+          propRow.appendChild(td);
+        }
+        let (td = this._frameDoc.createElementNS(HTML, "td")) {
+          td.appendChild(valueLabel);
+          propRow.appendChild(td);
+        }
+        propRow.setAttribute("class", "detailed-property-line");
+        table.appendChild(propRow);
+      }
+      let endRow = this._frameDoc.createElementNS(HTML, "tr");
+      let endCell = this._frameDoc.createElementNS(HTML, "td");
+      let bracketEnd = this._frameDoc.createElement("label");
+      bracketEnd.setAttribute("value", "}");
+      endCell.appendChild(bracketEnd);
+      endCell.setAttribute("colspan", 2);
+      endCell.setAttribute("class", "detailed-heading");
+      endRow.appendChild(endCell);
+      table.appendChild(endRow);
+    }
+    if (!anythingPresent) {
+      let headingRow = this._frameDoc.createElementNS(HTML, "tr");
+      let headingCell = this._frameDoc.createElementNS(HTML, "td");
+      let emptyLabel = this._frameDoc.createElement("label");
+      emptyLabel.setAttribute("value", "Nothing to see here");
+      headingCell.appendChild(emptyLabel);
+      headingCell.setAttribute("class", "detailed-heading");
+      headingRow.appendChild(headingCell);
+      table.appendChild(headingRow);
+    }
+    // Attaching the event listener to the close button.
+    close.addEventListener("command", this.closePropertyDetailBox.bind(this, propertyDetailBox), true);
+    propertyDetailBox.setAttribute("visible", true);
+    this.detailBox.parentNode.insertBefore(propertyDetailBox, this.detailBox.nextSibling);
   },
 
-  closePropertyDetailBox: function TV_closePropertyDetialBox()
+  closePropertyDetailBox: function TV_closePropertyDetialBox(aPropertyDetailBox)
   {
-    this.propertyDetailBox.setAttribute("visible", false);
-    let child = this.propertyDetailBox.lastChild;
-    if (child.id == "property-detail-info") {
-      this.propertyDetailBox.removeChild(child);
-    }
+    aPropertyDetailBox.setAttribute("visible", false);
+    this._window.setTimeout(function() {
+      aPropertyDetailBox.parentNode.removeChild(aPropertyDetailBox);
+    }, 5000);
   },
 
   /**
@@ -1287,8 +1378,11 @@ TimelineView.prototype = {
           valueLabel.setAttribute("value", "Click to View");
           //valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
           valueLabel.setAttribute("class", "text-link");
-          valueLabel.addEventListener("click", this.showPropertyDetails
-                                                   .bind(this, {name: name, value: value}), true);
+          valueLabel.addEventListener("click", this.createNextLevelJSONView
+                                                   .bind(this,
+                                                         {name: name, value: value},
+                                                         [name]
+                                                        ), true);
           break;
 
         default:
