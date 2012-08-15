@@ -5,12 +5,11 @@
     <creator>Girish Sharma</creator>
     <id>graphical-timeline-of-events@devtools</id>
     <name>Graphical Timeline of Events</name>
-    <version>0.8.0</version>
+    <version>0.9.0</version>
     <bootstrap>true</bootstrap>
     <type>2</type>
     <homepageURL>https://addons.mozilla.org/en-US/firefox/addon/graphical-timeline/</homepageURL>
-    <description>A new Developer Tool in the making</description>
-    <optionsType>2</optionsType>
+    <description>A new Developer Tool for Firefox to visually debug events.</description>
 
     <targetApplication>
       <r:Description>
