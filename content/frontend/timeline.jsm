@@ -223,7 +223,7 @@ TimelineView.prototype = {
     let featureBox = producerBox.firstChild.nextSibling;
     let urlLabel = this._frameDoc.createElement("label");
     urlLabel.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
-    urlLabel.setAttribute("class", "timeline-groubox");
+    urlLabel.setAttribute("class", "timeline-groupbox");
     urlLabel.setAttribute("groupId", aData.groupID);
     urlLabel.setAttribute("shouldDelete", true);
     urlLabel.setAttribute("value", aData.name);
@@ -306,7 +306,7 @@ TimelineView.prototype = {
       nameLabel.addEventListener("click", this.toggleProducerBox, true);
       spacer.addEventListener("click", this.toggleProducerBox, true);
       let optionDropDown = this._frameDoc.createElementNS(XUL, "toolbarbutton");
-      optionDropDown.setAttribute("class", "devtools-toolbarbutton producer-options-menu");
+      optionDropDown.setAttribute("class", "producer-options-menu");
       optionDropDown.setAttribute("producerId", producer.id);
       optionDropDown.setAttribute("type", "checkbox");
       let optionsPopup = this._frameDoc.createElementNS(XUL, "menupopup");

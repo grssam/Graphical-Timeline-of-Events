@@ -48,6 +48,7 @@
   -moz-appearance: none;
   min-width: 78px;
   min-height: 18px;
+  max-height: 18px;
   margin: 0;
   color: inherit;
 }
@@ -59,7 +60,6 @@
 
 .devtools-checkbox:not([label]) {
   min-width: 22px;
-  max-width: 14px;
 }
 
 .devtools-checkbox:not([checked=true]):hover:active > .checkbox-check {
@@ -365,6 +365,7 @@
  */
 
 .producer-options-menu {
+  -moz-appearance: none;
   list-style-image: url("images/devtools-dropdown.png");
   -moz-image-region: rect(0px 16px 16px 0px);
   background: transparent !important;
@@ -372,14 +373,18 @@
   box-shadow: none !important;
   max-width: 22px !important;
   min-width: 22px !important;
+  max-height: 22px !important;
+  min-height: 22px !important;
   margin: 0px !important;
-  padding: 0px !important;
+  padding: 2px 0px 0px 0px !important;
 }
 
 .producer-options-menu:hover, .producer-options-menu:focus {
   background: transparent !important;
   border: 0px !important;
   box-shadow: none !important;
+  margin: 0px !important;
+  padding: 2px 0px 0px 0px !important;
 }
 
 .producer-options-menu[checked] {
@@ -401,9 +406,12 @@
 .producer-feature-box > .producer-feature {
   width: 100%;
   color: rgb(207,218,230) !important;
-  min-height: 18px;
+  min-height: 20px;
+  max-height: 20px;
   border-bottom: 1px solid rgb(19,29,40);
   border-top: 1px solid rgb(33,44,55);
+  margin: 0px;
+  padding: 0px 0px 0px 5px;
 }
 
 .producer-feature-box > .producer-feature:last-of-type {
@@ -418,33 +426,33 @@
   display: none;
 }
 
-.timeline-groubox {
+.timeline-groupbox {
   width: 100%;
   color: rgb(207,218,230) !important;
-  min-height: 18px;
-  max-height: 18px;
+  min-height: 20px;
+  max-height: 20px;
   border-bottom: 1px solid rgb(19,29,40);
   border-top: 1px solid rgb(33,44,55);
-  padding: 1px 2px 1px 5px;
-  margin: 0px !important;
+  margin: 0px;
+  padding: 0px 0px 0px 5px;
   -moz-user-focus: normal;
 }
 
-.timeline-groubox:last-of-type {
+.timeline-groupbox:last-of-type {
   border-bottom: 1px solid rgba(0,0,0,0) !important;
 }
 
-.timeline-groubox:first-of-type {
+.timeline-groupbox:first-of-type {
   border-top: 1px solid rgba(0,0,0,0) !important;
 }
 
-.timeline-groubox:hover {
+.timeline-groupbox:hover {
   border-bottom: 1px dashed rgba(10,92,133,0.75);
   border-top: 1px dashed rgba(29,126,176,0.75);
   background: rgba(29,126,176,0.50);
 }
 
-.timeline-groubox:focus {
+.timeline-groupbox:focus {
   border-bottom: 1px solid rgb(10,92,133);
   border-top: 1px solid rgb(29,126,176);
   background-image: -moz-linear-gradient(top, rgb(0,110,165), rgb(0,86,129) 100%);
@@ -470,23 +478,6 @@
   -moz-animation-name: hideblock;
   -moz-animation-duration: 0.2s;
   max-height: 0px;
-}
-
-.timeline-groupbox {
-  color: rgb(207,218,230) !important;
-  min-height: 18px;
-  padding: 0px;
-  margin: 0px;
-  border-bottom: 1px solid rgb(19,29,40);
-  border-top: 1px solid rgb(33,44,55);
-}
-
-.timeline-groupbox:last-of-type {
-  border-bottom: 1px solid rgba(0,0,0,0) !important;
-}
-
-.timeline-groupbox:first-of-type {
-  border-top: 1px solid rgba(0,0,0,0) !important;
 }
 
 #timeline-content {
