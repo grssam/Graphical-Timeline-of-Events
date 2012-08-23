@@ -166,6 +166,69 @@ TimelineView.prototype = {
       this.restartOnReload.setAttribute("checked", true);
     }
     this.updateScrollbar();
+    // Setting up the first run experience
+    if (TimelinePreferences.timesUIOpened == 0 ||
+        TimelinePreferences.userStats.recorded == 0) {
+      this.setupFirstRunExperience();
+    }
+    // Setting up general tips based on user stats.
+    this.prepareTips();
+    TimelinePreferences.timesUIOpened = TimelinePreferences.timesUIOpened + 1;
+  },
+
+  /**
+   * Adds first run messages to tell user some basic features of the UI.
+   */
+  setupFirstRunExperience: function TV_setupFirstRunExperience()
+  {
+    function onRecordingTipClick() {
+      this.recordingTipButton.setAttribute("checked", true);
+      this.recordButton.setAttribute("checked", true);
+      this.recordingTip.classList.add("delayed-fade-out");
+      this.recordingTip.style.MozAnimationDuration = "0.5s";
+      this.recordingTipShown = false;
+      this._window.setTimeout(function() {
+        this.recordingTip.parentNode.removeChild(this.recordingTip);
+        this.recordingTip = this.recordingTipButton = null;
+        this.toggleRecording();
+      }.bind(this), 500);
+    }
+
+    let recordingTip = this._frameDoc.createElement("hbox");
+    recordingTip.setAttribute("class", "transparent-tip delayed-fade-in");
+    let preText = this._frameDoc.createElement("label");
+    preText.setAttribute("value", "Click here or the");
+    let postText = this._frameDoc.createElement("label");
+    postText.setAttribute("value", "record button to start recording events.");
+    let recordingTipButton = this._frameDoc.createElement("toolbarbutton");
+    recordingTipButton.setAttribute("class", "devtools-toolbarbutton record");
+    let (spacer = this._frameDoc.createElement("spacer")) {
+      spacer.setAttribute("flex", "1");
+      recordingTip.appendChild(spacer);
+    }
+    let recordingTipContent = this._frameDoc.createElement("hbox");
+    recordingTipContent.appendChild(preText);
+    recordingTipContent.appendChild(recordingTipButton);
+    recordingTipContent.appendChild(postText);
+    recordingTipContent.setAttribute("class", "tip-content");
+    recordingTip.appendChild(recordingTipContent);
+    let (spacer = this._frameDoc.createElement("spacer")) {
+      spacer.setAttribute("flex", "1");
+      recordingTip.appendChild(spacer);
+    }
+    recordingTipContent.addEventListener("click", onRecordingTipClick.bind(this), true);
+
+    this.detailBox.parentNode.appendChild(recordingTip);
+    this.recordingTip = recordingTip;
+    this.recordingTipButton = recordingTipButton;
+    this.recordingTipShown = true;
+  },
+
+  /**
+   * Adds general tips based on the user interaction with the timeline UI.
+   */
+  prepareTips: function TV_prepareTips()
+  {
   },
 
   /**
@@ -532,6 +595,17 @@ TimelineView.prototype = {
   toggleRecording: function TV_toggleRecording()
   {
     if (!this.recording) {
+      // removing the tip if displayed
+      if (this.recordingTipShown) {
+        this.recordingTipButton.setAttribute("checked", true);
+        this.recordingTip.classList.add("delayed-fade-out");
+        this.recordingTip.style.MozAnimationDuration = "0.25s";
+        this.recordingTipShown = false;
+        this._window.setTimeout(function() {
+          this.recordingTip.parentNode.removeChild(this.recordingTip);
+          this.recordingTip = this.recordingTipButton = null;
+        }.bind(this), 250);
+      }
       let message = {
         enabledProducers: {},
         timelineUIId: Timeline.id,
@@ -578,6 +652,9 @@ TimelineView.prototype = {
           this._canvas.moveToLive();
         }
       }
+      let stats = TimelinePreferences.userStats;
+      stats.recorded++;
+      TimelinePreferences.userStats = stats;
     }
     else {
       this._canvas.stopRendering();
@@ -2092,6 +2169,46 @@ let TimelinePreferences = {
   set height(value) {
     Services.prefs.setCharPref("devtools.timeline.height", value);
     this._height = value;
+  },
+
+  /**
+   * Gets the number of times the UI has been opened.
+   * @return number
+   */
+  get timesUIOpened() {
+    if (this._timesUIOpened === undefined) {
+      this._timesUIOpened = Services.prefs.getIntPref("devtools.timeline.timesUIOpened");
+    }
+    return this._timesUIOpened;
+  },
+
+  /**
+   * Sets the number of times the UI has been opened.
+   * @param number value
+   */
+  set timesUIOpened(value) {
+    Services.prefs.setIntPref("devtools.timeline.timesUIOpened", value);
+    this._timesUIOpened = value;
+  },
+
+  /**
+   * Gets the various stats of the user interaction with the UI.
+   * @return object
+   */
+  get userStats() {
+    if (this._userStats === undefined) {
+      this._userStats = JSON.parse(Services.prefs.getCharPref("devtools.timeline.userStats"));
+    }
+    return this._userStats;
+  },
+
+  /**
+   * Sets the various stats of the user interaction with the UI.
+   * @param object value
+   */
+  set userStats(value) {
+    Services.prefs.setCharPref("devtools.timeline.userStats", JSON.stringify(value));
+    this._userStats = value;
   },
 
   /**

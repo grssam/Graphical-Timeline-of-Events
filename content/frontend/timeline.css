@@ -82,6 +82,40 @@
  * Animations
  */
 
+ @-moz-keyframes delayed-fade-in {
+  0% {
+    top: 100%;
+    opacity: 0;
+  }
+
+  75% {
+    top: 100%;
+    opacity: 0;
+  }
+
+  100% {
+    top: 50%;
+    opacity: 1;
+  }
+}
+
+@-moz-keyframes delayed-fade-out {
+  0% {
+    top: 50%;
+    opacity: 1;
+  }
+
+  50% {
+    top: 50%;
+    opacity: 1;
+  }
+
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
 @-moz-keyframes showblock {
   0% {
     max-height: 0px;
@@ -758,4 +792,58 @@
 #timeline-scrollbar:hover, #timeline-scrollbar:focus{
   background-color: rgba(3,101,151,0.5);
   border: 1px solid rgb(3,101,151);
+}
+
+/**
+ * Various elements of the tooltips
+ */
+.record {
+  list-style-image: url("images/timeline-record.png");
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+.record[checked=true] {
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
+}
+
+.transparent-tip {
+  width: 100% !important;
+  z-index: 200 !important;
+  position: relative !important;
+}
+
+.tip-content {
+  cursor: pointer !important;
+  -moz-user-select: none;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.tip-content * {
+  cursor: pointer !important;
+}
+
+.tip-content label {
+  color: rgb(207,218,230);
+  font-size: 22px;
+  text-shadow: 0 0 4px black;
+}
+
+.tip-content > .record {
+  margin: 4px 3px 0px 3px;
+  min-height: 28px !important;
+  max-height: 28px !important;
+}
+
+.delayed-fade-in {
+  -moz-animation-name: delayed-fade-in;
+  -moz-animation-duration: 4s;
+  opacity: 1;
+  top: 50%;
+}
+
+.delayed-fade-out{
+  -moz-animation-name: delayed-fade-out;
+  opacity: 0;
+    top: 100%;
 }
