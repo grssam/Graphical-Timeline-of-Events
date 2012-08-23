@@ -1731,10 +1731,18 @@ TimelineView.prototype = {
     this._frameDoc.addEventListener("mouseup", this._onWindowEnd, true);
     this._frameDoc.addEventListener("click", this._onWindowEnd, true);
     this._canvas.startTimeWindowAt(left);
+    this._windowZoomTimeout = this._window.setTimeout(function() {
+      this.$("canvas-container").style.cursor = "e-resize";
+    }.bind(this), 500);
   },
 
   _onWindowSelect: function TV__onWindowSelect(aEvent)
   {
+    if (this._windowZoomTimeout) {
+      this._window.clearTimeout(this._windowZoomTimeout);
+      this.$("canvas-container").style.cursor = "e-resize";
+      this._windowZoomTimeout = null;
+    }
     this.timeWindow.style.width = (aEvent.clientX -
       this.producersPane.boxObject.width -
       this.timeWindow.style.left.replace("px", "")*1) + "px";
@@ -1756,6 +1764,11 @@ TimelineView.prototype = {
         this.timeWindow.removeAttribute("selected");
       }.bind(this), 500);
     }
+    if (this._windowZoomTimeout) {
+      this._window.clearTimeout(this._windowZoomTimeout);
+      this._windowZoomTimeout = null;
+    }
+    this.$("canvas-container").style.cursor = "default";
     this.handleTimeWindow();
   },
 
