@@ -380,9 +380,6 @@ TimelineView.prototype = {
         optionDropDown.removeAttribute("checked");
       }, true);
       this.$("timeline-content").parentNode.appendChild(optionsPopup);
-      optionDropDown.addEventListener("command", function(event) {
-        this.toggleOptionsForProducer(event, event.target.getAttribute("producerId"));
-      }.bind(this), true);
       nameBox.appendChild(optionDropDown);
       producerBox.appendChild(nameBox);
 
@@ -425,9 +422,14 @@ TimelineView.prototype = {
         optionsPopup.appendChild(featureCheckbox);
       }
       if (!producer.features || producer.features.length == 0) {
-        let emptyLabel = this._frameDoc.createElement("menuitem");
-        emptyLabel.setAttribute("label", "No option to show");
-        optionsPopup.appendChild(emptyLabel);
+        optionDropDown.setAttribute("tooltiptext", "No option to show");
+        optionDropDown.setAttribute("disabled", true);
+        optionsPopup.parentNode.removeChild(optionsPopup);
+      }
+      else {
+        optionDropDown.addEventListener("command", function(event) {
+          this.toggleOptionsForProducer(event, event.target.getAttribute("producerId"));
+        }.bind(this), true);
       }
       producerBox.appendChild(featureBox);
 

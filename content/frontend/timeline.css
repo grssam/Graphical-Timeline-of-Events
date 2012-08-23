@@ -425,6 +425,10 @@
   -moz-image-region: rect(0px 32px 16px 16px);
 }
 
+.producer-options-menu[disabled=true] {
+  opacity: 0.7;
+}
+
 /**
  * Feature Box
  */
