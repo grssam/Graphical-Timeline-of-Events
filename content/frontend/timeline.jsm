@@ -60,8 +60,9 @@ function TimelineView(aChromeWindow) {
   let gBrowser = this._window.gBrowser;
   let ownerDocument = gBrowser.parentNode.ownerDocument;
 
-  this._splitter = ownerDocument.createElement("splitter");
+  this._splitter = ownerDocument.createElement("hbox");
   this._splitter.setAttribute("class", "devtools-horizontal-splitter");
+  this._splitter.style.cursor = "n-resize";
 
   this.loaded = false;
   this.canvasStarted = false;
@@ -103,6 +104,7 @@ function TimelineView(aChromeWindow) {
   this.zoomOut = this.zoom.bind(this, false);
   this.closeDetailBox = this.closeDetailBox.bind(this);
   this.handleDetailBoxResize = this.handleDetailBoxResize.bind(this);
+  this.handleFrameResize = this.handleFrameResize.bind(this);
   this.updateScrollbar = this.updateScrollbar.bind(this);
   this.$ = this.$.bind(this);
   this._onLoad = this._onLoad.bind(this);
@@ -118,6 +120,9 @@ function TimelineView(aChromeWindow) {
   this._onDetailBoxResizeStart = this._onDetailBoxResizeStart.bind(this);
   this._onDetailBoxResize = this._onDetailBoxResize.bind(this);
   this._onDetailBoxResizeStop = this._onDetailBoxResizeStop.bind(this);
+  this._onFrameResizeStart = this._onFrameResizeStart.bind(this);
+  this._onFrameResize = this._onFrameResize.bind(this);
+  this._onFrameResizeEnd = this._onFrameResizeEnd.bind(this);
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
@@ -166,6 +171,7 @@ TimelineView.prototype = {
       this.restartOnReload.setAttribute("checked", true);
     }
     this.updateScrollbar();
+    this.handleFrameResize();
     // Setting up the first run experience
     if (TimelinePreferences.timesUIOpened == 0 ||
         TimelinePreferences.userStats.recorded == 0) {
@@ -1779,6 +1785,49 @@ TimelineView.prototype = {
   {
     this.$("timeline-canvas-dots").addEventListener("mousedown", this._onWindowStart, true);
   },
+
+  _onFrameResizeStart: function TV__onFrameResizeStart(aEvent)
+  {
+    this._splitter.removeEventListener("mousedown", this._onFrameResizeStart, true);
+    this._splitter = this._nbox.parentNode.parentNode.appendChild(this._splitter);
+    this._splitter.style.position = "fixed";
+    this._splitter.style.display = "block";
+    this._splitter.style.border = "1px dashed black";
+    this._splitter.style.width = "100%";
+    this._splitter.style.background = "-moz-linear-gradient(top, white 0px, transparent 1px, white 2px)";
+    this._splitter.style.backgroundOrigin = "border-box";
+    this._splitter.style.top = (aEvent.screenY + 8) + "px";
+    this._window.addEventListener("mousemove", this._onFrameResize, true);
+    this._window.addEventListener("mouseup", this._onFrameResizeEnd, true);
+    this._frameResizeStartY = aEvent.screenY;
+  },
+
+  _onFrameResize: function TV__onFrameResize(aEvent)
+  {
+    this._splitter.style.top = (aEvent.screenY + 8) + "px";
+  },
+
+  _onFrameResizeEnd: function TV__onFrameResizeEnd(aEvent)
+  {
+    this._splitter.style.position = "absolute";
+    this._splitter.style.top = aEvent.screenY + "px";
+    this._frame.style.height = this._frame.height =
+      (this._frame.height.replace("px", "")*1 +
+       this._frameResizeStartY - aEvent.screenY) + "px";
+    this._splitter.style.border = "none";
+    this._splitter.style.background = "transparent";
+    this._window.removeEventListener("mousemove", this._onFrameResize, true);
+    this._window.removeEventListener("mouseup", this._onFrameResizeEnd, true);
+    this._splitter = this._splitter.parentNode.removeChild(this._splitter);
+    this._splitter = this._frame.parentNode.insertBefore(this._splitter, this._frame);
+    this.handleFrameResize();
+  },
+
+  handleFrameResize: function TV_handleFrameResize()
+  {
+    this._splitter.addEventListener("mousedown", this._onFrameResizeStart, true);
+  },
+
   /**
    * Closes the UI, removes the frame and the splitter ans dispatches an
    * unloading event to tell the parent window.
