@@ -84,12 +84,12 @@
 
  @-moz-keyframes delayed-fade-in {
   0% {
-    top: 100%;
+    top: 80%;
     opacity: 0;
   }
 
   75% {
-    top: 100%;
+    top: 80%;
     opacity: 0;
   }
 
@@ -111,7 +111,7 @@
   }
 
   100% {
-    top: 100%;
+    top: 80%;
     opacity: 0;
   }
 }
