@@ -707,6 +707,9 @@ TimelineView.prototype = {
       this._canvas.startRendering();
       if (!this.overviewButton.hasAttribute("checked")) {
         this._canvas.moveToLive();
+        let stats = TimelinePreferences.userStats;
+        stats.liveMode++;
+        TimelinePreferences.userStats = stats;
       }
     }
   },
@@ -727,6 +730,9 @@ TimelineView.prototype = {
     }
     else {
       this._canvas.moveToLive();
+      let stats = TimelinePreferences.userStats;
+      stats.liveMode++;
+      TimelinePreferences.userStats = stats;
     }
   },
 
