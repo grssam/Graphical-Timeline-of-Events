@@ -519,6 +519,9 @@ TimelineView.prototype = {
           this.updateScrollbar();
         }.bind(this), 350);
       }
+      let stats = TimelinePreferences.userStats;
+      stats.compactMode++;
+      TimelinePreferences.userStats = stats;
     }
     else if (this.producersPane.boxObject.height > this.compactHeight &&
              this.compactMode == true) {
@@ -658,6 +661,9 @@ TimelineView.prototype = {
         this._canvas.startRendering();
         if (!this.overviewButton.hasAttribute("checked")) {
           this._canvas.moveToLive();
+          let stats = TimelinePreferences.userStats;
+          stats.liveMode++;
+          TimelinePreferences.userStats = stats;
         }
       }
       let stats = TimelinePreferences.userStats;
@@ -1077,6 +1083,9 @@ TimelineView.prototype = {
     let panel = netPanel.panel;
     panel.openPopup(aNode, "after_pointer", 0, 0, false, false);
     panel.sizeTo(450, 500);
+    let stats = TimelinePreferences.userStats;
+    stats.networkPanel++;
+    TimelinePreferences.userStats = stats;
   },
 
   /**
@@ -1415,6 +1424,9 @@ TimelineView.prototype = {
               this._window.InspectorUI
                   .openInspectorUI(this._window.gBrowser.contentDocument
                                        .getElementById(value));
+              let stats = TimelinePreferences.userStats;
+              stats.inspector++;
+              TimelinePreferences.userStats = stats;
             }.bind(this), true);
           }
           break;
@@ -1447,12 +1459,18 @@ TimelineView.prototype = {
                       }
                     } catch (ex) {}
                     this._window.openUILinkIn(aValue, "tab");
+                    let stats = TimelinePreferences.userStats;
+                    stats.linkClicked++;
+                    TimelinePreferences.userStats = stats;
                   }.bind(this));
                   break;
 
                 case "js":
                   valueLabel.addEventListener("click", function() {
                     let window = this._window;
+                    let stats = TimelinePreferences.userStats;
+                    stats.linkClicked++;
+                    TimelinePreferences.userStats = stats;
                     function openScript(scriptsView) {
                       let targetScript = aValue;
                       let scriptLocations = scriptsView.scriptLocations;
@@ -1491,6 +1509,9 @@ TimelineView.prototype = {
                 default:
                   valueLabel.addEventListener("click", function() {
                     this._window.openUILinkIn(aValue, "tab");
+                    let stats = TimelinePreferences.userStats;
+                    stats.linkClicked++;
+                    TimelinePreferences.userStats = stats;
                   }.bind(this));
               }
             }
@@ -1667,6 +1688,9 @@ TimelineView.prototype = {
     this.$("canvas-container").addEventListener("mousemove", this._onDrag, true);
     this._frameDoc.addEventListener("mouseup", this._onDragEnd, true);
     this._frameDoc.addEventListener("click", this._onDragEnd, true);
+    let stats = TimelinePreferences.userStats;
+    stats.rulerDragged++;
+    TimelinePreferences.userStats = stats;
   },
 
   _onDrag: function TV__onDrag(aEvent)
@@ -1766,6 +1790,9 @@ TimelineView.prototype = {
     } catch (ex) {}
     if (zoomed) {
       this.timeWindow.setAttribute("selected", true);
+      let stats = TimelinePreferences.userStats;
+      stats.windowZoomed++;
+      TimelinePreferences.userStats = stats;
       this._frameDoc.defaultView.setTimeout(function() {
         this.timeWindow.removeAttribute("selected");
       }.bind(this), 500);

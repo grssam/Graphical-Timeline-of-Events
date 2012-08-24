@@ -831,6 +831,11 @@
   color: rgb(207,218,230);
   font-size: 22px;
   text-shadow: 0 0 4px black;
+  -moz-transition: text-shadow 500ms;
+}
+
+.tip-content:hover label {
+  text-shadow: 0 0 10px highlight;
 }
 
 .tip-content > .record {
