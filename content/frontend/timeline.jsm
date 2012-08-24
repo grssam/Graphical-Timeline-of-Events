@@ -1789,7 +1789,6 @@ TimelineView.prototype = {
   _onFrameResizeStart: function TV__onFrameResizeStart(aEvent)
   {
     this._splitter.removeEventListener("mousedown", this._onFrameResizeStart, true);
-    this._splitter = this._nbox.parentNode.parentNode.appendChild(this._splitter);
     this._splitter.style.position = "fixed";
     this._splitter.style.display = "block";
     this._splitter.style.border = "1px dashed black";
@@ -1818,8 +1817,6 @@ TimelineView.prototype = {
     this._splitter.style.background = "transparent";
     this._window.removeEventListener("mousemove", this._onFrameResize, true);
     this._window.removeEventListener("mouseup", this._onFrameResizeEnd, true);
-    this._splitter = this._splitter.parentNode.removeChild(this._splitter);
-    this._splitter = this._frame.parentNode.insertBefore(this._splitter, this._frame);
     this.handleFrameResize();
   },
 
