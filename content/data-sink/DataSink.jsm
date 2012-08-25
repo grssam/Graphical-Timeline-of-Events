@@ -6,7 +6,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
 
-var EXPORTED_SYMBOLS = ["DataSink"];
+var EXPORTED_SYMBOLS = ["DataSink", "Packets"];
 
 /**
  * List of normlaized event types. Any producer should have events falling into
@@ -21,6 +21,28 @@ const NORMALIZED_EVENT_TYPE = {
   REPEATING_EVENT_MID: 5, // An entity of a repeating event which is neither
                           // start nor end.
   REPEATING_EVENT_STOP: 6, // End of a repeating event.
+};
+
+let Packets = {
+  UINotRegistered: {
+    error: "error",
+    type: "unregistered",
+    message: "Timeline UI not registered"
+  },
+
+  missingData: {
+    error: "error"
+    type: "missingData",
+    message: "Some data missing in the request packet"
+  },
+
+  startedListening: {
+    message: "Started Recording"
+  },
+
+  stoppedListening: {
+    message: "stopped Recording",
+  }
 };
 
 /**
@@ -92,18 +114,17 @@ let DataSink = {
     // Do not start the producers again.
     if (this.initiated) {
       // Send the update message without any id so that all UI update.
-      this.sendUpdateNotification("");
-      return;
+      return this.sendUpdateNotification("");
     }
 
     // Stop if aMessage is null (as we need the timelineUIId).
     if (!aMessage || !aMessage.timelineUIId) {
-      return;
+      return Packets.missingData;
     }
 
     // If this timeline UI is not registered, quit.
     if (!this.registeredUI || this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
-      return;
+      return Packets.UINotRegistered;
     }
 
     this._enabledProducers = {};
@@ -145,7 +166,7 @@ let DataSink = {
     //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     //this.dataStore = new DataStore(this.databaseName);
     this.initiated = true;
-    this.sendUpdateNotification("");
+    return this.sendUpdateNotification("");
   },
 
   /**
@@ -159,22 +180,21 @@ let DataSink = {
     // Do not start the producers if everything is not initiated or we are
     // already listening.
     if (!this.initiated) {
-      this.init(aMessage);
-      return;
+      return this.init(aMessage);
     }
 
     if (this.listening) {
-      return;
+      return Packets.startedListening;
     }
 
     // Stop if aMessage is null (as we need the timelineUIId).
     if (!aMessage || !aMessage.timelineUIId) {
-      return;
+      return Packets.missingData;
     }
 
     // If this timeline UI is not registered, quit.
     if (!this.registeredUI || this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
-      return;
+      return Packets.UINotRegistered;
     }
 
     this._enabledProducers = {};
@@ -194,7 +214,7 @@ let DataSink = {
     }
 
     this.listening = true;
-    this.sendUpdateNotification(aMessage.timelineUIId);
+    return this.sendUpdateNotification(aMessage.timelineUIId);
   },
 
   /**
@@ -207,7 +227,7 @@ let DataSink = {
    */
   stopListening: function DS_stopListening(aMessage) {
     if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
-      return;
+      return Packets.UINotRegistered;
     }
 
     if (this.listening) {
@@ -217,6 +237,8 @@ let DataSink = {
       this._enabledProducers = null;
       this.listening = false;
     }
+
+    return Packets.stoppedListening;
   },
 
   /**
@@ -234,7 +256,7 @@ let DataSink = {
    */
   replyToPing: function DS_replyToPing(aMessage) {
     if (!aMessage || !aMessage.timelineUIId) {
-      return;
+      return Packets.missingData;
     }
     if (!this.registeredUI) {
       this.registeredUI = [];
@@ -253,7 +275,7 @@ let DataSink = {
       aMessage.error = ERRORS.ID_TAKEN;
     }
 
-    this.sendMessage(DataSinkEventMessageType.PING_BACK, aMessage);
+    return {"reply": aMessage};
   },
 
   /**
@@ -286,7 +308,8 @@ let DataSink = {
         features: featureList,
       };
     }
-    this.sendMessage(DataSinkEventMessageType.UPDATE_UI, message);
+    // TODO: send an update to all the other UI clients too.
+    return {"UIUpdate": message};
   },
 
   /**
@@ -319,18 +342,20 @@ let DataSink = {
       .getBrowserIndexForDocument(window.document);
     // Get the unique tab id associated with the tab
     let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel; */
-    DataSink.sendMessage(DataSinkEventMessageType.PAGE_RELOAD, {/*tabId: tabId*/});
+    DataSink.sendMessage("reload", {/*tabId: tabId*/});
   },
 
   /**
    * Fires an event to let the Graph UI know about data changes.
    *
+   * @param Function aTeleport
+   *        The function using which the sendMessage will send the data.
    * @param int aMessageType
    *        One of DataSinkEventMessageType
    * @param object aMessageData
    *        Data concerned with the event.
    */
-  sendMessage: function DS_sendMessage(aMessageType, aMessageData) {
+  sendMessage: function DS_sendMessage(aTeleport, aMessageType, aMessageData) {
     let detail = {
                    "detail":
                      {
@@ -338,10 +363,7 @@ let DataSink = {
                        "messageType": aMessageType,
                      },
                  };
-    let customEvent =
-      new this._chromeWindowForGraph
-              .CustomEvent("GraphicalTimeline:DataSinkEvent", detail);
-    this._chromeWindowForGraph.dispatchEvent(customEvent);
+    aTeleport(detail);
   },
 
   /**
@@ -397,11 +419,13 @@ let DataSink = {
    *        Id of the producer whose features will be enabled.
    * @param array aFeatures
    *        List of features to enable.
+   * @param string aTimelineUIId
+   *        ID of the UI that intiated this request.
    */
-  enableFeatures: function DS_enableFeatures(aProducerId, aFeatures) {
+  enableFeatures: function DS_enableFeatures(aProducerId, aFeatures, aTimelineUIId) {
     if (typeof aProducerId != "string") {
       // aProducerId is not a string.
-      return;
+      return Packets.missingData;
     }
 
     if (this._enabledProducers[aProducerId] != null) {
@@ -409,6 +433,7 @@ let DataSink = {
         this._enabledProducers[aProducerId].enableFeatures(aFeatures);
       }
     }
+    return this.sendUpdateNotification(aTimelineUIId);
   },
 
   /**
@@ -418,11 +443,13 @@ let DataSink = {
    *        Id of the producer whose features will be disabled.
    * @param array aFeatures
    *        List of features to disable.
+   * @param string aTimelineUIId
+   *        ID of the UI that intiated this request.
    */
-  disableFeatures: function DS_disableFeatures(aProducerId, aFeatures) {
+  disableFeatures: function DS_disableFeatures(aProducerId, aFeatures, aTimelineUIId) {
     if (typeof aProducerId != "string") {
       // aProducerId is not a string.
-      return;
+      return Packets.missingData;
     }
 
     if (this._enabledProducers[aProducerId] != null) {
@@ -430,6 +457,7 @@ let DataSink = {
         this._enabledProducers[aProducerId].disableFeatures(aFeatures);
       }
     }
+    return this.sendUpdateNotification(aTimelineUIId);
   },
 
   /**
@@ -439,12 +467,14 @@ let DataSink = {
    *        Id of the producer to start.
    * @param array aFeatures (optional)
    *        List of enabled features. All features will be enabled if null.
+   * @param string aTimelineUIId
+   *        ID of the UI that intiated this request.
    */
   startProducer:
-  function DS_startProducer(aProducerId, aFeatures) {
+  function DS_startProducer(aProducerId, aFeatures, aTimelineUIId) {
     if (typeof aProducerId != "string") {
       // aProducerId is not a string.
-      return;
+      return Packets.missingData;
     }
 
     if (this._registeredProducers[aProducerId] != null) {
@@ -458,6 +488,7 @@ let DataSink = {
         this._enabledProducers[aProducerId].init(this.listeningWindows, aFeatures);
       }
     }
+    return this.sendUpdateNotification(aTimelineUIId);
   },
 
   /**
@@ -465,14 +496,17 @@ let DataSink = {
    *
    * @param string aProducerId
    *        Name of the producer to stop.
+   * @param string aTimelineUIId
+   *        ID of the UI that intiated this request.
    */
-  stopProducer: function DS_stopProducer(aProducerId) {
+  stopProducer: function DS_stopProducer(aProducerId, aTimelineUIId) {
     if (typeof aProducerId != "string") {
       // aProducerId is not a string.
-      return;
+      return Packets.missingData;
     }
 
     this._enabledProducers[aProducerId].destroy();
+    return this.sendUpdateNotification(aTimelineUIId);
   },
 
   /**
@@ -489,15 +523,15 @@ let DataSink = {
    */
   destroy: function DS_destroy(aMessage) {
     if (!this.initiated) {
-      return;
+      return {"destroyed":"notInitiated"};
     }
     if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
-      return;
+      return Packets.UINotRegistered;
     }
     this.registeredUI.splice(this.registeredUI.indexOf(aMessage.timelineUIId), 1);
 
     if (this.registeredUI.length > 0) {
-      return;
+      return {"notDestroyed":"otherUIAttached"};
     }
 
     if (this.listening) {
@@ -519,5 +553,15 @@ let DataSink = {
       this._registeredProducers = this.listeningWindows = null;
     this.initiated = false;
     this.databaseName = "";
+    return {"destroyed": "lastAttachedUI"};
   },
 };
+
+// Binding the sendMessage to send things via the dispatchEvent.
+// This can be overruled by the Data Sink Actor to use the connection.
+DataSink.sendMessage = DataSink.sendMessage.bind(DataSink, function(aDetail) {
+  let customEvent =
+    new DataSink._chromeWindowForGraph
+                .CustomEvent("GraphicalTimeline:DataSinkEvent", aDetail);
+  DataSink._chromeWindowForGraph.dispatchEvent(customEvent);
+});

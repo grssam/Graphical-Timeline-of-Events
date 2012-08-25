@@ -29,20 +29,8 @@ let TimelineUI = {
   {
     global.Timeline.destroy();
     Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
-    try {
-      Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-    } catch (e) {}
-    try {
-      delete global.DataSink;
-      delete global.NetworkProducer;
-      delete global.PageEventsProducer;
-      delete global.MemoryProducer;
-      global.Timeline = null;
-      delete global.Timeline;
-    } catch (e) {}
+    global.Timeline = null;
+    delete global.Timeline;
     TimelineUI = null;
   },
 
@@ -50,7 +38,7 @@ let TimelineUI = {
   {
     function $(id) window.document.getElementById(id);
     if (global.Timeline.UIOpened) {
-      if (window.gBrowser.selectedTab.linkedBrowser.contentWindow == TimelineUI.contentWindow){ 
+      if (window.gBrowser.selectedTab.linkedBrowser.contentWindow == TimelineUI.contentWindow) {
         $(broadcasterID).setAttribute("checked", "true");
       }
       else {
@@ -72,23 +60,9 @@ let TimelineUI = {
                    .getService(Ci.nsIWindowMediator)
                    .getMostRecentWindow("navigator:browser");
     if (global.Timeline && global.Timeline.UIOpened != true) {
-      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
-      global.DataSink.addRemoteListener(window);
       global.Timeline.init(function () {
-        global.DataSink.removeRemoteListener(window);
         try {
           Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-          delete global.DataSink;
-          delete global.NetworkProducer;
-          delete global.PageEventsProducer;
-          delete global.MemoryProducer;
           global.Timeline = null;
           delete global.Timeline;
           Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
