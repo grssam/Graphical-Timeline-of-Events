@@ -9,37 +9,6 @@ Cu.import("resource://gre/modules/Services.jsm");
 var EXPORTED_SYMBOLS = ["DataSink"];
 
 /**
- * List of message types that the UI can send.
- */
-const UIEventMessageType = {
-  PING_HELLO: 0, // Tells the remote Data Sink that a UI has been established.
-  INIT_DATA_SINK: 1, // Initialize the Data Sink and start all the producers.
-  DESTROY_DATA_SINK: 2, // Destroy the Data Sink and stop all producer activity.
-  START_RECORDING: 3, // To only start all the producers with given features.
-  STOP_RECORDING: 4, // To only stop all the producers with given features.
-  START_PRODUCER: 5, // To start a single producer.
-  STOP_PRODUCER: 6, // To stop a single producer.
-  ENABLE_FEATURES: 7, // To enable features of a producer.
-  DISABLE_FEATURES: 8, // To disable features of a producer.
-  ADD_WINDOW: 9, // Add another window to listen for tab based events.
-  REMOVE_WINDOW: 10, // Stop listening for events for tab based events.
-};
-
-/**
- * List of message types that the UI can listen for.
- */
-const DataSinkEventMessageType = {
-  PING_BACK: 0, // A reply from the remote Data Sink when the UI sends PING_HELLO.
-                // Only upon receiving this message, the UI can send a message
-                // to start the producers.
-  NEW_DATA: 1,  // There is new data in the data store.
-  UPDATE_UI: 2, // This event will be sent when there are local changes in
-                // active features or producers and those changes need to be
-                // reflected back to the UI.
-  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
-};
-
-/**
  * List of normlaized event types. Any producer should have events falling into
  * one (or more in case of continuous and repeating) of the following events.
  */
@@ -52,13 +21,6 @@ const NORMALIZED_EVENT_TYPE = {
   REPEATING_EVENT_MID: 5, // An entity of a repeating event which is neither
                           // start nor end.
   REPEATING_EVENT_STOP: 6, // End of a repeating event.
-};
-
-/**
- * List of known errors that a UI can cause.
- */
-const ERRORS = {
-  ID_TAKEN: 0, // Id is already used by another timeline UI.
 };
 
 /**
@@ -325,98 +287,6 @@ let DataSink = {
       };
     }
     this.sendMessage(DataSinkEventMessageType.UPDATE_UI, message);
-  },
-
-  /**
-   * Listener for events coming from remote Graph UI.
-   *
-   * @param object aEvent
-   *        Data object associated with the incoming event.
-   */
-  _remoteListener: function DS_remoteListener(aEvent) {
-    let message = aEvent.detail.messageData;
-    let type = aEvent.detail.messageType;
-    switch(type) {
-
-      case UIEventMessageType.PING_HELLO:
-        DataSink.replyToPing(message);
-        break;
-
-      case UIEventMessageType.INIT_DATA_SINK:
-        DataSink.init(message);
-        break;
-
-      case UIEventMessageType.DESTROY_DATA_SINK:
-        DataSink.destroy(message);
-        break;
-
-      case UIEventMessageType.ENABLE_FEATURES:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
-          return;
-        }
-        DataSink.enableFeatures(message.producerId, message.features);
-        DataSink.sendUpdateNotification(message.timelineUIId);
-        break;
-
-      case UIEventMessageType.DISABLE_FEATURES:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
-          return;
-        }
-        DataSink.disableFeatures(message.producerId, message.features);
-        DataSink.sendUpdateNotification(message.timelineUIId);
-        break;
-
-      case UIEventMessageType.START_PRODUCER:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
-          return;
-        }
-        DataSink.startProducer(message.producerId, message.features);
-        DataSink.sendUpdateNotification(message.timelineUIId);
-        break;
-
-      case UIEventMessageType.STOP_PRODUCER:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
-          return;
-        }
-        DataSink.stopProducer(message.producerId);
-        DataSink.sendUpdateNotification(message.timelineUIId);
-        break;
-
-      case UIEventMessageType.START_RECORDING:
-        DataSink.startListening(message);
-        break;
-
-      case UIEventMessageType.STOP_RECORDING:
-        DataSink.stopListening(message);
-        break;
-    }
-  },
-
-  /**
-   * Listen for starting and stopping instructions to enable remote startup
-   * and shutdown.
-   *
-   * @param object aChromeWindow
-   *        Reference to the chrome window to apply the event listener.
-   */
-  addRemoteListener: function DS_addRemoteListener(aChromeWindow) {
-    aChromeWindow.addEventListener("GraphicalTimeline:UIEvent",
-                                   DataSink._remoteListener, true);
-  },
-
-  /**
-   * Removes the remote event listener from a window.
-   *
-   * @param object aChromeWindow
-   *        Reference to the chrome window from which listener is to be removed.
-   */
-  removeRemoteListener: function DS_removeRemoteListener(aChromeWindow) {
-    aChromeWindow.removeEventListener("GraphicalTimeline:UIEvent",
-                                     DataSink._remoteListener, true);
   },
 
   /**
