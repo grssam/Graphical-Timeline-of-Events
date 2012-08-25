@@ -272,7 +272,7 @@ let DataSink = {
       aMessage.producerInfoList = this._producerInfoList;
     }
     else {
-      aMessage.error = ERRORS.ID_TAKEN;
+      aMessage.error = "idTaken";
     }
 
     return {"reply": aMessage};
@@ -342,7 +342,7 @@ let DataSink = {
       .getBrowserIndexForDocument(window.document);
     // Get the unique tab id associated with the tab
     let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel; */
-    DataSink.sendMessage("reload", {/*tabId: tabId*/});
+    DataSink.sendMessage("pageReload", {/*tabId: tabId*/});
   },
 
   /**
@@ -395,7 +395,7 @@ let DataSink = {
     // Adding the normalized data to the data store object.
     //if (this.dataStore.add(normalizedData)) {
       // Informing the Graph UI about the new data.
-      DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA, normalizedData);
+      DataSink.sendMessage("newNormalizedData", normalizedData);
     //}
   },
 

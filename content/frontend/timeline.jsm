@@ -4,45 +4,15 @@
 
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/NetworkPanel.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "DebuggerServer",
+                                  "resource://gre/modules/devtools/dbg-server.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "DebuggerClient",
+                                  "resource://gre/modules/devtools/dbg-client.jsm");
 
 var EXPORTED_SYMBOLS = ["Timeline"];
-
-/**
- * List of message types that the UI can send.
- */
-const UIEventMessageType = {
-  PING_HELLO: 0, // Tells the remote Data Sink that a UI has been established.
-  INIT_DATA_SINK: 1, // Initialize the Data Sink and start all the producers.
-  DESTROY_DATA_SINK: 2, // Destroy the Data Sink and stop all producer activity.
-  START_RECORDING: 3, // To only start all the producers with given features.
-  STOP_RECORDING: 4, // To only stop all the producers with given features.
-  START_PRODUCER: 5, // To start a single producer.
-  STOP_PRODUCER: 6, // To stop a single producer.
-  ENABLE_FEATURES: 7, // To enable features of a producer.
-  DISABLE_FEATURES: 8, // To disable features of a producer.
-  ADD_WINDOW: 9, // Add another window to listen for tab based events.
-  REMOVE_WINDOW: 10, // Stop listening for events for tab based events.
-};
-
-/**
- * List of message types that the UI can listen for.
- */
-const DataSinkEventMessageType = {
-  PING_BACK: 0, // A reply from the remote Data Sink when the UI sends PING_HELLO.
-                // Only upon receiving this message, the UI can send a message
-                // to start the producers.
-  NEW_DATA: 1,  // There is new data in the data store.
-  UPDATE_UI: 2, // This event will be sent when there are local changes in
-                // active features or producers and those changes need to be
-                // reflected back to the UI.
-  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
-};
-
-const ERRORS = {
-  ID_TAKEN: 0, // Id is already used by another timeline UI.
-};
 
 const COLOR_LIST = ["#1eff07", "#0012ff", "#20dbec", "#33b5ff", "#a8ff9c", "#b3f7ff",
                     "#f9b4ff", "#f770ff", "#ff0000", "#ff61fd", "#ffaf60", "#fffc04"];
@@ -1953,15 +1923,34 @@ let Timeline = {
     Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
                         .getMostRecentWindow("navigator:browser");
-    Timeline.addRemoteListener(Timeline._window);
     // destroying on unload.
     Timeline._window.addEventListener("unload", Timeline.destroy, false);
     if (!Timeline.id) {
       Timeline.id = "timeline-ui-" + Date.now();
     }
-    Timeline.pingSent = true;
-    Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                        {timelineUIId: Timeline.id});
+
+    if (!DebuggerServer.initialized) {
+      // Always allow connections from nsIPipe transports.
+      DebuggerServer.init(function () { return true; });
+      DebuggerServer.addBrowserActors();
+    }
+    // Setting up the client and attaching it to the DataSinkActor
+    let transport = DebuggerServer.connectPipe();
+
+    let client = Timeline.client = new DebuggerClient(transport);
+
+    client.addListener("newNormalizedData", Timeline._remoteListener
+                                                    .bind(Timeline, "newNormalizedData"));
+    client.addListener("UIUpdate", Timeline._remoteListener.bind(Timeline, "UIUpdate"));
+    client.addListener("pageReload", Timeline._remoteListener.bind(Timeline, "pageReload"));
+
+    client.connect(function(aType, aTraits) {
+      client.listTabs(function(aResponse) {
+        let DataSink = Timeline.DataSink = aResponse.dataSinkActor;
+        Timeline.pingSent = true;
+        Timeline.sendMessage("ping", {timelineUIId: Timeline.id}, Timeline.handlePingReply);
+      }.bind(Timeline));
+    }.bind(Timeline));
   },
 
   /**
@@ -1980,7 +1969,7 @@ let Timeline = {
    */
   startListening: function GUI_startListening(aMessage) {
     //Timeline.timer = Timeline._window.setInterval(Timeline.readData, 25);
-    Timeline.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
+    Timeline.sendMessage("startRecording", aMessage);
     Timeline.listening = true;
     Timeline.shouldDeleteDatabaseItself = false;
   },
@@ -1994,12 +1983,12 @@ let Timeline = {
     }
     //Timeline._window.clearInterval(Timeline.timer);
     //Timeline.timer = null;
-    Timeline.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
+    Timeline.sendMessage("stopRecording", aMessage);
     Timeline.listening = false;
   },
 
   /**
-   * Handles the ping response from the Data Sink.
+   * Handles the ping response from the Data Sink Actor.
    *
    * @param object aMessage
    *        Ping response message containing either the databse name on success
@@ -2012,11 +2001,10 @@ let Timeline = {
     if (aMessage.error) {
       switch (aMessage.error) {
 
-        case ERRORS.ID_TAKEN:
+        case "idTaken":
           // The id was already taken, generate a new id and send the ping again.
           Timeline.id = "timeline-ui-" + Date.now();
-          Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                              {timelineUIId: Timeline.id});
+          Timeline.sendMessage("ping", {timelineUIId: Timeline.id}, Timeline.handlePingReply);
           break;
       }
     }
@@ -2045,7 +2033,7 @@ let Timeline = {
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.ENABLE_FEATURES, message);
+    Timeline.sendMessage("enableFeatures", message);
   },
 
   /**
@@ -2063,7 +2051,7 @@ let Timeline = {
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.DISABLE_FEATURES, message);
+    Timeline.sendMessage("disableFeatures", message);
   },
 
   /**
@@ -2081,7 +2069,7 @@ let Timeline = {
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.START_PRODUCER, message);
+    Timeline.sendMessage("startProducer", message);
   },
 
   /**
@@ -2096,7 +2084,7 @@ let Timeline = {
       timelineUIId: Timeline.id,
       producerId: aProducerId,
     };
-    Timeline.sendMessage(UIEventMessageType.STOP_PRODUCER, message);
+    Timeline.sendMessage("stopProducer", message);
   },
 
   /**
@@ -2127,58 +2115,32 @@ let Timeline = {
   /**
    * Listener for events coming from remote Data Sink.
    *
-   * @param object aEvent
-   *        Data object associated with the incoming event.
+   * @param string aType
+   *        Type of the packet coming from the Data Sink Actor.
+   * @param object aPacket
+   *        Packet coming from the Data Sink Actor.
    */
-  _remoteListener: function GUI_remoteListener(aEvent) {
-    let message = aEvent.detail.messageData;
-    let type = aEvent.detail.messageType;
-    switch(type) {
+  _remoteListener: function GUI_remoteListener(aType, aPacket) {
+    let message = aPacket.message;
+    switch(aType) {
 
-      case DataSinkEventMessageType.PING_BACK:
-        Timeline.handlePingReply(message);
-        break;
-
-      case DataSinkEventMessageType.NEW_DATA:
+      case "newNormalizedData":
         Timeline.newDataAvailable = true;
         Timeline.processData([message]);
         break;
 
-      case DataSinkEventMessageType.UPDATE_UI:
+      case "UIUpdate":
         if (message.timelineUIId != Timeline.id) {
           Timeline._view.updateUI(message);
         }
         break;
 
-      case DataSinkEventMessageType.PAGE_RELOAD:
+      case "pageReload":
         if (TimelinePreferences.doRestartOnReload) {
           Timeline._view.forceRestart();
         }
         break;
     }
-  },
-
-  /**
-   * Listen for starting and stopping instructions to enable remote startup
-   * and shutdown.
-   *
-   * @param object aChromeWindow
-   *        Reference to the chrome window to apply the event listener.
-   */
-  addRemoteListener: function GUI_addRemoteListener(aChromeWindow) {
-    aChromeWindow.addEventListener("GraphicalTimeline:DataSinkEvent",
-                                   Timeline._remoteListener, true);
-  },
-
-  /**
-   * Removes the remote event listener from a window.
-   *
-   * @param object aChromeWindow
-   *        Reference to the chrome window from which listener is to be removed.
-   */
-  removeRemoteListener: function GUI_removeRemoteListener(aChromeWindow) {
-    aChromeWindow.removeEventListener("GraphicalTimeline:DataSinkEvent",
-                                      Timeline._remoteListener, true);
   },
 
   /**
@@ -2188,18 +2150,16 @@ let Timeline = {
    *        One of DataSinkEventMessageType
    * @param object aMessageData
    *        Data concerned with the event.
+   * @param Function aCallback
+   *        The response handler.
    */
-  sendMessage: function GUI_sendMessage(aMessageType, aMessageData) {
-    let detail = {
-                   "detail":
-                     {
-                       "messageData": aMessageData,
-                       "messageType": aMessageType,
-                     },
-                 };
-    let customEvent =
-      new Timeline._window.CustomEvent("GraphicalTimeline:UIEvent", detail)
-    Timeline._window.dispatchEvent(customEvent);
+  sendMessage: function GUI_sendMessage(aMessageType, aMessageData, aCallback) {
+    if (!Timeline.client || !Timeline.DataSink) {
+      return;
+    }
+    aMessageData.to = Timeline.DataSink;
+    aMessageData.type = aMessageType;
+    Timeline.client.request(aMessageData, aCallback);
   },
 
   /**
@@ -2221,18 +2181,25 @@ let Timeline = {
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       } catch (ex) {}
       //DataStore = Timeline.dataStore = null;
-      Timeline.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
+      Timeline.sendMessage("destroy",
                            {deleteDatabase: true, // true to delete the database
                             timelineUIId: Timeline.id, // to tell which UI is closing.
                            });
       Timeline.shouldDeleteDatabaseItself = true;
       Timeline.pingSent = Timeline.listening = false;
-      Timeline.removeRemoteListener(Timeline._window);
       Timeline._view.closeUI();
       Cu.unload("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
       CanvasManager = null;
+      Timeline.client.removeListener("newNormalizedData",
+                                     Timeline._remoteListener
+                                             .bind(Timeline, "newNormalizedData"));
+      Timeline.client.removeListener("UIUpdate",
+                                     Timeline._remoteListener.bind(Timeline, "UIUpdate"));
+      Timeline.client.removeListener("pageReload",
+                                     Timeline._remoteListener.bind(Timeline, "pageReload"));
+      Timeline.client.close();
       Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
-        Timeline._currentId = Timeline._window = null;
+        Timeline.client = Timeline._currentId = Timeline._window = null;
       Timeline.producerInfoList = null;
       if (Timeline.callback)
         Timeline.callback();
