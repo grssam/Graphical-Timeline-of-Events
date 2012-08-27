@@ -10,7 +10,7 @@ Cu.import("resource://gre/modules/NetworkPanel.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "DebuggerServer",
                                   "resource://gre/modules/devtools/dbg-server.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "DebuggerClient",
-                                  "resource://gre/modules/devtools/dbg-client.jsm");
+                                  "chrome://graphical-timeline/content/client/timeline-client.jsm");
 
 var EXPORTED_SYMBOLS = ["Timeline"];
 
@@ -96,7 +96,7 @@ function TimelineView(aChromeWindow) {
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
-  this._frame.setAttribute("src", "chrome://graphical-timeline/content/frontend/timeline.xul");
+  this._frame.setAttribute("src", "chrome://graphical-timeline/content/client/timeline.xul");
 }
 
 TimelineView.prototype = {
@@ -1918,7 +1918,7 @@ let Timeline = {
    * Prepares the UI and sends ping to the Data Sink.
    */
   init: function GUI_init(aCallback) {
-    Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
+    Cu.import("chrome://graphical-timeline/content/client/timeline-canvas.jsm");
     Timeline.callback = aCallback;
     Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator)
@@ -2188,7 +2188,7 @@ let Timeline = {
       Timeline.shouldDeleteDatabaseItself = true;
       Timeline.pingSent = Timeline.listening = false;
       Timeline._view.closeUI();
-      Cu.unload("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
+      Cu.unload("chrome://graphical-timeline/content/client/timeline-canvas.jsm");
       CanvasManager = null;
       Timeline.client.removeListener("newNormalizedData",
                                      Timeline._remoteListener

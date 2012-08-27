@@ -56,7 +56,7 @@ DataSinkActor.prototype =
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+      Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
     }
     return DataSink.init(aRequest);
   },
@@ -68,7 +68,7 @@ DataSinkActor.prototype =
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+      Components.utils.unload("chrome://graphical-timeline/content/server/DataSink.jsm");
     } catch (e) {}
     try {
       delete global.DataSink;
@@ -130,7 +130,7 @@ DataSinkActor.prototype =
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+      Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
     }
     return DataSink.startListening(aRequest);
   },

@@ -6,7 +6,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
 
 var EXPORTED_SYMBOLS = ["MemoryProducer"];
 

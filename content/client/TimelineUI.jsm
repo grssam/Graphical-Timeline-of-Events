@@ -22,13 +22,13 @@ let TimelineUI = {
 
   _startup: function TUI__startup()
   {
-    Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+    Cu.import("chrome://graphical-timeline/content/client/timeline.jsm", global);
   },
 
   _unload: function TUI__unload()
   {
     global.Timeline.destroy();
-    Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
+    Components.utils.unload("chrome://graphical-timeline/content/client/timeline.jsm");
     global.Timeline = null;
     delete global.Timeline;
     TimelineUI = null;
@@ -62,10 +62,10 @@ let TimelineUI = {
     if (global.Timeline && global.Timeline.UIOpened != true) {
       global.Timeline.init(function () {
         try {
-          Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
+          Components.utils.unload("chrome://graphical-timeline/content/client/timeline.jsm");
           global.Timeline = null;
           delete global.Timeline;
-          Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+          Components.utils.import("chrome://graphical-timeline/content/client/timeline.jsm", global);
         } catch (e) {}
         try {
           $(broadcasterID).setAttribute("checked", "false");

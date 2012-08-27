@@ -101,7 +101,7 @@ function addMenuItem(window) {
   button.classList.add("developer-toolbar-button");
   button.id = toolbarButtonID;
   button.setAttribute("style", "list-style-image: " +
-                               "url('chrome://graphical-timeline/content/frontend" +
+                               "url('chrome://graphical-timeline/content/client" +
                                "/images/tools-icons-small.png');" +
                                "-moz-image-region: rect(0, 16px, 16px, 0);");
   $("developer-toolbar").insertBefore(button, $("developer-toolbar-webconsole").nextSibling);
@@ -128,8 +128,8 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   });
 
   function init() {
-    DebuggerServer.addActors("chrome://graphical-timeline/content/data-sink/DataSinkActor.js");
-    Cu.import("chrome://graphical-timeline/content/frontend/TimelineUI.jsm", global);
+    DebuggerServer.addActors("chrome://graphical-timeline/content/server/DataSinkActor.js");
+    Cu.import("chrome://graphical-timeline/content/client/TimelineUI.jsm", global);
     TimelineUI._startup();
     watchWindows(function(window) {
       // Tab switch handler.
@@ -141,7 +141,7 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     watchWindows(addMenuItem);
     unload(TimelineUI._unload);
     unload(function() {
-      Components.utils.unload("chrome://graphical-timeline/content/frontend/TimelineUI.jsm");
+      Components.utils.unload("chrome://graphical-timeline/content/client/TimelineUI.jsm");
       global.TimelineUI = null;
       delete global.TimelineUI;
     });
