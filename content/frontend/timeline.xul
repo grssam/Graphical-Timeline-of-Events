@@ -19,27 +19,27 @@
   <hbox id="timeline-content" flex="1">
     <vbox>
       <toolbar id="timeline-toolbar" class="devtools-toolbar">
-        <hbox>
+        <hbox id="timeline-controls">
           <toolbarbutton id="record"
-                         class="developer-toolbar-button"
+                         class="devtools-toolbarbutton"
                          type="checkbox"
                          tooltiptext="&timelineUI.toggleRecording.tooltiptext;"
                          tabindex="0"/>
           <toolbarbutton id="overview"
-                         class="developer-toolbar-button"
+                         class="devtools-toolbarbutton"
                          type="checkbox"
                          tooltiptext="&timelineUI.toggleOverviewButton.tooltiptext;"
                          tabindex="1"/>
           <toolbarbutton id="zoom-in"
-                         class="developer-toolbar-button"
+                         class="devtools-toolbarbutton"
                          tooltiptext="&timelineUI.zoomIn.tooltiptext;"
                          tabindex="2"/>
           <toolbarbutton id="zoom-out"
-                         class="developer-toolbar-button"
+                         class="devtools-toolbarbutton"
                          tooltiptext="&timelineUI.zoomOut.tooltiptext;"
                          tabindex="3"/>
           <toolbarbutton id="options"
-                         class="developer-toolbar-button"
+                         class="devtools-toolbarbutton"
                          type="menu"
                          tooltiptext="&timelineUI.options.tooltiptext;"
                          tabindex="4">
