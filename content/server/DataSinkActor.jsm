@@ -7,6 +7,8 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
 
+var EXPORTED_SYMBOLS = ["DataSinkActor"];
+
 function DataSinkActor(aConnection) {
   this.conn = aConnection;
 }
@@ -156,5 +158,3 @@ DataSinkActor.prototype.requestTypes =
   "startRecording": DataSinkActor.prototype.onStartRecording,
   "stopRecording": DataSinkActor.prototype.onStopRecording
 };
-
-DebuggerServer.addGlobalActor(DataSinkActor, "dataSinkActor");

@@ -1938,7 +1938,8 @@ let Timeline = {
     let transport = DebuggerServer.connectPipe();
 
     // Setup the Data Sink Actor
-    DebuggerServer.addActors("chrome://graphical-timeline/content/server/DataSinkActor.js");
+    Cu.import("chrome://graphical-timeline/content/server/DataSinkActor.jsm");
+    DebuggerServer.addGlobalActor(DataSinkActor, "dataSinkActor");
 
     let client = Timeline.client = new DebuggerClient(transport);
 
@@ -2201,6 +2202,11 @@ let Timeline = {
       Timeline.client.removeListener("pageReload",
                                      Timeline._remoteListener.bind(Timeline, "pageReload"));
       Timeline.client.close();
+      DebuggerServer.removeGlobalActor(DataSinkActor);
+      try {
+        Cu.unload("chrome://graphical-timeline/content/server/DataSinkActor.jsm");
+        DataSinkActor == null;
+      } catch (ex) {}
       Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
         Timeline.client = Timeline._currentId = Timeline._window = null;
       Timeline.producerInfoList = null;
