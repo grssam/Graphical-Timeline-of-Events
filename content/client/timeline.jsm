@@ -1937,6 +1937,9 @@ let Timeline = {
     // Setting up the client and attaching it to the DataSinkActor
     let transport = DebuggerServer.connectPipe();
 
+    // Setup the Data Sink Actor
+    DebuggerServer.addActors("chrome://graphical-timeline/content/server/DataSinkActor.js");
+
     let client = Timeline.client = new DebuggerClient(transport);
 
     client.addListener("newNormalizedData", Timeline._remoteListener

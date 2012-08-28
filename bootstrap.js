@@ -9,8 +9,6 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/AddonManager.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
-XPCOMUtils.defineLazyModuleGetter(this, "DebuggerServer",
-                                  "resource://gre/modules/devtools/dbg-server.jsm");
 
 let gAddon;
 let reload = function() {};
@@ -129,7 +127,6 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   });
 
   function init() {
-    DebuggerServer.addActors("chrome://graphical-timeline/content/server/DataSinkActor.js");
     Cu.import("chrome://graphical-timeline/content/client/TimelineUI.jsm", global);
     TimelineUI._startup();
     watchWindows(function(window) {
