@@ -1502,7 +1502,6 @@ TimelineView.prototype = {
         case "object":
           value = aValue;
           valueLabel.setAttribute("value", "Click to View");
-          //valueLabel.setAttribute("tooltiptext", JSON.stringify(value));
           valueLabel.setAttribute("class", "text-link");
           valueLabel.addEventListener("click", this.createNextLevelJSONView
                                                    .bind(this,
@@ -1943,10 +1942,9 @@ let Timeline = {
 
     let client = Timeline.client = new DebuggerClient(transport);
 
-    client.addListener("newNormalizedData", Timeline._remoteListener
-                                                    .bind(Timeline, "newNormalizedData"));
-    client.addListener("UIUpdate", Timeline._remoteListener.bind(Timeline, "UIUpdate"));
-    client.addListener("pageReload", Timeline._remoteListener.bind(Timeline, "pageReload"));
+    client.addListener("newNormalizedData", Timeline._remoteListener.bind(Timeline));
+    client.addListener("UIUpdate", Timeline._remoteListener.bind(Timeline));
+    client.addListener("pageReload", Timeline._remoteListener.bind(Timeline));
 
     client.connect(function(aType, aTraits) {
       client.listTabs(function(aResponse) {
@@ -1999,6 +1997,10 @@ let Timeline = {
    *        or the error on failure.
    */
   handlePingReply: function GUI_handlePingReply(aMessage) {
+    if (!aMessage.type || aMessage.type != "reply") {
+      return;
+    }
+    aMessage = aMessage.message;
     if (!aMessage || aMessage.timelineUIId != Timeline.id || !Timeline.pingSent) {
       return;
     }
@@ -2119,14 +2121,12 @@ let Timeline = {
   /**
    * Listener for events coming from remote Data Sink.
    *
-   * @param string aType
-   *        Type of the packet coming from the Data Sink Actor.
-   * @param object aPacket
-   *        Packet coming from the Data Sink Actor.
-   */
-  _remoteListener: function GUI_remoteListener(aType, aPacket) {
-    let message = aPacket.message;
-    switch(aType) {
+   * @param arguments
+   *        [type, message]
+  */
+  _remoteListener: function GUI_remoteListener() {
+    let message = arguments[1].message;
+    switch(arguments[0]) {
 
       case "newNormalizedData":
         Timeline.newDataAvailable = true;
@@ -2195,12 +2195,11 @@ let Timeline = {
       Cu.unload("chrome://graphical-timeline/content/client/timeline-canvas.jsm");
       CanvasManager = null;
       Timeline.client.removeListener("newNormalizedData",
-                                     Timeline._remoteListener
-                                             .bind(Timeline, "newNormalizedData"));
+                                     Timeline._remoteListener.bind(Timeline));
       Timeline.client.removeListener("UIUpdate",
-                                     Timeline._remoteListener.bind(Timeline, "UIUpdate"));
+                                     Timeline._remoteListener.bind(Timeline));
       Timeline.client.removeListener("pageReload",
-                                     Timeline._remoteListener.bind(Timeline, "pageReload"));
+                                     Timeline._remoteListener.bind(Timeline));
       Timeline.client.close();
       DebuggerServer.removeGlobalActor(DataSinkActor);
       try {

@@ -167,7 +167,6 @@ function DebuggerClient(aTransport)
 {
   this._transport = aTransport;
   this._transport.hooks = this;
-  this._threadClients = {};
   this._tabClients = {};
 
   this._pendingRequests = [];
@@ -319,11 +318,6 @@ DebuggerClient.prototype = {
         delete this._activeRequests[aPacket.from];
       }
 
-      // Packets that indicate thread state changes get special treatment.
-      if (aPacket.type in ThreadStateTypes &&
-          aPacket.from in this._threadClients) {
-        this._threadClients[aPacket.from]._onThreadState(aPacket);
-      }
       this.notify(aPacket.type, aPacket);
 
       if (onResponse) {

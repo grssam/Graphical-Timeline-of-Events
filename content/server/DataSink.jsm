@@ -31,7 +31,7 @@ let Packets = {
   },
 
   missingData: {
-    error: "error"
+    error: "error",
     type: "missingData",
     message: "Some data missing in the request packet"
   },
@@ -274,8 +274,7 @@ let DataSink = {
     else {
       aMessage.error = "idTaken";
     }
-
-    return {"reply": aMessage};
+    return {"message": aMessage, "type": "reply"};
   },
 
   /**
@@ -309,7 +308,7 @@ let DataSink = {
       };
     }
     // TODO: send an update to all the other UI clients too.
-    return {"UIUpdate": message};
+    return {"message": message, "type": "reply"};
   },
 
   /**
@@ -348,14 +347,12 @@ let DataSink = {
   /**
    * Fires an event to let the Graph UI know about data changes.
    *
-   * @param Function aTeleport
-   *        The function using which the sendMessage will send the data.
    * @param int aMessageType
    *        One of DataSinkEventMessageType
    * @param object aMessageData
    *        Data concerned with the event.
    */
-  sendMessage: function DS_sendMessage(aTeleport, aMessageType, aMessageData) {
+  sendMessage: function DS_sendMessage(aMessageType, aMessageData) {
     let detail = {
                    "detail":
                      {
@@ -363,7 +360,14 @@ let DataSink = {
                        "messageType": aMessageType,
                      },
                  };
-    aTeleport(detail);
+    DataSink.transportFunction(detail);
+  },
+
+  transportFunction: function DS_transportFunction(aDetail) {
+    let customEvent =
+      new DataSink._chromeWindowForGraph
+                  .CustomEvent("GraphicalTimeline:DataSinkEvent", aDetail);
+    DataSink._chromeWindowForGraph.dispatchEvent(customEvent);
   },
 
   /**
@@ -556,12 +560,3 @@ let DataSink = {
     return {"destroyed": "lastAttachedUI"};
   },
 };
-
-// Binding the sendMessage to send things via the dispatchEvent.
-// This can be overruled by the Data Sink Actor to use the connection.
-DataSink.sendMessage = DataSink.sendMessage.bind(DataSink, function(aDetail) {
-  let customEvent =
-    new DataSink._chromeWindowForGraph
-                .CustomEvent("GraphicalTimeline:DataSinkEvent", aDetail);
-  DataSink._chromeWindowForGraph.dispatchEvent(customEvent);
-});

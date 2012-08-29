@@ -11,6 +11,7 @@ var EXPORTED_SYMBOLS = ["DataSinkActor"];
 
 function DataSinkActor(aConnection) {
   this.conn = aConnection;
+  this.onPing = this.onPing.bind(this);
 }
 
 DataSinkActor.prototype =
@@ -31,36 +32,45 @@ DataSinkActor.prototype =
     this.onDestroy();
   },
 
+  count: 0,
   sendPacket: function DSA_sendPacket(aDetails)
   {
-    let {messageData, messageType} = aDetails;
+    let {messageData, messageType} = aDetails.detail;
     let packet = {
-      from: this.actorID,
-      type: messageType,
-      message: messageData
+      "from": this.actorID,
+      "type": messageType,
+      "message": messageData
     };
     this.conn.send(packet);
   },
 
   onPing: function DSA_onPing(aRequest)
   {
-    return DataSink.replyToPing(aRequest);
-  },
-
-  onInit: function DSA_onInit(aRequest)
-  {
     try {
-      if (DataSink && !DataSink.initiated) {
-        // Enable the below line when there is a way to trick UnsolicitedNotifications.
-        // DataSink.sendMessage = DataSink.sendMessage.bind(DataSink, this.sendPacket);
-      }
+      return DataSink.replyToPing(aRequest);
     } catch (ex) {
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
+      DataSink.transportFunction = this.sendPacket.bind(this);
+      return DataSink.replyToPing(aRequest);
     }
-    return DataSink.init(aRequest);
+  },
+
+  onInit: function DSA_onInit(aRequest)
+  {
+    try {
+      return DataSink.init(aRequest);
+    } catch (ex) {
+      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+      Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+      Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
+      Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
+      DataSink.transportFunction = this.sendPacket.bind(this);
+      return DataSink.init(aRequest);
+    }
+    
   },
 
   onDestroy: function DSA_onDestroy(aRequest)
@@ -124,17 +134,15 @@ DataSinkActor.prototype =
   onStartRecording: function DSA_onStartRecording(aRequest)
   {
     try {
-      if (DataSink && !DataSink.initiated) {
-        // Enable the below line when there is a way to trick UnsolicitedNotifications.
-        // DataSink.sendMessage = DataSink.sendMessage.bind(DataSink, this.sendPacket);
-      }
+      return DataSink.startListening(aRequest);
     } catch (ex) {
       Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
       Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
+      DataSink.transportFunction = this.sendPacket.bind(this);
+      return DataSink.startListening(aRequest);
     }
-    return DataSink.startListening(aRequest);
   },
 
   onStopRecording: function DSA_onStopRecording(aRequest)
@@ -144,8 +152,8 @@ DataSinkActor.prototype =
 };
 
 /**
-* Request type definitions.
-*/
+ * Request type definitions.
+ */
 DataSinkActor.prototype.requestTypes =
 {
   "ping": DataSinkActor.prototype.onPing,
