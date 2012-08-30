@@ -250,7 +250,7 @@
 }
 
 #options {
-  list-style-image: url("chrome://browser/skin/devtools/inspector-option-icon.png");
+  list-style-image: url("images/devtools-dropdown.png");
   -moz-image-region: rect(0px 16px 16px 0px);
 }
 

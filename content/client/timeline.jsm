@@ -1793,11 +1793,15 @@ TimelineView.prototype = {
     this._splitter.removeEventListener("mousedown", this._onFrameResizeStart, true);
     this._splitter.style.position = "fixed";
     this._splitter.style.display = "block";
-    this._splitter.style.border = "1px dashed black";
     this._splitter.style.width = "100%";
+    this._splitter.style.height = "7px";
+    this._splitter.style.background = "-moz-linear-gradient(top, transparent 0px," +
+                                      "transparent 2px, rgb(22,33,43) 2px, rgb(22,33,43) 3px," +
+                                      "white 3px, white 4px, rgb(22,33,43) 4px," +
+                                      "rgb(22,33,43) 5px, transparent 5px, transparent 7px)";
     this._splitter.style.background = "-moz-linear-gradient(top, white 0px, white 1px, transparent 1px, white 2px)";
     this._splitter.style.backgroundOrigin = "border-box";
-    this._splitter.style.top = (aEvent.screenY - this._window.screenY) + "px";
+    this._splitter.style.top = (aEvent.screenY - this._window.screenY - 2) + "px";
     this._window.addEventListener("mousemove", this._onFrameResize, true);
     this._window.addEventListener("mouseup", this._onFrameResizeEnd, true);
     this._frameResizeStartY = aEvent.screenY;
@@ -1805,13 +1809,13 @@ TimelineView.prototype = {
 
   _onFrameResize: function TV__onFrameResize(aEvent)
   {
-    this._splitter.style.top = (aEvent.screenY - this._window.screenY) + "px";
+    this._splitter.style.top = (aEvent.screenY - this._window.screenY - 2) + "px";
   },
 
   _onFrameResizeEnd: function TV__onFrameResizeEnd(aEvent)
   {
     this._splitter.style.position = "absolute";
-    this._splitter.style.top = (aEvent.screenY - this._window.screenY) + "px";
+    this._splitter.style.top = (aEvent.screenY - this._window.screenY - 2) + "px";
     this._frame.style.height = this._frame.height =
       (this._frame.height.replace("px", "")*1 +
        this._frameResizeStartY - aEvent.screenY) + "px";
