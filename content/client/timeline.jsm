@@ -1799,7 +1799,6 @@ TimelineView.prototype = {
                                       "transparent 2px, rgb(22,33,43) 2px, rgb(22,33,43) 3px," +
                                       "white 3px, white 4px, rgb(22,33,43) 4px," +
                                       "rgb(22,33,43) 5px, transparent 5px, transparent 7px)";
-    this._splitter.style.background = "-moz-linear-gradient(top, white 0px, white 1px, transparent 1px, white 2px)";
     this._splitter.style.backgroundOrigin = "border-box";
     this._splitter.style.top = (aEvent.screenY - this._window.screenY - 2) + "px";
     this._window.addEventListener("mousemove", this._onFrameResize, true);
@@ -1815,6 +1814,7 @@ TimelineView.prototype = {
   _onFrameResizeEnd: function TV__onFrameResizeEnd(aEvent)
   {
     this._splitter.style.position = "absolute";
+    this._splitter.style.height = "3px";
     this._splitter.style.top = (aEvent.screenY - this._window.screenY - 2) + "px";
     this._frame.style.height = this._frame.height =
       (this._frame.height.replace("px", "")*1 +
