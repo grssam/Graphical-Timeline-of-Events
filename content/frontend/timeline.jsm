@@ -235,6 +235,49 @@ TimelineView.prototype = {
    */
   prepareTips: function TV_prepareTips()
   {
+    let stats = TimelinePreferences.userStats;
+    if (stats.windowZoomed == 0) {
+      this.displayTips = function() {
+        function onFrameClick() {
+          this.$("timeline-canvas-dots").removeEventListener("click",
+                                                             onFrameClick.bind(this), true);
+          this.zoomingTip.classList.add("delayed-fade-out");
+          this.zoomingTip.style.MozAnimationDuration = "0.5s";
+          this._window.setTimeout(function() {
+            this.zoomingTip.parentNode.removeChild(this.zoomingTip);
+            this.zoomingTip = null;
+          }.bind(this), 500);
+        }
+
+        this.zoomingTip = this._frameDoc.createElement("hbox");
+        this.zoomingTip.setAttribute("class", "transparent-tip delayed-fade-in");
+        let text = this._frameDoc.createElement("label");
+        text.setAttribute("value", "Click and drag on this area to zoom into view");
+        let (spacer = this._frameDoc.createElement("spacer")) {
+          spacer.setAttribute("flex", "1");
+          this.zoomingTip.appendChild(spacer);
+        }
+        let zoomingTipContent = this._frameDoc.createElement("hbox");
+        zoomingTipContent.appendChild(text);
+        zoomingTipContent.setAttribute("class", "tip-content");
+        this.zoomingTip.appendChild(zoomingTipContent);
+        let (spacer = this._frameDoc.createElement("spacer")) {
+          spacer.setAttribute("flex", "1");
+          this.zoomingTip.appendChild(spacer);
+        }
+        this.$("timeline-canvas-dots").addEventListener("mousedown",
+                                                        onFrameClick.bind(this), true);
+
+        this.detailBox.parentNode.appendChild(this.zoomingTip);
+      };
+    }
+    else if (stats.rulerDragged == 0) {
+      this.displayTips = function() {
+      };
+    }
+    else {
+      this.displayTips = function() {};
+    }
   },
 
   /**
@@ -666,6 +709,7 @@ TimelineView.prototype = {
           TimelinePreferences.userStats = stats;
         }
       }
+      this.displayTips();
       let stats = TimelinePreferences.userStats;
       stats.recorded++;
       TimelinePreferences.userStats = stats;
