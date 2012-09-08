@@ -236,7 +236,7 @@ TimelineView.prototype = {
   prepareTips: function TV_prepareTips()
   {
     let stats = TimelinePreferences.userStats;
-    if (stats.windowZoomed == 0) {
+    if (stats.windowZoomed == 0 && stats.recorded >= 2) {
       this.displayTips = function() {
         function onFrameClick() {
           this.$("timeline-canvas-dots").removeEventListener("click",
@@ -269,10 +269,6 @@ TimelineView.prototype = {
                                                         onFrameClick.bind(this), true);
 
         this.detailBox.parentNode.appendChild(this.zoomingTip);
-      };
-    }
-    else if (stats.rulerDragged == 0) {
-      this.displayTips = function() {
       };
     }
     else {
