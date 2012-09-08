@@ -3,7 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 "use strict";
-let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
+const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
 
@@ -83,12 +83,9 @@ DataSinkActor.prototype =
       Components.utils.unload("chrome://graphical-timeline/content/server/DataSink.jsm");
     } catch (e) {}
     try {
-      delete global.DataSink;
-      delete global.NetworkProducer;
-      delete global.PageEventsProducer;
-      delete global.MemoryProducer;
+      DataSink = NetworkProducer = PageEventsProducer = MemoryProducer = null;
     } catch (e) {}
-    return toReturn;
+    return toReturn || {};
   },
 
   onEnableFeatures: function DSA_onEnableFeatures(aRequest)

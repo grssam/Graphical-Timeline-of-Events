@@ -745,6 +745,11 @@ let NetworkProducer =
       }
       return value;
     }
+
+    if (!NetworkProducer.listeningWindows) {
+      return;
+    }
+
     /* let tabId = null;
     let window = aHttpActivity.contentWindow;
     // Get the chrome window associated with the content window

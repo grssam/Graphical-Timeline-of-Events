@@ -2192,29 +2192,30 @@ let Timeline = {
       Timeline.sendMessage("destroy",
                            {deleteDatabase: true, // true to delete the database
                             timelineUIId: Timeline.id, // to tell which UI is closing.
-                           });
-      Timeline.shouldDeleteDatabaseItself = true;
-      Timeline.pingSent = Timeline.listening = false;
-      Timeline._view.closeUI();
-      Cu.unload("chrome://graphical-timeline/content/client/timeline-canvas.jsm");
-      CanvasManager = null;
-      Timeline.client.removeListener("newNormalizedData",
-                                     Timeline._remoteListener.bind(Timeline));
-      Timeline.client.removeListener("UIUpdate",
-                                     Timeline._remoteListener.bind(Timeline));
-      Timeline.client.removeListener("pageReload",
-                                     Timeline._remoteListener.bind(Timeline));
-      Timeline.client.close();
-      DebuggerServer.removeGlobalActor(DataSinkActor);
-      try {
-        Cu.unload("chrome://graphical-timeline/content/server/DataSinkActor.jsm");
-        DataSinkActor == null;
-      } catch (ex) {}
-      Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
-        Timeline.client = Timeline._currentId = Timeline._window = null;
-      Timeline.producerInfoList = null;
-      if (Timeline.callback)
-        Timeline.callback();
+                           }, function() {
+        Timeline.shouldDeleteDatabaseItself = true;
+        Timeline.pingSent = Timeline.listening = false;
+        Timeline._view.closeUI();
+        Cu.unload("chrome://graphical-timeline/content/client/timeline-canvas.jsm");
+        CanvasManager = null;
+        Timeline.client.removeListener("newNormalizedData",
+                                       Timeline._remoteListener.bind(Timeline));
+        Timeline.client.removeListener("UIUpdate",
+                                       Timeline._remoteListener.bind(Timeline));
+        Timeline.client.removeListener("pageReload",
+                                       Timeline._remoteListener.bind(Timeline));
+        Timeline.client.close();
+        DebuggerServer.removeGlobalActor(DataSinkActor);
+        try {
+          Cu.unload("chrome://graphical-timeline/content/server/DataSinkActor.jsm");
+          DataSinkActor == null;
+        } catch (ex) {}
+        Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
+          Timeline.client = Timeline._currentId = Timeline._window = null;
+        Timeline.producerInfoList = null;
+        if (Timeline.callback)
+          Timeline.callback();
+      });
     }
   }
 };

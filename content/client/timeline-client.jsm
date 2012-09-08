@@ -13,7 +13,6 @@ const Cr = Components.results;
 var EXPORTED_SYMBOLS = ["DebuggerClient"];
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
-Cu.import("resource://gre/modules/NetUtil.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 let loader = Cc["@mozilla.org/moz/jssubscript-loader;1"]
@@ -279,7 +278,7 @@ DebuggerClient.prototype = {
       }
 
       self._activeRequests[request.to] = request;
-      self._transport.send(request.request);
+      self._transport && self._transport.send(request.request);
 
       return false;
     });
