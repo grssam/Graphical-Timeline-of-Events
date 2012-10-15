@@ -7,7 +7,11 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/NetUtil.jsm");
-Cu.import("resource:///modules/NetworkHelper.jsm");
+try {
+  Cu.import("resource:///modules/NetworkHelper.jsm");
+} catch (ex) { // Firefox 18+ has this new location for this file
+  Cu.import("resource:///modules/devtools/NetworkHelper.jsm");
+}
 Cu.import("chrome://graphical-timeline/content/server/DataSink.jsm");
 
 var EXPORTED_SYMBOLS = ["NetworkProducer"];
