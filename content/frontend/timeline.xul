@@ -4,7 +4,7 @@
    - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://browser/skin/devtools/common.css" type="text/css"?>
-<?xml-stylesheet href="timeline.css" type="text/css"?>
+<?xml-stylesheet href="chrome://graphical-timeline/skin/timeline.css" type="text/css"?>
 <!DOCTYPE window [
 <!ENTITY % timelineDTD SYSTEM "chrome://graphical-timeline/locale/graphical-timeline.dtd" >
  %timelineDTD;
