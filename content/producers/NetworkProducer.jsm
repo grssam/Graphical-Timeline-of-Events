@@ -448,7 +448,7 @@ let NetworkProducer =
 
     let channel = aSubject.QueryInterface(Ci.nsIHttpChannel);
     // Try to get the source window of the request.
-    let win = NetworkHelper.getWindowForRequest(channel);
+    let win = NetworkHelper.getWindowForRequest(channel).top;
     if (!win || NetworkProducer.listeningWindows.indexOf(win) == -1) {
       return;
     }
@@ -593,7 +593,7 @@ let NetworkProducer =
   function NP__onRequestHeader(aChannel, aTimestamp, aExtraStringData)
   {
     // Try to get the source window of the request.
-    let win = NetworkHelper.getWindowForRequest(aChannel);
+    let win = NetworkHelper.getWindowForRequest(aChannel).top;
     if (!win || this.listeningWindows.indexOf(win) == -1) {
       return;
     }
@@ -653,7 +653,7 @@ let NetworkProducer =
   {
     return {
       id: this.sequenceId,
-      contentWindow: NetworkHelper.getWindowForRequest(aChannel),
+      contentWindow: NetworkHelper.getWindowForRequest(aChannel).top,
       channel: aChannel,
       charset: null, // see NP__onRequestHeader()
       stages: [], // activity stages (aActivitySubtype)
