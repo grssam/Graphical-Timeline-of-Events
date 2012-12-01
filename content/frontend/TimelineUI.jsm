@@ -7,8 +7,16 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 
 const broadcasterID = "devtoolsMenuBroadcaster_TimelineUI";
-
+let gDevToolsAvailable;
 var EXPORTED_SYMBOLS = ["TimelineUI"];
+
+try {
+  Cu.import("resource:///modules/devtools/gDevTools.jsm");
+  Cu.import("resource:///modules/devtools/Target.jsm");
+  gDevToolsAvailable = true;
+} catch (ex) {
+  gDevToolsAvailable = false;
+}
 
 let global = {};
 
@@ -20,14 +28,45 @@ let TimelineUI = {
    */
   contentWindow: null,
 
+  get gDevToolsAvailable() gDevToolsAvailable,
+
   _startup: function TUI__startup()
   {
     Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+    Cu.import("chrome://graphical-timeline/content/frontend/TimelinePanel.jsm", global);
+
+    if (gDevToolsAvailable) {
+      let timelineDefinition = {
+        id: "timeline",
+        key: "Q",
+        accesskey: "T",
+        modifiers:"accel,shift",
+        ordinal: 5,
+        killswitch: "devtools.timeline.enabled",
+        icon: "chrome://graphical-timeline/skin/images/tools-icons-small.png",
+        url: "chrome://graphical-timeline/content/frontend/timeline.xul",
+        label: "Timeline",
+
+        isTargetSupported: function(target) {
+          return true;
+        },
+
+        build: function(iframeWindow, toolbox) {
+          return new global.TimelinePanel(iframeWindow, toolbox);
+        }
+      };
+      gDevTools.registerTool(timelineDefinition);
+    }
   },
 
   _unload: function TUI__unload()
   {
-    global.Timeline.destroy();
+    if (gDevToolsAvailable) {
+      gDevTools.unregisterTool("timeline");
+    }
+    else {
+      global.Timeline.destroy();
+    }
     Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
     try {
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
@@ -42,6 +81,7 @@ let TimelineUI = {
       delete global.MemoryProducer;
       global.Timeline = null;
       delete global.Timeline;
+      delete global.TimelinePanel;
     } catch (e) {}
     TimelineUI = null;
   },
@@ -72,33 +112,40 @@ let TimelineUI = {
                    .getService(Ci.nsIWindowMediator)
                    .getMostRecentWindow("navigator:browser");
     if (global.Timeline && global.Timeline.UIOpened != true) {
-      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
-      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
-      global.DataSink.addRemoteListener(window);
-      global.Timeline.init(function () {
-        global.DataSink.removeRemoteListener(window);
-        try {
-          Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-          Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-          delete global.DataSink;
-          delete global.NetworkProducer;
-          delete global.PageEventsProducer;
-          delete global.MemoryProducer;
-          global.Timeline = null;
-          delete global.Timeline;
-          Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
-        } catch (e) {}
-        try {
-          $(broadcasterID).setAttribute("checked", "false");
-        } catch (ex) {}
-      });
-      $(broadcasterID).setAttribute("checked", "true");
-      TimelineUI.contentWindow = window.content.window;
+      if (gDevToolsAvailable) {
+        let target = TargetFactory.forTab(window.gBrowser.selectedTab);
+        let toolbox = gDevTools.openToolbox(target, null, "timeline");
+        TimelineUI.contentWindow = window.content.window;
+      }
+      else {
+        Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+        Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
+        Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
+        Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
+        global.DataSink.addRemoteListener(window);
+        global.Timeline.init(function () {
+          global.DataSink.removeRemoteListener(window);
+          try {
+            Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
+            Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
+            Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
+            Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
+            Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
+            delete global.DataSink;
+            delete global.NetworkProducer;
+            delete global.PageEventsProducer;
+            delete global.MemoryProducer;
+            global.Timeline = null;
+            delete global.Timeline;
+            Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+          } catch (e) {}
+          try {
+            $(broadcasterID).setAttribute("checked", "false");
+          } catch (ex) {}
+        });
+        $(broadcasterID).setAttribute("checked", "true");
+        TimelineUI.contentWindow = window.content.window;
+      }
     }
     else {
       if (window.content.window != TimelineUI.contentWindow) {

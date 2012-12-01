@@ -54,15 +54,20 @@ const HTML = "http://www.w3.org/1999/xhtml";
  *
  * @param chromeWindow aChromeWindow
  *        The window in which the UI should be setup and monitored.
+ * @param iframe aIframe
+ *        If you want the xul to reside inside an iframe, pass the iframe.
  */
-function TimelineView(aChromeWindow) {
+function TimelineView(aChromeWindow, aIframe) {
   this._window = aChromeWindow;
   let gBrowser = this._window.gBrowser;
+  this._iframe = aIframe || null;
   let ownerDocument = gBrowser.parentNode.ownerDocument;
 
-  this._splitter = ownerDocument.createElement("hbox");
-  this._splitter.setAttribute("class", "devtools-horizontal-splitter");
-  this._splitter.style.cursor = "n-resize";
+  if (!this._iframe) {
+    this._splitter = ownerDocument.createElement("hbox");
+    this._splitter.setAttribute("class", "devtools-horizontal-splitter");
+    this._splitter.style.cursor = "n-resize";
+  }
 
   this.loaded = false;
   this.canvasStarted = false;
@@ -72,11 +77,13 @@ function TimelineView(aChromeWindow) {
   this.compactHeight = 120;
   this.compactMode = TimelinePreferences.compactMode;
 
-  this._frame = ownerDocument.createElement("iframe");
-  this._frame.height = TimelinePreferences.height;
-  this._nbox = gBrowser.getNotificationBox(gBrowser.selectedTab.linkedBrowser);
-  this._nbox.appendChild(this._splitter);
-  this._nbox.appendChild(this._frame);
+  this._frame = this._iframe || ownerDocument.createElement("iframe");
+  if (!this._iframe) {
+    this._frame.height = TimelinePreferences.height;
+    this._nbox = gBrowser.getNotificationBox(gBrowser.selectedTab.linkedBrowser);
+    this._nbox.appendChild(this._splitter);
+    this._nbox.appendChild(this._frame);
+  }
   this._canvas = null;
 
   this.toggleOverview = this.toggleOverview.bind(this);
@@ -126,7 +133,9 @@ function TimelineView(aChromeWindow) {
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
-  this._frame.setAttribute("src", "chrome://graphical-timeline/content/frontend/timeline.xul");
+  if (!this._iframe) {
+    this._frame.setAttribute("src", "chrome://graphical-timeline/content/frontend/timeline.xul");
+  }
 }
 
 TimelineView.prototype = {
@@ -159,8 +168,15 @@ TimelineView.prototype = {
     this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
     this.$("zoom-in").addEventListener("command", this.zoomIn, true);
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
-    this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
-    this.closeButton.addEventListener("command", Timeline.destroy, true);
+    if (!this._iframe) {
+      this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
+      this.closeButton.addEventListener("command", Timeline.destroy, true);
+    }
+    else {
+      this.closeButton.style.opacity = 0;
+      this.closeButton.style.zIndex = -10;
+      this.closeButton.style.pointerEvents = "none";
+    }
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.restartOnReload.addEventListener("command", this.toggleRestartOnReload, true);
@@ -171,7 +187,9 @@ TimelineView.prototype = {
       this.restartOnReload.setAttribute("checked", true);
     }
     this.updateScrollbar();
-    this.handleFrameResize();
+    if (!this._iframe) {
+      this.handleFrameResize();
+    }
     // Setting up the first run experience
     if (TimelinePreferences.timesUIOpened == 0 ||
         TimelinePreferences.userStats.recorded == 0) {
@@ -1973,6 +1991,7 @@ let Timeline = {
   _view: null,
   _currentId: 1,
   _window: null,
+  _iframe: null,
   //_console: null,
 
   UIOpened: false,
@@ -1991,12 +2010,15 @@ let Timeline = {
   /**
    * Prepares the UI and sends ping to the Data Sink.
    */
-  init: function GUI_init(aCallback) {
+  init: function GUI_init(aCallback, aIframe) {
     Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
     Timeline.callback = aCallback;
+    if (aIframe) {
+      Timeline._iframe = aIframe;
+    }
     Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                        .getService(Ci.nsIWindowMediator)
-                        .getMostRecentWindow("navigator:browser");
+                         .getService(Ci.nsIWindowMediator)
+                         .getMostRecentWindow("navigator:browser");
     Timeline.addRemoteListener(Timeline._window);
     // destroying on unload.
     Timeline._window.addEventListener("unload", Timeline.destroy, false);
@@ -2005,7 +2027,7 @@ let Timeline = {
     }
     Timeline.pingSent = true;
     Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                        {timelineUIId: Timeline.id});
+                         {timelineUIId: Timeline.id});
   },
 
   /**
@@ -2013,9 +2035,15 @@ let Timeline = {
    */
   buildUI: function GUI_buildUI() {
     if (!Timeline._view) {
-      Timeline._view = new TimelineView(Timeline._window);
+      try {
+      Timeline._view = new TimelineView(Timeline._window, Timeline._iframe);
+    
+    } catch(e) { Timeline._window.alert(e);}
     }
+    try {
     Timeline._view.createProducersPane(Timeline.producerInfoList);
+    
+    } catch(e) { Timeline._window.alert(e);}
     Timeline.UIOpened = true;
   },
 
