@@ -52,6 +52,16 @@ let TimelineUI = {
         },
 
         build: function(iframeWindow, toolbox) {
+          if (global.Timeline && global.Timeline.UIOpened == true) {
+            TimelineUI.toggleTimelineUI();
+            return {destroy: function() {}, once: function() {}};
+          }
+          else {
+            let window = Cc["@mozilla.org/appshell/window-mediator;1"]
+                           .getService(Ci.nsIWindowMediator)
+                           .getMostRecentWindow("navigator:browser");
+            TimelineUI.contentWindow = window.content.window;
+          }
           return new global.TimelinePanel(iframeWindow, toolbox);
         }
       };
@@ -181,15 +191,45 @@ let TimelineUI = {
   reopenTimelineUI: function TUI_reopenTimelineUI()
   {
     global.Timeline.destroy();
+    TimelineUI.closeCurrentlyOpenedToolbox();
+    TimelineUI.closeThisToolbox();
     TimelineUI.toggleTimelineUI();
   },
 
   switchToTimelineTab: function TUI_switchToTimelineTab()
   {
-    global.Timeline._window.focus();
-    global.Timeline._window.gBrowser.selectedTab = global.Timeline._window.gBrowser.tabs[
-      global.Timeline._window.gBrowser
-                     .getBrowserIndexForDocument(TimelineUI.contentWindow.document)
-    ];
+    TimelineUI.closeThisToolbox();
+    let window = Cc["@mozilla.org/appshell/window-mediator;1"]
+                  .getService(Ci.nsIWindowMediator)
+                  .getMostRecentWindow("navigator:browser");
+    window.gBrowser.selectedTab = TimelineUI.getTimelineTab();
+  },
+
+  getTimelineTab: function TUI_getTimelineTab()
+  {
+    let window = Cc["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Ci.nsIWindowMediator)
+                   .getMostRecentWindow("navigator:browser");
+    return window.gBrowser.tabs[window.gBrowser.getBrowserIndexForDocument(
+      TimelineUI.contentWindow.document)];
+  },
+
+  closeCurrentlyOpenedToolbox: function TUI_closeCurrentlyOpenedToolbox()
+  {
+    if (TimelineUI.gDevToolsAvailable) {
+      let target = TargetFactory.forTab(TimelineUI.getTimelineTab());
+      gDevTools.closeToolbox(target);
+    }
+  },
+
+  closeThisToolbox: function TUI_closeThisToolbox()
+  {
+    if (TimelineUI.gDevToolsAvailable) {
+      let window = Cc["@mozilla.org/appshell/window-mediator;1"]
+                    .getService(Ci.nsIWindowMediator)
+                    .getMostRecentWindow("navigator:browser");
+      let target = TargetFactory.forTab(window.gBrowser.selectedTab);
+      gDevTools.closeToolbox(target);
+    }
   },
 };
