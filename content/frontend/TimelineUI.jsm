@@ -190,28 +190,24 @@ let TimelineUI = {
 
   reopenTimelineUI: function TUI_reopenTimelineUI()
   {
-    global.Timeline.destroy();
     TimelineUI.closeCurrentlyOpenedToolbox();
     TimelineUI.closeThisToolbox();
+    global.Timeline.destroy();
     TimelineUI.toggleTimelineUI();
   },
 
   switchToTimelineTab: function TUI_switchToTimelineTab()
   {
     TimelineUI.closeThisToolbox();
-    let window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                  .getService(Ci.nsIWindowMediator)
-                  .getMostRecentWindow("navigator:browser");
-    window.gBrowser.selectedTab = TimelineUI.getTimelineTab();
+    global.Timeline._window.focus();
+    global.Timeline._window.gBrowser.selectedTab = TimelineUI.getTimelineTab();
   },
 
   getTimelineTab: function TUI_getTimelineTab()
   {
-    let window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                   .getService(Ci.nsIWindowMediator)
-                   .getMostRecentWindow("navigator:browser");
-    return window.gBrowser.tabs[window.gBrowser.getBrowserIndexForDocument(
-      TimelineUI.contentWindow.document)];
+    return global.Timeline._window.gBrowser.tabs[
+      global.Timeline._window.gBrowser.getBrowserIndexForDocument(
+        TimelineUI.contentWindow.document)];
   },
 
   closeCurrentlyOpenedToolbox: function TUI_closeCurrentlyOpenedToolbox()
