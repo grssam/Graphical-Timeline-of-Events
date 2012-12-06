@@ -148,6 +148,7 @@ TimelineView.prototype = {
     this.loaded = true;
     this._frame.removeEventListener("load", this._onLoad, true);
     this._frameDoc = this._frame.contentDocument;
+    this._frameDoc.defaultView.focus();
     this.closeButton = this.$("close");
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
@@ -197,6 +198,8 @@ TimelineView.prototype = {
     }
     // Setting up general tips based on user stats.
     this.prepareTips();
+    // Setup accesskey preview to show the access key for the various buttons
+    this.setupAccesskeyPreview();
     TimelinePreferences.timesUIOpened = TimelinePreferences.timesUIOpened + 1;
   },
 
@@ -291,6 +294,95 @@ TimelineView.prototype = {
     }
     else {
       this.displayTips = function() {};
+    }
+  },
+
+  setupAccesskeyPreview: function TV_setupAccesskeyPreview()
+  {
+    this._frameDoc.addEventListener("keydown", this._onAltKeyDown.bind(this), true);
+    this._frameDoc.addEventListener("keyup", this._onAltKeyUP.bind(this), true);
+    this._frameDoc.addEventListener("keypress", this._onAltKeyUP.bind(this), true);
+    this._frameDoc.addEventListener("mousedown", function() {
+      this._frameDoc.defaultView.focus();
+      this.clearAccessKeys();
+    }.bind(this), true);
+  },
+
+  showAccessKeys: function TV_showAccessKeys()
+  {
+    this.recordButton.label = "R";
+    this.overviewButton.label = "O";
+    this.$("zoom-in").label = "+";
+    this.$("zoom-out").label = "-";
+    this._lastKeyPressTime = Date.now();
+  },
+
+  clearAccessKeys: function TV_clearAccessKeys()
+  {
+    try {
+      this.recordButton.removeAttribute("label");
+    } catch(ex) {}
+    try {
+      this.overviewButton.removeAttribute("label");
+    } catch(ex) {}
+    try {
+      this.$("zoom-in").removeAttribute("label");
+    } catch(ex) {}
+    try {
+      this.$("zoom-out").removeAttribute("label");
+    } catch(ex) {}
+  },
+
+  _onAltKeyUP: function TV__onAltKeyUP(event)
+  {
+    if (event.keyCode == 18) {
+      this.clearAccessKeys();
+    }
+  },
+
+  _onAltKeyDown: function TV__onAltKeyPress(event)
+  {
+    if (event.keyCode == 18 && event.altKey) {
+      this.showAccessKeys();
+      event.stopPropagation();
+      event.preventDefault();
+      return;
+    }
+    if (!event.altKey) {
+      return;
+    }
+    switch(event.keyCode) {
+      case event.DOM_VK_R:
+        this.recordButton.click();
+        break;
+
+      case event.DOM_VK_O:
+        this.overviewButton.click();
+        break;
+
+      case event.DOM_VK_ADD:
+      case event.DOM_VK_PLUS:
+        this.$("zoom-in").click();
+        break;
+
+      case event.DOM_VK_SUBTRACT:
+      case event.DOM_VK_HYPHEN_MINUS:
+        this.$("zoom-out").click();
+        break;
+
+      default:
+        return;
+    }
+    this.showAccessKeys();
+    if (!this._accessKeysClearerTimer) {
+      this._accessKeysClearerTimer =
+        this._frameDoc.defaultView.setInterval(function() {
+          if (Date.now() - this._lastKeyPressTime > 5000 && this._accessKeysClearerTimer) {
+            this._frameDoc.defaultView.clearInterval(this._accessKeysClearerTimer);
+            this._accessKeysClearerTimer = null;
+            this.clearAccessKeys();
+          }
+        }.bind(this), 2000);
     }
   },
 
@@ -1485,9 +1577,29 @@ TimelineView.prototype = {
           valueLabel.setAttribute("class", "text-link");
           if (aValue != null) {
             valueLabel.addEventListener("click", function() {
-              this._window.InspectorUI
-                  .openInspectorUI(this._window.gBrowser.contentDocument
-                                       .getElementById(value));
+              try {
+                this._window.InspectorUI
+                    .openInspectorUI(this._window.gBrowser.contentDocument
+                                         .getElementById(value));
+              } catch (ex) {
+                let gBrowser = this._window.gBrowser;
+                let imported = {};
+                Cu.import("resource:///modules/devtools/Target.jsm", imported);
+                let target = imported.TargetFactory.forTab(gBrowser.selectedTab);
+                let inspector = this._window.gDevTools.getPanelForTarget("inspector", target);
+                this._window.gDevTools.getToolboxForTarget(target).selectTool("inspector");
+                if (inspector && inspector.isReady) {
+                  inspector.selection.setNode(this._window.gBrowser.contentDocument
+                                                  .getElementById(value));
+                } else {
+                  let toolbox = this._window.gDevTools.openToolboxForTab(target, "inspector");
+                  toolbox.once("inspector-ready", function(event, panel) {
+                    let inspector = this._window.gDevTools.getPanelForTarget("inspector", target);
+                    inspector.selection.setNode(this._window.gBrowser.contentDocument
+                                                    .getElementById(value));
+                  }.bind(this));
+                }
+              }
               let stats = TimelinePreferences.userStats;
               stats.inspector++;
               TimelinePreferences.userStats = stats;
@@ -1961,9 +2073,12 @@ TimelineView.prototype = {
       this._canvas.destroy();
       this._canvas = null;
     }
-    this._splitter.parentNode.removeChild(this._splitter);
-    this._frame.parentNode.removeChild(this._frame);
-    this._frame = this._frameDoc = this._window = null;
+    if (!this._iframe) {
+      this._splitter.parentNode.removeChild(this._splitter);
+      this._frame.parentNode.removeChild(this._frame);
+      this._frame = null;
+    }
+    this._frameDoc = this._window = null;
   },
 
   _onUnload: function TV__onUnload()

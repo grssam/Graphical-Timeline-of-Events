@@ -139,6 +139,9 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     if (!TimelineUI.gDevToolsAvailable) {
       watchWindows(addMenuItem);
     }
+    else {
+      watchWindows(function(window) window.TimelineUI = TimelineUI);
+    }
     unload(TimelineUI._unload);
     unload(function() {
       Components.utils.unload("chrome://graphical-timeline/content/frontend/TimelineUI.jsm");
