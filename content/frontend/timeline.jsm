@@ -1638,37 +1638,43 @@ TimelineView.prototype = {
                     let stats = TimelinePreferences.userStats;
                     stats.linkClicked++;
                     TimelinePreferences.userStats = stats;
-                    function openScript(scriptsView) {
-                      let targetScript = aValue;
-                      let scriptLocations = scriptsView.scriptLocations;
+                    if (!Timeline._toolbox) {
+                      function openScript(scriptsView) {
+                        let targetScript = aValue;
+                        let scriptLocations = scriptsView.scriptLocations;
 
-                      if (scriptLocations.indexOf(targetScript) === -1) {
-                        window.DebuggerUI.toggleDebugger();
-                        window.openUILinkIn(aValue, "tab");
+                        if (scriptLocations.indexOf(targetScript) === -1) {
+                          window.DebuggerUI.toggleDebugger();
+                          window.openUILinkIn(aValue, "tab");
+                          window = null;
+                          return;
+                        }
+                        scriptsView.selectScript(targetScript);
                         window = null;
-                        return;
                       }
-                      scriptsView.selectScript(targetScript);
-                      window = null;
-                    }
-                    if (window.DebuggerUI.getDebugger() == null) {
-                      window.DebuggerUI.toggleDebugger();
-                      let dbg = window.DebuggerUI.getDebugger().contentWindow;
+                      if (window.DebuggerUI.getDebugger() == null) {
+                        window.DebuggerUI.toggleDebugger();
+                        let dbg = window.DebuggerUI.getDebugger().contentWindow;
 
-                      dbg.addEventListener("Debugger:Connecting", function onConnecting() {
-                        dbg.removeEventListener("Debugger:Connecting", onConnecting);
+                        dbg.addEventListener("Debugger:Connecting", function onConnecting() {
+                          dbg.removeEventListener("Debugger:Connecting", onConnecting);
 
+                          let client = dbg.DebuggerController.client;
+                          let scripts = dbg.DebuggerView.Scripts;
+
+                          client.addOneTimeListener("resumed", openScript.bind(this, scripts));
+                        });
+                      }
+                      else {
+                        let dbg = window.DebuggerUI.getDebugger().contentWindow;
                         let client = dbg.DebuggerController.client;
                         let scripts = dbg.DebuggerView.Scripts;
-
-                        client.addOneTimeListener("resumed", openScript.bind(this, scripts));
+                        openScript(scripts);
+                      }
+                    } else {
+                      Timeline._toolbox.selectTool("jsdebugger").then(function(dbg) {
+                        dbg.panelWin.DebuggerView.Sources.preferredSource = aValue;
                       });
-                    }
-                    else {
-                      let dbg = window.DebuggerUI.getDebugger().contentWindow;
-                      let client = dbg.DebuggerController.client;
-                      let scripts = dbg.DebuggerView.Scripts;
-                      openScript(scripts);
                     }
                   }.bind(this))
                   break;
