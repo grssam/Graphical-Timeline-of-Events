@@ -1616,11 +1616,21 @@ TimelineView.prototype = {
               switch (extension) {
                 case "css":
                   valueLabel.addEventListener("click", function() {
+                    
                     try {
                       let styleSheets = this._window.content.window.document.styleSheets;
                       for each (let style in styleSheets) {
                         if (style.href == aValue) {
+                          try {
                           this._window.StyleEditor.openChrome(style, 1);
+                          } catch (ex) {
+                            if (Timeline._toolbox) {
+                              Timeline._toolbox.selectTool("styleeditor").then(function(panel) {
+                                panel.selectStyleSheet(style, 1);
+                              });
+                              return;
+                            }
+                          }
                           return;
                         }
                       }
