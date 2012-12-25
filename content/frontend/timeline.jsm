@@ -1582,22 +1582,13 @@ TimelineView.prototype = {
                     .openInspectorUI(this._window.gBrowser.contentDocument
                                          .getElementById(value));
               } catch (ex) {
-                let gBrowser = this._window.gBrowser;
-                let imported = {};
-                Cu.import("resource:///modules/devtools/Target.jsm", imported);
-                let target = imported.TargetFactory.forTab(gBrowser.selectedTab);
-                let inspector = this._window.gDevTools.getPanelForTarget("inspector", target);
-                this._window.gDevTools.getToolboxForTarget(target).selectTool("inspector");
-                if (inspector && inspector.isReady) {
-                  inspector.selection.setNode(this._window.gBrowser.contentDocument
-                                                  .getElementById(value));
-                } else {
-                  let toolbox = this._window.gDevTools.openToolboxForTab(target, "inspector");
-                  toolbox.once("inspector-ready", function(event, panel) {
-                    let inspector = this._window.gDevTools.getPanelForTarget("inspector", target);
-                    inspector.selection.setNode(this._window.gBrowser.contentDocument
-                                                    .getElementById(value));
-                  }.bind(this));
+                if (Timeline._toolbox) {
+                  Timeline._toolbox.selectTool("inspector").then(function(panel) {
+                    panel.selection.setNode(Timeline._toolbox._target.tab
+                                                    .linkedBrowser
+                                                    .contentDocument
+                                                    .getElementById(value), "timeline");
+                  });
                 }
               }
               let stats = TimelinePreferences.userStats;
