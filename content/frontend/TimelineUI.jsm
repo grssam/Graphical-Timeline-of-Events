@@ -54,14 +54,11 @@ let TimelineUI = {
 
         build: function(iframeWindow, toolbox) {
           if (global.Timeline && global.Timeline.UIOpened == true) {
-            TimelineUI.toggleTimelineUI();
-            return {destroy: function() {}, once: function() {}, open: function() []}.open();
+            TimelineUI.toggleTimelineUI(toolbox._target);
+            return {destroy: function() {}, once: function() {}, open: function() {}}.open();
           }
           else {
-            let window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                           .getService(Ci.nsIWindowMediator)
-                           .getMostRecentWindow("navigator:browser");
-            TimelineUI.contentWindow = window.content.window;
+            TimelineUI.contentWindow = toolbox._target.window;
           }
           return (new global.TimelinePanel(iframeWindow, toolbox)).open();
         }
@@ -113,20 +110,23 @@ let TimelineUI = {
   /**
    * Tries to toggle the Timeline UI. Gives a notification if the timelnie is
    * already opened in another tab/window and someone tries to open it.
+   *
+   * @param Target aTarget [Optional]
+   *        The target for Timeline of gDevTools is available.
    */
-  toggleTimelineUI: function TUI_toggleTimelineUI()
+  toggleTimelineUI: function TUI_toggleTimelineUI(aTarget)
   {
 
     function $(id) window.document.getElementById(id);
 
-    let window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                   .getService(Ci.nsIWindowMediator)
-                   .getMostRecentWindow("navigator:browser");
+    let window = Services.wm.getMostRecentWindow("navigator:browser");
     if (global.Timeline && global.Timeline.UIOpened != true) {
       if (gDevToolsAvailable) {
-        let target = TargetFactory.forTab(window.gBrowser.selectedTab);
-        let toolbox = gDevTools.showToolbox(target, "timeline");
-        TimelineUI.contentWindow = window.content.window;
+        if (!aTarget) {
+          aTarget = TargetFactory.forTab(window.gBrowser.selectedTab);
+        }
+        gDevTools.showToolbox(aTarget, "timeline");
+        TimelineUI.contentWindow = aTarget.window;
       }
       else {
         Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
@@ -222,9 +222,7 @@ let TimelineUI = {
   closeThisToolbox: function TUI_closeThisToolbox()
   {
     if (TimelineUI.gDevToolsAvailable) {
-      let window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                    .getService(Ci.nsIWindowMediator)
-                    .getMostRecentWindow("navigator:browser");
+      let window = Services.wm.getMostRecentWindow("navigator:browser");
       let target = TargetFactory.forTab(window.gBrowser.selectedTab);
       gDevTools.closeToolbox(target);
     }

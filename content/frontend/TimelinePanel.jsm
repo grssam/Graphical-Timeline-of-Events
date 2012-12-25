@@ -18,7 +18,7 @@ function TimelinePanel(iframeWindow, toolbox) {
   this.panelWin = iframeWindow;
 
   // import the timeline jsm to map functions
-  this.window = Services.wm.getMostRecentWindow("navigator:browser");
+  this.window = toolbox._target.tab.ownerDocument.defaultView;
   Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
@@ -27,7 +27,7 @@ function TimelinePanel(iframeWindow, toolbox) {
 
   let parentDoc = iframeWindow.document.defaultView.parent.document;
   let iframe = parentDoc.getElementById("toolbox-panel-iframe-timeline");
-  global.Timeline.init(null, iframe);
+  global.Timeline.init(null, iframe, toolbox);
 
   EventEmitter.decorate(this);
 }

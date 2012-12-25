@@ -81,9 +81,7 @@ let DataSink = {
   get sequenceId() (++this._sequenceId),
 
   // Chrome window getter.
-  get _chromeWindowForGraph() Cc["@mozilla.org/appshell/window-mediator;1"]
-                                .getService(Ci.nsIWindowMediator)
-                                .getMostRecentWindow("navigator:browser"),
+  get _chromeWindowForGraph() Services.wm.getMostRecentWindow("navigator:browser"),
 
   // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
   registeredUI: [],
@@ -147,10 +145,28 @@ let DataSink = {
     this._enabledProducers = {};
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
-    let contentWindow = Cc["@mozilla.org/appshell/window-mediator;1"]
-                        .getService(Ci.nsIWindowMediator)
-                        .getMostRecentWindow("navigator:browser")
-                        .content;
+    // If tab id is provided, serach for the correct tab to get the cotent window.
+    let contentWindow = null;
+    if (aMessage.tabID) {
+      let windows = Services.wm.getEnumerator("navigator:browser");
+      while (windows.hasMoreElements()) {
+        // Only run the watcher immediately if the window is completely loaded
+        let win = windows.getNext();
+        if (win.gBrowser.tabs == null)
+          continue;
+        for (let tab of win.gBrowser.tabs) {
+          Cu.reportError(tab.linkedPanel);
+          if (aMessage.tabID === tab.linkedPanel) {
+            contentWindow = tab.linkedBrowser.contentWindow;
+            break;
+          }
+        }
+      }
+    }
+    if (contentWindow == null) {
+      contentWindow = Services.wm.getMostRecentWindow("navigator:browser")
+                              .content;
+    }
     this.listeningWindows = [contentWindow];
     // enable the required producers if aMessage not null.
     if (aMessage.enabledProducers) {
@@ -307,8 +323,7 @@ let DataSink = {
    *         Data Sink.
    *         @see DataSink.init()
    */
-  sendUpdateNotification: function DS_sendUpdateNotification(Id)
-  {
+  sendUpdateNotification: function DS_sendUpdateNotification(Id) {
     let message =
     {
       enabledProducers: {},

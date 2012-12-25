@@ -2107,6 +2107,7 @@ let Timeline = {
   _currentId: 1,
   _window: null,
   _iframe: null,
+  _toolbox: null,
   //_console: null,
 
   UIOpened: false,
@@ -2125,15 +2126,19 @@ let Timeline = {
   /**
    * Prepares the UI and sends ping to the Data Sink.
    */
-  init: function GUI_init(aCallback, aIframe) {
+  init: function GUI_init(aCallback, aIframe, aToolbox) {
     Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
     Timeline.callback = aCallback;
     if (aIframe) {
       Timeline._iframe = aIframe;
     }
-    Timeline._window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                         .getService(Ci.nsIWindowMediator)
-                         .getMostRecentWindow("navigator:browser");
+    Timeline._toolbox = aToolbox;
+    if (Timeline._toolbox) {
+      Timeline._window = Timeline._toolbox._target.tab.ownerDocument.defaultView;
+    }
+    else {
+      Timeline._window = Services.wm.getMostRecentWindow("navigator:browser");
+    }
     Timeline.addRemoteListener(Timeline._window);
     // destroying on unload.
     Timeline._window.addEventListener("unload", Timeline.destroy, false);
@@ -2150,15 +2155,9 @@ let Timeline = {
    */
   buildUI: function GUI_buildUI() {
     if (!Timeline._view) {
-      try {
       Timeline._view = new TimelineView(Timeline._window, Timeline._iframe);
-    
-    } catch(e) { Timeline._window.alert(e);}
     }
-    try {
     Timeline._view.createProducersPane(Timeline.producerInfoList);
-    
-    } catch(e) { Timeline._window.alert(e);}
     Timeline.UIOpened = true;
   },
 
@@ -2167,6 +2166,10 @@ let Timeline = {
    */
   startListening: function GUI_startListening(aMessage) {
     //Timeline.timer = Timeline._window.setInterval(Timeline.readData, 25);
+    // Adding the correct tab id, if toolbox is available.
+    if (Timeline._toolbox) {
+      aMessage.tabID = Timeline._toolbox._target.tab.linkedPanel;
+    }
     Timeline.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     Timeline.listening = true;
     Timeline.shouldDeleteDatabaseItself = false;
@@ -2203,7 +2206,7 @@ let Timeline = {
           // The id was already taken, generate a new id and send the ping again.
           Timeline.id = "timeline-ui-" + Date.now();
           Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                              {timelineUIId: Timeline.id});
+                               {timelineUIId: Timeline.id});
           break;
       }
     }
