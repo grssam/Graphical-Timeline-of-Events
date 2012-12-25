@@ -9,6 +9,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 var EXPORTED_SYMBOLS = ["TimelinePanel"];
 
 Cu.import("resource:///modules/devtools/EventEmitter.jsm");
+Cu.import("resource://gre/modules/commonjs/promise/core.js");
 let global = {};
 Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
 
@@ -17,9 +18,7 @@ function TimelinePanel(iframeWindow, toolbox) {
   this.panelWin = iframeWindow;
 
   // import the timeline jsm to map functions
-  this.window = Cc["@mozilla.org/appshell/window-mediator;1"]
-                  .getService(Ci.nsIWindowMediator)
-                  .getMostRecentWindow("navigator:browser");
+  this.window = Services.wm.getMostRecentWindow("navigator:browser");
   Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
@@ -30,7 +29,7 @@ function TimelinePanel(iframeWindow, toolbox) {
   let iframe = parentDoc.getElementById("toolbox-panel-iframe-timeline");
   global.Timeline.init(null, iframe);
 
-  new EventEmitter(this);
+  EventEmitter.decorate(this);
 }
 
 TimelinePanel.prototype = {
@@ -39,11 +38,12 @@ TimelinePanel.prototype = {
 
   get isReady() this._isReady,
 
-  jsmHolder: {},
-
-  setReady: function() {
+  open: function() {
+    let deferred = Promise.defer();
     this._isReady = true;
     this.emit("ready");
+    deferred.resolve(this);
+    return deferred.promise;
   },
 
   destroy: function() {
@@ -65,5 +65,6 @@ TimelinePanel.prototype = {
       global = {};
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
     } catch (e) {Components.utils.reportError(e);}Components.utils.reportError('done');
+    return Promise.resolve(null);
   },
 };

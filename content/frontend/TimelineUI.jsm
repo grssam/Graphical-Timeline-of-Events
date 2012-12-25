@@ -43,18 +43,19 @@ let TimelineUI = {
         modifiers:"accel,shift",
         ordinal: 5,
         killswitch: "devtools.timeline.enabled",
-        icon: "chrome://graphical-timeline/skin/images/tools-icons-small.png",
+        icon: "chrome://graphical-timeline/skin/images/tool-timeline.png",
         url: "chrome://graphical-timeline/content/frontend/timeline.xul",
         label: "Timeline",
+        tooltip: "Graphical Timeline of Events",
 
         isTargetSupported: function(target) {
-          return true;
+          return !target.isRemote;
         },
 
         build: function(iframeWindow, toolbox) {
           if (global.Timeline && global.Timeline.UIOpened == true) {
             TimelineUI.toggleTimelineUI();
-            return {destroy: function() {}, once: function() {}};
+            return {destroy: function() {}, once: function() {}, open: function() []}.open();
           }
           else {
             let window = Cc["@mozilla.org/appshell/window-mediator;1"]
@@ -62,7 +63,7 @@ let TimelineUI = {
                            .getMostRecentWindow("navigator:browser");
             TimelineUI.contentWindow = window.content.window;
           }
-          return new global.TimelinePanel(iframeWindow, toolbox);
+          return (new global.TimelinePanel(iframeWindow, toolbox)).open();
         }
       };
       gDevTools.registerTool(timelineDefinition);
@@ -124,7 +125,7 @@ let TimelineUI = {
     if (global.Timeline && global.Timeline.UIOpened != true) {
       if (gDevToolsAvailable) {
         let target = TargetFactory.forTab(window.gBrowser.selectedTab);
-        let toolbox = gDevTools.openToolbox(target, null, "timeline");
+        let toolbox = gDevTools.showToolbox(target, "timeline");
         TimelineUI.contentWindow = window.content.window;
       }
       else {
