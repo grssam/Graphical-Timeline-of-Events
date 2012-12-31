@@ -169,8 +169,8 @@ TimelineView.prototype = {
     this.$("stack-panes-splitter").addEventListener("mouseup", this.resizeCanvas, true);
     this.$("zoom-in").addEventListener("command", this.zoomIn, true);
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
+    this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
     if (!this._iframe) {
-      this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
       this.closeButton.addEventListener("command", Timeline.destroy, true);
     }
     else {
@@ -747,7 +747,6 @@ TimelineView.prototype = {
     else {
       this.canvasScrollbar.style.opacity = 0;
     }
-    Cu.reportError(this._frame.boxObject.height);
   },
 
   /**

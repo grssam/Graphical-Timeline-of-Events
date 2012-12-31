@@ -64,7 +64,7 @@ TimelinePanel.prototype = {
       global = null;
       global = {};
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
-    } catch (e) {Components.utils.reportError(e);}Components.utils.reportError('done');
+    } catch (e) {}
     return Promise.resolve(null);
   },
 };

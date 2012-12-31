@@ -155,7 +155,6 @@ let DataSink = {
         if (win.gBrowser.tabs == null)
           continue;
         for (let tab of win.gBrowser.tabs) {
-          Cu.reportError(tab.linkedPanel);
           if (aMessage.tabID === tab.linkedPanel) {
             contentWindow = tab.linkedBrowser.contentWindow;
             break;
