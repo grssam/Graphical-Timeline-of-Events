@@ -1219,21 +1219,14 @@ TimelineView.prototype = {
   _showNetworkPanel: function TV__showNetworkPanel(aNode, aData)
   {
     let httpActivity = {
-      log: {
-        entries: [{
-          startedDateTime: new Date(aData.details.startTime).toISOString(),
-          request: aData.details.request,
-          response: aData.details.response,
-          timings: aData.details.timings
-        }],
-      },
-      meta: {
-        stages: aData.details.stages,
-      }
+      startedDateTime: new Date(aData.details.startTime).toISOString(),
+      request: aData.details.request,
+      response: aData.details.response,
+      timings: aData.details.timings,
     };
     // Adding cookie entry as null
-    httpActivity.log.entries[0].response.cookies = [];
-    httpActivity.log.entries[0].request.cookies = [];
+    httpActivity.response.cookies = [];
+    httpActivity.request.cookies = [];
     let netPanel = new NetworkPanel(this.$("timeline-content").parentNode, httpActivity);
 
     let panel = netPanel.panel;
