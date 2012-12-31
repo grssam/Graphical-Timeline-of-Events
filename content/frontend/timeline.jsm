@@ -735,7 +735,7 @@ TimelineView.prototype = {
     }
     else if (scrollHeight.value > this.producersPane.boxObject.height) {
       this.canvasScrollbar.style.opacity = 1;
-      let clientHeight = this._frame.height.replace("px", "")*1 - 32;
+      let clientHeight = this._frame.boxObject.height - 32;
       let height = Math.floor(Math.max(20, clientHeight * clientHeight /
                                            scrollHeight.value));
       this.canvasScrollbar.style.height = (height - 2) + "px";
@@ -747,6 +747,7 @@ TimelineView.prototype = {
     else {
       this.canvasScrollbar.style.opacity = 0;
     }
+    Cu.reportError(this._frame.boxObject.height);
   },
 
   /**
