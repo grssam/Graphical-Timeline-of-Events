@@ -35,6 +35,10 @@
   -  tooltip text for the button that toggles the Recording in the timeline UI. -->
 <!ENTITY timelineUI.toggleRecording.tooltiptext        "Toggle Recording">
 
+<!-- LOCALIZATION NOTE (timelineUI.clearButton.tooltiptext): This is the
+  -  tooltip text for the button that clears the existing events from the timeline UI. -->
+<!ENTITY timelineUI.clearButton.tooltiptext        "Clear and Restart Timeline">
+
 <!-- LOCALIZATION NOTE (timelineUI.zoomIn.tooltiptext): This is the
   -  tooltip text for the [+] zoom in button in the timeline UI. -->
 <!ENTITY timelineUI.zoomIn.tooltiptext        "Zoom In">

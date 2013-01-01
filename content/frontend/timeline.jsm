@@ -150,6 +150,7 @@ TimelineView.prototype = {
     this._frameDoc = this._frame.contentDocument;
     this._frameDoc.defaultView.focus();
     this.closeButton = this.$("close");
+    this.clearButton = this.$("clear");
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
     this.detailBox = this.$("timeline-detailbox");
@@ -180,6 +181,7 @@ TimelineView.prototype = {
     }
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
+    this.clearButton.addEventListener("command", this.forceRestart, true);
     this.restartOnReload.addEventListener("command", this.toggleRestartOnReload, true);
     this._frame.addEventListener("unload", this._onUnload, true);
     // Building the UI according to the preferences.
@@ -311,6 +313,7 @@ TimelineView.prototype = {
   showAccessKeys: function TV_showAccessKeys()
   {
     this.recordButton.label = "R";
+    this.clearButton.label = "C";
     this.overviewButton.label = "O";
     this.$("zoom-in").label = "+";
     this.$("zoom-out").label = "-";
@@ -321,6 +324,9 @@ TimelineView.prototype = {
   {
     try {
       this.recordButton.removeAttribute("label");
+    } catch(ex) {}
+    try {
+      this.clearButton.removeAttribute("label");
     } catch(ex) {}
     try {
       this.overviewButton.removeAttribute("label");
@@ -354,6 +360,10 @@ TimelineView.prototype = {
     switch(event.keyCode) {
       case event.DOM_VK_R:
         this.recordButton.click();
+        break;
+
+      case event.DOM_VK_C:
+        this.clearButton.click();
         break;
 
       case event.DOM_VK_O:
@@ -442,7 +452,8 @@ TimelineView.prototype = {
       return;
     }
     let featureBox = producerBox.firstChild.nextSibling;
-    if (featureBox.firstChild.id == "no-event-groupbox") {
+    if (featureBox.firstChild &&
+        featureBox.firstChild.id == "no-event-groupbox") {
       featureBox.removeChild(featureBox.firstChild);
     }
     let richListItem = this._frameDoc.createElement("richlistitem");
@@ -594,6 +605,7 @@ TimelineView.prototype = {
         featureLabel.setAttribute("class", "producer-feature");
         featureLabel.setAttribute("value", "No event to display");
         featureLabel.setAttribute("enabled", true);
+        featureLabel.setAttribute("shouldDelete", true);
         featureBox.appendChild(featureLabel);
         optionsPopup.parentNode.removeChild(optionsPopup);
       }
@@ -626,6 +638,17 @@ TimelineView.prototype = {
         else {
           feature = feature.nextSibling;
         }
+      }
+      if (!producerBox.firstChild.nextSibling.firstChild) {
+        // Adding an empty tag
+        let featureLabel = this._frameDoc.createElement("label");
+        featureLabel.setAttribute("id", "no-event-groupbox");
+        featureLabel.setAttribute("flex", "1");
+        featureLabel.setAttribute("class", "producer-feature");
+        featureLabel.setAttribute("value", "No event to display");
+        featureLabel.setAttribute("shouldDelete", true);
+        featureLabel.setAttribute("enabled", true);
+        producerBox.firstChild.nextSibling.appendChild(featureLabel);
       }
       producerBox = producerBox.nextSibling;
     }
@@ -849,33 +872,34 @@ TimelineView.prototype = {
   forceRestart: function TV_forceRestart()
   {
     this.cleanUI();
-    this.recording = true;
     // Starting the canvas.
     if (!this.canvasStarted) {
-      this._canvas = new CanvasManager(this._frameDoc, this._window);
-      this._canvas.height = this.$("canvas-container").boxObject.height - 32;
-      this._canvas.width = this.$("timeline-content").boxObject.width -
-                           this.producersPane.boxObject.width -
-                           (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
-      this._canvas.continuousInLine = this.continuousInLine;
-      this.canvasStarted = true;
-      this.handleScroll();
-      this.handleScrollbarMove();
-      this.handleDetailClick();
-      this.handleTimeWindow();
-      this.handleDetailBoxResize();
+      // this._canvas = new CanvasManager(this._frameDoc, this._window);
+      // this._canvas.height = this.$("canvas-container").boxObject.height - 32;
+      // this._canvas.width = this.$("timeline-content").boxObject.width -
+                           // this.producersPane.boxObject.width -
+                           // (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
+      // this._canvas.continuousInLine = this.continuousInLine;
+      // this.canvasStarted = true;
+      // this.handleScroll();
+      // this.handleScrollbarMove();
+      // this.handleDetailClick();
+      // this.handleTimeWindow();
+      // this.handleDetailBoxResize();
     }
     else {
       this._canvas.height = this.$("canvas-container").boxObject.height - 32;
       this._canvas.width = this.$("timeline-content").boxObject.width -
                            this.producersPane.boxObject.width -
                            (this.detailBoxOpened? this.detailBox.boxObject.width: 0);
-      this._canvas.startRendering();
-      if (!this.overviewButton.hasAttribute("checked")) {
-        this._canvas.moveToLive();
-        let stats = TimelinePreferences.userStats;
-        stats.liveMode++;
-        TimelinePreferences.userStats = stats;
+      if (this.recording) {
+        this._canvas.startRendering();
+        if (!this.overviewButton.hasAttribute("checked")) {
+          this._canvas.moveToLive();
+          let stats = TimelinePreferences.userStats;
+          stats.liveMode++;
+          TimelinePreferences.userStats = stats;
+        }
       }
     }
   },

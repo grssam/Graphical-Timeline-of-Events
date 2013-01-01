@@ -218,6 +218,15 @@
   -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 
+#clear {
+  list-style-image: url("images/timeline-clear.png");
+  -moz-image-region: rect(0px, 16px, 18px, 0px);
+}
+
+#clear:active {
+  -moz-image-region: rect(0px, 32px, 18px, 16px);
+}
+
 #overview {
   list-style-image: url("images/timeline-overview.png");
   -moz-image-region: rect(0px, 16px, 16px, 0px);
