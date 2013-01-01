@@ -220,11 +220,11 @@
 
 #clear {
   list-style-image: url("images/timeline-clear.png");
-  -moz-image-region: rect(0px, 16px, 18px, 0px);
+  -moz-image-region: rect(1px, 16px, 19px, 0px);
 }
 
 #clear:active {
-  -moz-image-region: rect(0px, 32px, 18px, 16px);
+  -moz-image-region: rect(1px, 32px, 19px, 16px);
 }
 
 #overview {
