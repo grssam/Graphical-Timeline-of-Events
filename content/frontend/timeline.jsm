@@ -404,17 +404,20 @@ TimelineView.prototype = {
       if (aMessage.enabledProducers[id]) {
         enabledProducers.push(id);
         producerBox.setAttribute("enabled", true);
-        let feature = producerBox.firstChild.nextSibling.firstChild;
-        while (feature) {
-          if (aMessage.enabledProducers[id].features
-                      .indexOf(feature.getAttribute("value")) == -1) {
-            feature.setAttribute("enabled", false);
+        if (this.producerInfoList[id].features &&
+            this.producerInfoList[id].features.length > 0) {
+          let feature = producerBox.firstChild.nextSibling.firstChild;
+          while (feature) {
+            if (aMessage.enabledProducers[id].features
+                        .indexOf(feature.getAttribute("value")) == -1) {
+              feature.setAttribute("enabled", false);
+            }
+            else {
+              enabledFeatures.push(id + ":" + feature.getAttribute("value"));
+              feature.setAttribute("enabled", true);
+            }
+            feature = feature.nextSibling;
           }
-          else {
-            enabledFeatures.push(id + ":" + feature.getAttribute("value"));
-            feature.setAttribute("enabled", true);
-          }
-          feature = feature.nextSibling;
         }
       }
       else {
@@ -439,16 +442,21 @@ TimelineView.prototype = {
       return;
     }
     let featureBox = producerBox.firstChild.nextSibling;
+    if (featureBox.firstChild.id == "no-event-groupbox") {
+      featureBox.removeChild(featureBox.firstChild);
+    }
+    let richListItem = this._frameDoc.createElement("richlistitem");
     let urlLabel = this._frameDoc.createElement("label");
-    urlLabel.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
-    urlLabel.setAttribute("class", "timeline-groupbox");
-    urlLabel.setAttribute("groupId", aData.groupID);
-    urlLabel.setAttribute("shouldDelete", true);
+    richListItem.setAttribute("id", aData.groupID.replace(" ", "_") + "-groupbox");
+    richListItem.setAttribute("class", "timeline-groupbox");
+    richListItem.setAttribute("groupId", aData.groupID);
+    richListItem.setAttribute("shouldDelete", true);
     urlLabel.setAttribute("value", aData.name);
     urlLabel.setAttribute("tooltiptext", aData.nameTooltip || "");
-    urlLabel.setAttribute("flex", "0");
+    urlLabel.setAttribute("flex", "1");
     urlLabel.setAttribute("crop", "center");
-    featureBox.appendChild(urlLabel);
+    richListItem.appendChild(urlLabel);
+    featureBox.appendChild(richListItem);
     this._window.setTimeout(this.updateScrollbar, 100);
   },
 
@@ -540,10 +548,11 @@ TimelineView.prototype = {
 
       // The features box contains list of each feature and a checkbox to toggle
       // that feature.
-      let featureBox = this._frameDoc.createElement("vbox");
+      let featureBox = this._frameDoc.createElement("richlistbox");
       featureBox.setAttribute("class", "producer-feature-box");
       featureBox.setAttribute("producerId", producer.id);
-      featureBox.addEventListener("click", this.handleGroupClick, true);
+      featureBox.setAttribute("seltype", "single");
+      featureBox.addEventListener("select", this.handleGroupClick, true);
       for each (let feature in producer.features) {
         let featureLabel = this._frameDoc.createElement("label");
         featureLabel.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
@@ -579,6 +588,13 @@ TimelineView.prototype = {
       if (!producer.features || producer.features.length == 0) {
         optionDropDown.setAttribute("tooltiptext", "No option to show");
         optionDropDown.setAttribute("disabled", true);
+        let featureLabel = this._frameDoc.createElement("label");
+        featureLabel.setAttribute("id", "no-event-groupbox");
+        featureLabel.setAttribute("flex", "1");
+        featureLabel.setAttribute("class", "producer-feature");
+        featureLabel.setAttribute("value", "No event to display");
+        featureLabel.setAttribute("enabled", true);
+        featureBox.appendChild(featureLabel);
         optionsPopup.parentNode.removeChild(optionsPopup);
       }
       else {
@@ -1083,8 +1099,8 @@ TimelineView.prototype = {
     if (!this.canvasStarted) {
       return;
     }
-    let group = aEvent.originalTarget;
-    if (!group.hasAttribute("enabled") && group.hasAttribute("groupId")) {
+    let group = aEvent.target.selectedItem;
+    if (group && !group.hasAttribute("enabled") && group.hasAttribute("groupId")) {
       let groupId = group.getAttribute("groupId");
       let time = this._canvas.groupedData[groupId].timestamps[0];
       this._canvas.moveGroupInView(group.getAttribute("groupId"));
@@ -1102,6 +1118,9 @@ TimelineView.prototype = {
         this._canvas.width = width;
         this.detailBoxOpened = true;
       }
+    }
+    else {
+      aEvent.preventDefault();
     }
   },
 

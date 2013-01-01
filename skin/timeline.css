@@ -459,14 +459,21 @@
  */
 
 .producer-feature-box {
-  width: 100%;
+  width: 100% !important;
   overflow: hidden;
   display: block;
   margin: 0px !important;
   padding: 0px !important;
+  background-color: transparent !important;
+  min-height: 0px !important;
+  -moz-appearance: none !important;
 }
 
-.producer-feature-box > .producer-feature {
+.producer-feature-box * {
+  width: 100% !important;
+}
+
+.producer-feature-box .producer-feature {
   width: 100%;
   color: rgb(207,218,230) !important;
   min-height: 20px;
@@ -477,15 +484,15 @@
   padding: 0px 0px 0px 5px;
 }
 
-.producer-feature-box > .producer-feature:last-of-type {
+.producer-feature-box .producer-feature:last-of-type {
   border-bottom: 1px solid rgba(0,0,0,0) !important;
 }
 
-.producer-feature-box > .producer-feature:first-of-type {
+.producer-feature-box .producer-feature:first-of-type {
   border-top: 1px solid rgba(0,0,0,0) !important;
 }
 
-.producer-feature-box > .producer-feature:not([enabled=true]) {
+.producer-feature-box .producer-feature:not([enabled=true]) {
   display: none;
 }
 
@@ -499,6 +506,7 @@
   margin: 0px;
   padding: 0px 0px 0px 5px;
   -moz-user-focus: normal;
+  background-color: transparent;
 }
 
 .timeline-groupbox:last-of-type {
@@ -512,7 +520,7 @@
 .timeline-groupbox:hover {
   border-bottom: 1px solid rgba(10,92,133,0.50);
   border-top: 1px solid rgba(29,126,176,0.50);
-  background: rgba(29,126,176,0.50);
+  background-color: rgba(29,126,176,0.50);
 }
 
 .timeline-groupbox:focus {
@@ -525,15 +533,6 @@
   -moz-animation-name: showblock;
   -moz-animation-duration: 0.2s;
   max-height: 10000px;
-}
-
-.producer-box[visible=true][enabled=true] > .producer-feature-box:empty:after {
-  content: "No event to display";
-  color: rgb(207,218,230) !important;
-  min-height: 16px !important;
-  opacity: 1 !important;
-  padding: 1px 2px 1px 5px;
-  cursor: default;
 }
 
 .producer-box:not([visible=true]) > .producer-feature-box,
