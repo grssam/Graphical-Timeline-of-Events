@@ -510,8 +510,8 @@
 }
 
 .timeline-groupbox:hover {
-  border-bottom: 1px dashed rgba(10,92,133,0.75);
-  border-top: 1px dashed rgba(29,126,176,0.75);
+  border-bottom: 1px solid rgba(10,92,133,0.50);
+  border-top: 1px solid rgba(29,126,176,0.50);
   background: rgba(29,126,176,0.50);
 }
 

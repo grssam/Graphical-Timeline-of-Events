@@ -1158,11 +1158,12 @@ TimelineView.prototype = {
    */
   handleMousemove: function TV_handleMousemove(aEvent)
   {
-    if (this.canvasStarted) {
-      let [groupIds, ids] = this._canvas
-                                 .mouseHoverAt(aEvent.clientX -
-                                               this.producersPane.boxObject.width,
-                                               aEvent.clientY - 32);
+    if (this.canvasStarted &&
+        this.detailBox.getAttribute("pinned") != "true") {
+      let [groupIds, ids] =
+        this._canvas.mouseHoverAt(aEvent.clientX -
+                                  this.producersPane.boxObject.width,
+                                  aEvent.clientY - 32);
       this.showDetailedInfoFor(groupIds, ids);
     }
   },
