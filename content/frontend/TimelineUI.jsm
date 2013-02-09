@@ -7,7 +7,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 
 const broadcasterID = "devtoolsMenuBroadcaster_TimelineUI";
-let gDevToolsAvailable;
+let gDevToolsAvailable, _TimelineUIOpened = false;
 var EXPORTED_SYMBOLS = ["TimelineUI"];
 
 try {
@@ -30,12 +30,17 @@ let TimelineUI = {
 
   get gDevToolsAvailable() gDevToolsAvailable,
 
+  get UIOpened() {
+    if (TimelineUI.gDevToolsAvailable) {
+      return _TimelineUIOpened;
+    }
+    return global.Timeline.UIOpened;
+  },
+
   _startup: function TUI__startup()
   {
-    Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
-    Cu.import("chrome://graphical-timeline/content/frontend/TimelinePanel.jsm", global);
-
     if (gDevToolsAvailable) {
+      Cu.import("chrome://graphical-timeline/content/frontend/TimelinePanel.jsm", global);
       let timelineDefinition = {
         id: "timeline",
         key: "Q",
@@ -53,17 +58,24 @@ let TimelineUI = {
         },
 
         build: function(iframeWindow, toolbox) {
-          if (global.Timeline && global.Timeline.UIOpened == true) {
+          if (TimelineUI.UIOpened == true) {
             TimelineUI.toggleTimelineUI(toolbox._target);
+            _TimelineUIOpened = false;
             return {destroy: function() {}, once: function() {}, open: function() {}}.open();
           }
           else {
             TimelineUI.contentWindow = toolbox._target.window;
           }
-          return (new global.TimelinePanel(iframeWindow, toolbox)).open();
+          _TimelineUIOpened = true;
+          return (new global.TimelinePanel(iframeWindow, toolbox, function() {
+            _TimelineUIOpened = false;
+          })).open();
         }
       };
       gDevTools.registerTool(timelineDefinition);
+    }
+    else {
+      Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
     }
   },
 
@@ -75,6 +87,7 @@ let TimelineUI = {
     else {
       global.Timeline.destroy();
     }
+    TimelineUI.contentWindow = null;
     Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
     try {
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
@@ -97,7 +110,7 @@ let TimelineUI = {
   _onTabChange: function TUI__onTabChange(window)
   {
     function $(id) window.document.getElementById(id);
-    if (global.Timeline.UIOpened) {
+    if (global.Timeline && global.Timeline.UIOpened) {
       if (window.gBrowser.selectedTab.linkedBrowser.contentWindow == TimelineUI.contentWindow){ 
         $(broadcasterID).setAttribute("checked", "true");
       }
@@ -116,11 +129,10 @@ let TimelineUI = {
    */
   toggleTimelineUI: function TUI_toggleTimelineUI(aTarget)
   {
-
     function $(id) window.document.getElementById(id);
 
     let window = Services.wm.getMostRecentWindow("navigator:browser");
-    if (global.Timeline && global.Timeline.UIOpened != true) {
+    if (TimelineUI.UIOpened != true) {
       if (gDevToolsAvailable) {
         if (!aTarget) {
           aTarget = TargetFactory.forTab(window.gBrowser.selectedTab);
@@ -171,20 +183,25 @@ let TimelineUI = {
           callback: TimelineUI.switchToTimelineTab
         }];
         notificationBox.removeAllNotifications(true);
-        notificationBox.appendNotification("Timeline is open in another tab (" +
-                                            TimelineUI.contentWindow.document.title +
-                                            ")" + (window != global.Timeline._window
-                                                   ? " in another window"
-                                                   : "") +
-                                           ". What would you like to do?",
-                                           "", null,
-                                           notificationBox.PRIORITY_WARNING_MEDIUM,
-                                           buttons,
-                                           null);
+        notificationBox
+          .appendNotification("Timeline is open in another tab (" +
+                               TimelineUI.contentWindow.document.title +
+                               ")" + (window != TimelineUI.getTimelineTab()
+                                                          .ownerDocument
+                                                          .defaultView
+                                      ? " in another window"
+                                      : "") +
+                              ". What would you like to do?",
+                              "", null,
+                              notificationBox.PRIORITY_WARNING_MEDIUM,
+                              buttons,
+                              null);
       }
       else {
         TimelineUI.contentWindow = null;
-        global.Timeline.destroy();
+        if (!TimelineUI.gDevToolsAvailable) {
+          global.Timeline.destroy();
+        }
       }
     }
   },
@@ -193,22 +210,49 @@ let TimelineUI = {
   {
     TimelineUI.closeCurrentlyOpenedToolbox();
     TimelineUI.closeThisToolbox();
-    global.Timeline.destroy();
+    if (!TimelineUI.gDevToolsAvailable) {
+      global.Timeline.destroy();
+    }
     TimelineUI.toggleTimelineUI();
   },
 
   switchToTimelineTab: function TUI_switchToTimelineTab()
   {
     TimelineUI.closeThisToolbox();
-    global.Timeline._window.focus();
-    global.Timeline._window.gBrowser.selectedTab = TimelineUI.getTimelineTab();
+    if (!TimelineUI.gDevToolsAvailable) {
+      global.Timeline._window.focus();
+      global.Timeline._window.gBrowser.selectedTab = TimelineUI.getTimelineTab();
+    }
+    else {
+      let chromeWindow = TimelineUI.contentWindow
+                                   .QueryInterface(Ci.nsIInterfaceRequestor)
+                                   .getInterface(Ci.nsIWebNavigation)
+                                   .QueryInterface(Ci.nsIDocShell)
+                                   .chromeEventHandler
+                                   .ownerDocument.defaultView;
+      chromeWindow.focus();
+      chromeWindow.gBrowser.selectedTab = TimelineUI.getTimelineTab();
+    }
   },
 
   getTimelineTab: function TUI_getTimelineTab()
   {
-    return global.Timeline._window.gBrowser.tabs[
-      global.Timeline._window.gBrowser.getBrowserIndexForDocument(
-        TimelineUI.contentWindow.document)];
+    if (!TimelineUI.gDevToolsAvailable) {
+      return global.Timeline._window.gBrowser.tabs[
+        global.Timeline._window.gBrowser.getBrowserIndexForDocument(
+          TimelineUI.contentWindow.document)];
+    }
+    else {
+      let chromeWindow = TimelineUI.contentWindow
+                                   .QueryInterface(Ci.nsIInterfaceRequestor)
+                                   .getInterface(Ci.nsIWebNavigation)
+                                   .QueryInterface(Ci.nsIDocShell)
+                                   .chromeEventHandler
+                                   .ownerDocument.defaultView;
+      return chromeWindow.gBrowser.tabs[
+        chromeWindow.gBrowser.getBrowserIndexForDocument(
+          TimelineUI.contentWindow.document)];
+    }
   },
 
   closeCurrentlyOpenedToolbox: function TUI_closeCurrentlyOpenedToolbox()

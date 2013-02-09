@@ -130,21 +130,21 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
   function init() {
     Cu.import("chrome://graphical-timeline/content/frontend/TimelineUI.jsm", global);
     TimelineUI._startup();
-    watchWindows(function(window) {
-      // Tab switch handler.
-      listen(window, window.gBrowser.tabContainer, "TabSelect", function() {
-        TimelineUI._onTabChange(window);
-      }, true);
-    });
     watchWindows(handleCustomization);
     if (!TimelineUI.gDevToolsAvailable) {
+      watchWindows(function(window) {
+        // Tab switch handler.
+        listen(window, window.gBrowser.tabContainer, "TabSelect", function() {
+          TimelineUI._onTabChange(window);
+        }, true);
+      });
       watchWindows(addMenuItem);
     }
     else {
       watchWindows(function(window) window.TimelineUI = TimelineUI);
     }
-    unload(TimelineUI._unload);
     unload(function() {
+      TimelineUI._unload();
       Components.utils.unload("chrome://graphical-timeline/content/frontend/TimelineUI.jsm");
       global.TimelineUI = null;
       delete global.TimelineUI;

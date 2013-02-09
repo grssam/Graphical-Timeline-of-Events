@@ -329,6 +329,7 @@
   margin: 0px !important;
   border-width: 0px !important;
   overflow: visible;
+  padding: 3px !important;
 }
 
 /**
@@ -379,6 +380,7 @@
   max-width: 4px;
   min-width: 4px;
   border: 0px solid transparent !important;
+  outline: 0px solid transparent !important;
   width: 4px;
   background-size: 4px 32px !important;
   background-position: 0px 0px !important;
@@ -570,7 +572,7 @@
   max-width: 100%;
   margin: 0;
   padding: 0;
-  background: url("images/background-noise.png");
+  background: url("images/background-noise.png") repeat 0px 32px 100%;
   overflow: hidden;
   top: 0px;
 }

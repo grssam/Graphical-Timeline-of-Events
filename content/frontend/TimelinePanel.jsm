@@ -9,13 +9,18 @@ Cu.import("resource://gre/modules/Services.jsm");
 var EXPORTED_SYMBOLS = ["TimelinePanel"];
 
 Cu.import("resource:///modules/devtools/EventEmitter.jsm");
-Cu.import("resource://gre/modules/commonjs/promise/core.js");
+try {
+  Cu.import("resource://gre/modules/commonjs/promise/core.js");
+} catch (e) {
+  Cu.import("resource://gre/modules/commonjs/sdk/core/promise.js");
+}
 let global = {};
 Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
 
-function TimelinePanel(iframeWindow, toolbox) {
+function TimelinePanel(iframeWindow, toolbox, callback) {
   this._toolbox = toolbox;
   this.panelWin = iframeWindow;
+  this.callback = callback;
 
   // import the timeline jsm to map functions
   this.window = toolbox._target.tab.ownerDocument.defaultView;
@@ -51,6 +56,7 @@ TimelinePanel.prototype = {
     global.DataSink.removeRemoteListener(this.window);
     this.window = null;
     try {
+      Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
@@ -65,6 +71,10 @@ TimelinePanel.prototype = {
       global = {};
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
     } catch (e) {}
+    if (this.callback) {
+      this.callback();
+      this.callback = null;
+    }
     return Promise.resolve(null);
   },
 };
