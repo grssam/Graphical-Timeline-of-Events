@@ -267,6 +267,10 @@ NetworkResponseListener.prototype = {
    */
   onInputStreamReady: function NRL_onInputStreamReady(aStream)
   {
+    if (typeof Ci == "undefined") {
+      this.httpActivity = null;
+      return;
+    }
     if (!(aStream instanceof Ci.nsIAsyncInputStream) || !this.httpActivity) {
       return;
     }

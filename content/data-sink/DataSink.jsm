@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+"use strict";
+
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
@@ -79,9 +81,6 @@ let DataSink = {
   NormalizedEventType: NORMALIZED_EVENT_TYPE,
 
   get sequenceId() (++this._sequenceId),
-
-  // Chrome window getter.
-  get _chromeWindowForGraph() Services.wm.getMostRecentWindow("navigator:browser"),
 
   // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
   registeredUI: [],
@@ -430,7 +429,7 @@ let DataSink = {
    */
   removeRemoteListener: function DS_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListener("GraphicalTimeline:UIEvent",
-                                     DataSink._remoteListener, true);
+                                      DataSink._remoteListener, true);
   },
 
   /**
@@ -482,6 +481,9 @@ let DataSink = {
                        "messageType": aMessageType,
                      },
                  };
+    if (!this._chromeWindowForGraph) {
+      this._chromeWindowForGraph = Services.wm.getMostRecentWindow("navigator:browser");
+    }
     let customEvent =
       new this._chromeWindowForGraph
               .CustomEvent("GraphicalTimeline:DataSinkEvent", detail);
@@ -659,8 +661,12 @@ let DataSink = {
       //Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
     } catch (ex) {}
     //DataStore = this.dataStore = null;
-    this._browsers = this.registeredUI = this._enabledProducers =
-      this._registeredProducers = this.listeningWindows = null;
+    this._browsers = null;
+    this.registeredUI = null;
+    this._enabledProducers = null;
+    this._registeredProducers = null;
+    this.listeningWindows = null;
+    this._chromeWindowForGraph = null;
     this.initiated = false;
     this.databaseName = "";
   },
