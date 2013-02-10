@@ -56,6 +56,7 @@ TimelinePanel.prototype = {
     global.DataSink.removeRemoteListener(this.window);
     this.window = null;
     try {
+      global.DataSink = null;
       Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
@@ -65,6 +66,8 @@ TimelinePanel.prototype = {
       delete global.NetworkProducer;
       delete global.PageEventsProducer;
       delete global.MemoryProducer;
+      global.Timeline = null;
+      global.Timeline = null;
       global.Timeline = null;
       delete global.Timeline;
       global = null;
