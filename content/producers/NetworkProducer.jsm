@@ -10,7 +10,11 @@ Cu.import("resource://gre/modules/NetUtil.jsm");
 try {
   Cu.import("resource:///modules/NetworkHelper.jsm");
 } catch(ex) {
-  Cu.import("resource:///modules/devtools/NetworkHelper.jsm");
+  try {
+    Cu.import("resource:///modules/devtools/NetworkHelper.jsm");
+  } catch (ex) {
+    Cu.import("resource://gre/modules/devtools/NetworkHelper.jsm");
+  }
 }
 Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
 

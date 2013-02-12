@@ -5,7 +5,15 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("resource://gre/modules/NetworkPanel.jsm");
+try {
+  Cu.import("resource:///modules/NetworkHelper.jsm");
+} catch(ex) {
+  try {
+    Cu.import("resource:///modules/devtools/NetworkHelper.jsm");
+  } catch (ex) {
+    Cu.import("resource://gre/modules/devtools/NetworkHelper.jsm");
+  }
+}
 
 var EXPORTED_SYMBOLS = ["Timeline"];
 
