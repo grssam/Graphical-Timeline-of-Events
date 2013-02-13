@@ -6,13 +6,9 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
 try {
-  Cu.import("resource:///modules/NetworkHelper.jsm");
+  Cu.import("resource://gre/modules/NetworkPanel.jsm");
 } catch(ex) {
-  try {
-    Cu.import("resource:///modules/devtools/NetworkHelper.jsm");
-  } catch (ex) {
-    Cu.import("resource://gre/modules/devtools/NetworkHelper.jsm");
-  }
+  Cu.import("resource:///modules/NetworkPanel.jsm");
 }
 
 var EXPORTED_SYMBOLS = ["Timeline"];
