@@ -21,6 +21,7 @@ function TimelinePanel(iframeWindow, toolbox, callback) {
   this._toolbox = toolbox;
   this.panelWin = iframeWindow;
   this.callback = callback;
+  this.Timeline = global.Timeline;
 
   // import the timeline jsm to map functions
   this.window = toolbox._target.tab.ownerDocument.defaultView;
@@ -55,6 +56,7 @@ TimelinePanel.prototype = {
     global.Timeline.destroy();
     global.DataSink.removeRemoteListener(this.window);
     this.window = null;
+    this.Timeline = null;
     try {
       global.DataSink = null;
       Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");

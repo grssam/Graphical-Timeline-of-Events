@@ -11,6 +11,10 @@ try {
   Cu.import("resource:///modules/NetworkPanel.jsm");
 }
 
+try {
+  Cu.import("resource:///modules/devtools/EventEmitter.jsm")
+} catch(ex) {}
+
 var EXPORTED_SYMBOLS = ["Timeline"];
 
 /**
@@ -621,6 +625,9 @@ TimelineView.prototype = {
       producerBox.appendChild(featureBox);
 
       this.producersPane.appendChild(producerBox);
+    }
+    if (Timeline._toolbox) {
+      Timeline.emit("AfterUIBuilt");
     }
   },
 
@@ -2183,6 +2190,7 @@ let Timeline = {
     Timeline._toolbox = aToolbox;
     if (Timeline._toolbox) {
       Timeline._window = Timeline._toolbox._target.tab.ownerDocument.defaultView;
+      EventEmitter.decorate(Timeline);
     }
     else {
       Timeline._window = Services.wm.getMostRecentWindow("navigator:browser");
@@ -2265,6 +2273,9 @@ let Timeline = {
       //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       //Timeline.dataStore = new DataStore(Timeline.databaseName);
       Timeline.buildUI();
+      if (Timeline._toolbox) {
+        Timeline.emit("AfterSinkConnected");
+      }
     }
   },
 

@@ -20,6 +20,204 @@ try {
 
 let global = {};
 
+function addCommands() {
+  Cu.import("resource:///modules/devtools/gcli.jsm");
+
+  /**
+   * 'timeline' command.
+   */
+  gcli.addCommand({
+    name: "timeline",
+    description: "Control the timeline using the following commands:"
+  });
+
+  /**
+   * 'timeline toggle' command.
+   */
+  gcli.addCommand({
+    name: "timeline toggle",
+    returnType: "html",
+    description: "Toggles the Timeline either for the selected tab, or window.",
+    params: [{
+        group: "Options",
+        params: [{
+            name: "chrome",
+            type: "boolean",
+            description: "Toggle the timeline in chrome mode.",
+            manual: "In chrome mode, you can view the activities of the whole" +
+                    " browser and not just a single tab"
+          }]
+      }],
+    exec: function(aArgs, context) {
+      let win = context.environment.chromeDocument.defaultView;
+      if (!aArgs.chrome) {
+        win.TimelineUI.toggleTimelineUI();
+        return;
+      }
+      if (!Services.prefs.getBoolPref("devtools.chrome.enabled")) {
+        let div = win.document.createElement("div");
+        div.textContent = "Chrome mode is not enabled";
+        return div;
+      }
+      if (!gDevToolsAvailable) {
+        let div = win.document.createElement("div");
+        div.textContent = "Your FIrefox does not have DevTools Toolbox Support" +
+                          " yet.\nSwitch to Firefox 20 or above to use this options.";
+        return div;
+      }
+      let windowTarget = TargetFactory.forWindow(win);
+      win.TimelineUI.toggleTimelineUI(windowTarget, "window");
+    }
+  });
+
+  /**
+   * 'timeline start' command.
+   */
+  gcli.addCommand({
+    name: "timeline start",
+    returnType: "html",
+    description: "Starts recording the enabled activities in Timeline.",
+    manual: "Opens the Timeline if not already open and starts recording" +
+            " various activites that are enabled.",
+    params: [{
+        group: "Options",
+        params: [{
+            name: "chrome",
+            type: "boolean",
+            description: "Starts the Timeline in chrome mode.",
+          }]
+      }],
+    exec: function(aArgs, context) {
+      let win = context.environment.chromeDocument.defaultView;
+      if (gDevToolsAvailable) {
+        if (!aArgs.chrome) {
+          let target = TargetFactory.forTab(win.gBrowser.selectedTab);
+          if (!gDevTools.getToolbox(target) ||
+              !gDevTools.getToolbox(target).getPanel("timeline")) {
+            win.TimelineUI.toggleTimelineUI().then(function() {
+              let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+              timeline.once("AfterUIBuilt", function after() {
+                timeline._view.toggleRecording();
+              });
+            });
+          }
+          else {
+            let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+            if (!timeline._view.recording) {
+              timeline._view.toggleRecording();
+            }
+          }
+          return;
+        }
+        if (!Services.prefs.getBoolPref("devtools.chrome.enabled")) {
+          let div = win.document.createElement("div");
+          div.textContent = "Chrome mode is not enabled";
+          return div;
+        }
+        if (!gDevToolsAvailable) {
+          let div = win.document.createElement("div");
+          div.textContent = "Your FIrefox does not have DevTools Toolbox Support" +
+                            " yet.\nSwitch to Firefox 20 or above to use this options.";
+          return div;
+        }
+        let target = TargetFactory.forWindow(win);
+        if (!gDevTools.getToolbox(target) ||
+            !gDevTools.getToolbox(target).getPanel("timeline")) {
+          win.TimelineUI.toggleTimelineUI(target, "window").then(function() {
+            let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+            timeline.once("AfterUIBuilt", function after() {
+              timeline._view.toggleRecording();
+            });
+          });
+        }
+        else {
+          let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+          if (!timeline._view.recording) {
+            timeline._view.toggleRecording();
+          }
+        }
+      }
+      else {
+        if (TimelineUI.UIOpened) {
+          if (!global.Timeline._view.recording) {
+            global.Timeline._view.toggleRecording();
+          }
+        }
+        else {
+          win.TimelineUI.toggleTimelineUI();
+          global.Timeline._view.toggleRecording();
+        }
+      }
+    }
+  });
+
+  /**
+   * 'timeline stop' command.
+   */
+  gcli.addCommand({
+    name: "timeline stop",
+    returnType: "html",
+    description: "Stops recording the enabled activities in Timeline.",
+    params: [{
+        group: "Options",
+        params: [{
+            name: "chrome",
+            type: "boolean",
+            description: "Starts the Timeline in chrome mode.",
+          }]
+      }],
+    exec: function(aArgs, context) {
+      let win = context.environment.chromeDocument.defaultView;
+      if (gDevToolsAvailable) {
+        if (!aArgs.chrome) {
+          let target = TargetFactory.forTab(win.gBrowser.selectedTab);
+          if (gDevTools.getToolbox(target) &&
+              gDevTools.getToolbox(target).getPanel("timeline")) {
+            let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+            if (timeline._view.recording) {
+              timeline._view.toggleRecording();
+            }
+          }
+          return;
+        }
+        if (!Services.prefs.getBoolPref("devtools.chrome.enabled")) {
+          let div = win.document.createElement("div");
+          div.textContent = "Chrome mode is not enabled";
+          return div;
+        }
+        if (!gDevToolsAvailable) {
+          let div = win.document.createElement("div");
+          div.textContent = "Your FIrefox does not have DevTools Toolbox Support" +
+                            " yet.\nSwitch to Firefox 20 or above to use this options.";
+          return div;
+        }
+        let target = TargetFactory.forWindow(win);
+        if (gDevTools.getToolbox(target) &&
+            gDevTools.getToolbox(target).getPanel("timeline")) {
+          let timeline = gDevTools.getToolbox(target).getPanel("timeline").Timeline;
+          if (timeline._view.recording) {
+            timeline._view.toggleRecording();
+          }
+        }
+      }
+      else {
+        if (TimelineUI.UIOpened) {
+          if (global.Timeline._view.recording) {
+            global.Timeline._view.toggleRecording();
+          }
+        }
+      }
+    }
+  });
+}
+
+function removeCommands() {
+  gcli.removeCommand("timeline");
+  gcli.removeCommand("timeline toggle");
+  gcli.removeCommand("timeline start");
+  gcli.removeCommand("timeline stop");
+}
+
 let TimelineUI = {
 
   /**
@@ -77,6 +275,7 @@ let TimelineUI = {
     else {
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
     }
+    addCommands();
   },
 
   _unload: function TUI__unload()
@@ -105,6 +304,7 @@ let TimelineUI = {
       delete global.TimelinePanel;
     } catch (e) {}
     TimelineUI = null;
+    removeCommands();
   },
 
   _onTabChange: function TUI__onTabChange(window)
@@ -126,8 +326,10 @@ let TimelineUI = {
    *
    * @param Target aTarget [Optional]
    *        The target for Timeline of gDevTools is available.
+   * @param HostType aHostType [Optional]
+   *        The type of host for the toolbox.
    */
-  toggleTimelineUI: function TUI_toggleTimelineUI(aTarget)
+  toggleTimelineUI: function TUI_toggleTimelineUI(aTarget, aHostType = null)
   {
     function $(id) window.document.getElementById(id);
 
@@ -137,8 +339,8 @@ let TimelineUI = {
         if (!aTarget) {
           aTarget = TargetFactory.forTab(window.gBrowser.selectedTab);
         }
-        gDevTools.showToolbox(aTarget, "timeline");
         TimelineUI.contentWindow = aTarget.window;
+        return gDevTools.showToolbox(aTarget, "timeline", aHostType);
       }
       else {
         Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
@@ -196,11 +398,22 @@ let TimelineUI = {
                               notificationBox.PRIORITY_WARNING_MEDIUM,
                               buttons,
                               null);
+        if (gDevToolsAvailable) {
+          return {then: function(){}};
+        }
       }
       else {
         TimelineUI.contentWindow = null;
         if (!TimelineUI.gDevToolsAvailable) {
           global.Timeline.destroy();
+        }
+        else {
+          if (aTarget) {
+            gDevTools.closeToolbox(aTarget);
+          }
+          else {
+            TimelineUI.closeThisToolbox();
+          }
         }
       }
     }
