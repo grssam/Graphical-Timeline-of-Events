@@ -12,7 +12,6 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 let gAddon;
 let reload = function() {};
-let openSite = false;
 const toolsMenuitemID = "graphical-timeline-tools-menu-item";
 const appMenuitemID = "graphical-timeline-app-menu-item";
 const keyID = "graphical-timeline-key";
@@ -155,21 +154,6 @@ function startup(data, reason) AddonManager.getAddonByID(data.id, function(addon
     init();
   };
   init();
-
-  if ((reason == 7 || reason == 5) && data.version == "0.9.5")
-    openSite = true;
-  watchWindows(function(window) {
-    if (openSite) {
-      let stats = JSON.parse(pref("userStats"));
-      let statString = (stats.compactMode || 0) + "_" + (stats.recorded || 0) + "_" +
-                       (stats.linkClicked || 0) + "_" + (stats.networkPanel || 0) + "_" +
-                       (stats.rulerDragged || 0) + "_" + (pref("timesUIOpened") || 0) + "_" +
-                       (stats.windowZoomed || 0) + "_" + (stats.liveMode || 0) + "_" +
-                       (stats.inspector || 0);
-      window.openUILinkIn("http://grssam.com/addons/graphical-timeline/?stats=" + statString, "tab");
-      openSite = false;
-    }
-  });
 });
 
 function shutdown(data, reason) {
