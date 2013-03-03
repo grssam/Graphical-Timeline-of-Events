@@ -837,6 +837,7 @@ TimelineView.prototype = {
       }
       this.cleanUI();
       Timeline.startListening(message);
+      this.recordButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
         this._canvas = new CanvasManager(this._frameDoc, this._window);
@@ -872,6 +873,7 @@ TimelineView.prototype = {
     }
     else {
       this._canvas.stopRendering();
+      this.recordButton.removeAttribute("checked");
       Timeline.stopListening({timelineUIId: Timeline.id});
     }
     this.recording = !this.recording;
