@@ -94,6 +94,8 @@ let DataSink = {
   // Represents whether we are listening or not.
   listening: false,
 
+  chromeMode: false,
+
   /**
    * The Data Sink initialization code.
    *
@@ -145,7 +147,8 @@ let DataSink = {
     // Assuming that the user does not switch tab between event dispatch and
     // event capturing.
     // If tab id is provided, serach for the correct tab to get the cotent window.
-    let contentWindow = null;
+    // Otherwise assume that Timeline is in Chrome mode.
+    let window = null;
     if (aMessage.tabID) {
       let windows = Services.wm.getEnumerator("navigator:browser");
       while (windows.hasMoreElements()) {
@@ -155,17 +158,17 @@ let DataSink = {
           continue;
         for (let tab of win.gBrowser.tabs) {
           if (aMessage.tabID === tab.linkedPanel) {
-            contentWindow = tab.linkedBrowser.contentWindow;
+            window = tab.linkedBrowser.contentWindow;
             break;
           }
         }
       }
     }
-    if (contentWindow == null) {
-      contentWindow = Services.wm.getMostRecentWindow("navigator:browser")
-                              .content;
+    if (window == null) {
+      this.chromeMode = true;
+      window = Services.wm.getMostRecentWindow("navigator:browser");
     }
-    this.listeningWindows = [contentWindow];
+    this.listeningWindows = [window];
     // enable the required producers if aMessage not null.
     if (aMessage.enabledProducers) {
       for (let producer in this._registeredProducers) {
@@ -183,15 +186,20 @@ let DataSink = {
 
     this.listening = true;
 
-    this._chromeWindowForGraph =
-      contentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                   .getInterface(Ci.nsIWebNavigation)
-                   .QueryInterface(Ci.nsIDocShell)
-                   .chromeEventHandler
-                   .ownerDocument.defaultView;
-
-    this._browsers = [this._chromeWindowForGraph.gBrowser
-                          .getBrowserForDocument(contentWindow.document)];
+    if (!this.chromeMode) {
+      this._chromeWindowForGraph =
+        window.QueryInterface(Ci.nsIInterfaceRequestor)
+              .getInterface(Ci.nsIWebNavigation)
+              .QueryInterface(Ci.nsIDocShell)
+              .chromeEventHandler
+              .ownerDocument.defaultView;
+      this._browsers = [this._chromeWindowForGraph.gBrowser
+                            .getBrowserForDocument(window.document)];
+    }
+    else {
+      this._chromeWindowForGraph = window;
+      this._browsers = [window.gBrowser];
+    }
     this._browsers[0].addEventListener("beforeunload", this.onWindowUnload, true);
     // Initiating the Data Store
     //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");

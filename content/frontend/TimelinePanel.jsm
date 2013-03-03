@@ -24,7 +24,12 @@ function TimelinePanel(iframeWindow, toolbox, callback) {
   this.Timeline = global.Timeline;
 
   // import the timeline jsm to map functions
-  this.window = toolbox._target.tab.ownerDocument.defaultView;
+  if (toolbox._target.tab) {
+    this.window = toolbox._target.tab.ownerDocument.defaultView;
+  }
+  else if (toolbox._target.window) {
+    this.window = toolbox._target.window;
+  }
   Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
   Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);

@@ -1630,7 +1630,7 @@ TimelineView.prototype = {
                     .openInspectorUI(this._window.gBrowser.contentDocument
                                          .getElementById(value));
               } catch (ex) {
-                if (Timeline._toolbox) {
+                if (Timeline._toolbox && Timeline._toolbox._target.tab) {
                   Timeline._toolbox.selectTool("inspector").then(function(panel) {
                     panel.selection.setNode(Timeline._toolbox._target.tab
                                                     .linkedBrowser
@@ -2189,7 +2189,11 @@ let Timeline = {
     }
     Timeline._toolbox = aToolbox;
     if (Timeline._toolbox) {
-      Timeline._window = Timeline._toolbox._target.tab.ownerDocument.defaultView;
+      try {
+        Timeline._window = Timeline._toolbox._target.tab.ownerDocument.defaultView;
+      } catch (ex) {
+        Timeline._window = Timeline._toolbox._target.window;
+      }
       EventEmitter.decorate(Timeline);
     }
     else {
@@ -2224,7 +2228,9 @@ let Timeline = {
     //Timeline.timer = Timeline._window.setInterval(Timeline.readData, 25);
     // Adding the correct tab id, if toolbox is available.
     if (Timeline._toolbox) {
-      aMessage.tabID = Timeline._toolbox._target.tab.linkedPanel;
+      try {
+        aMessage.tabID = Timeline._toolbox._target.tab.linkedPanel;
+      } catch (ex) {}
     }
     Timeline.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     Timeline.listening = true;
