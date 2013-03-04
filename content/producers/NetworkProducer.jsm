@@ -352,11 +352,12 @@ let NetworkProducer =
    *        List of content windows for which NetworkProducer will listen for
    *        network activity.
    */
-  init: function NP_init(aWindowList)
+  init: function NP_init(aWindowList, aOptions, aChromeMode)
   {
     this.openRequests = {};
     this.openResponses = {};
     this.listeningWindows = aWindowList;
+    this.chromeMode = !!aChromeMode;
     this.responsePipeSegmentSize = Services.prefs
                                    .getIntPref("network.buffer.cache.size");
 
@@ -456,9 +457,11 @@ let NetworkProducer =
 
     let channel = aSubject.QueryInterface(Ci.nsIHttpChannel);
     // Try to get the source window of the request.
-    let win = NetworkHelper.getWindowForRequest(channel).top;
-    if (!win || NetworkProducer.listeningWindows.indexOf(win) == -1) {
-      return;
+    if (!NetworkProducer.chromeMode) {
+      let win = NetworkHelper.getWindowForRequest(channel);
+      if (!win || NetworkProducer.listeningWindows.indexOf(win.top) == -1) {
+        return;
+      }
     }
 
     let response = {
@@ -601,13 +604,16 @@ let NetworkProducer =
   function NP__onRequestHeader(aChannel, aTimestamp, aExtraStringData)
   {
     // Try to get the source window of the request.
-    let win = NetworkHelper.getWindowForRequest(aChannel).top;
-    if (!win || this.listeningWindows.indexOf(win) == -1) {
-      return;
+    let win = null;
+    if (!this.chromeMode) {
+      win = NetworkHelper.getWindowForRequest(aChannel);
+      if (!win || this.listeningWindows.indexOf(win.top) == -1) {
+        return;
+      }
     }
 
     let httpActivity = this.createActivityObject(aChannel);
-    httpActivity.charset = win.document.characterSet; // see NP__onRequestBodySent()
+    httpActivity.charset = win? win.document.characterSet: null; // see NP__onRequestBodySent()
     httpActivity.stages.push("REQUEST_HEADER"); // activity stage (aActivitySubtype)
 
     httpActivity.timings.REQUEST_HEADER = {
@@ -661,7 +667,6 @@ let NetworkProducer =
   {
     return {
       id: this.sequenceId,
-      contentWindow: NetworkHelper.getWindowForRequest(aChannel).top,
       channel: aChannel,
       charset: null, // see NP__onRequestHeader()
       stages: [], // activity stages (aActivitySubtype)
@@ -848,10 +853,6 @@ let NetworkProducer =
    */
   _onRequestBodySent: function NM__onRequestBodySent(aHttpActivity)
   {
-    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
-      return;
-    }
-
     let request = aHttpActivity.entry.request;
 
     let sentBody = this.readPostTextFromRequest(aHttpActivity.channel,
@@ -896,10 +897,6 @@ let NetworkProducer =
     // that is not trivial to do in an accurate manner. Hence, we save the
     // response headers in this.httpResponseExaminer().
 
-    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
-      return;
-    }
-
     let response = aHttpActivity.entry.response;
 
     let headers = aExtraStringData.split(/\r\n|\n|\r/);
@@ -925,9 +922,6 @@ let NetworkProducer =
    */
   _onTransactionClose: function NP__onTransactionClose(aHttpActivity)
   {
-    if (this.listeningWindows.indexOf(aHttpActivity.contentWindow) == -1) {
-      return;
-    }
     this._setupHarTimings(aHttpActivity);
     this.sendActivity(aHttpActivity);
     delete this.openRequests[aHttpActivity.id];

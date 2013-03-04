@@ -605,11 +605,12 @@ let DataSink = {
       if (typeof this._registeredProducers[aProducerId] == 'function') {
         this._enabledProducers[aProducerId] =
           new this._registeredProducers[aProducerId](this.listeningWindows,
-                                                     aFeatures);
+                                                     aFeatures, this.chromeMode);
       }
       else {
         this._enabledProducers[aProducerId] = this._registeredProducers[aProducerId];
-        this._enabledProducers[aProducerId].init(this.listeningWindows, aFeatures);
+        this._enabledProducers[aProducerId].init(this.listeningWindows,
+                                                 aFeatures, this.chromeMode);
       }
     }
   },
