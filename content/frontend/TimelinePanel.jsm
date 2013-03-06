@@ -21,7 +21,6 @@ function TimelinePanel(iframeWindow, toolbox, callback) {
   this._toolbox = toolbox;
   this.panelWin = iframeWindow;
   this.callback = callback;
-  this.Timeline = global.Timeline;
 
   // import the timeline jsm to map functions
   if (toolbox._target.tab) {
@@ -38,7 +37,7 @@ function TimelinePanel(iframeWindow, toolbox, callback) {
 
   let parentDoc = iframeWindow.document.defaultView.parent.document;
   let iframe = parentDoc.getElementById("toolbox-panel-iframe-timeline");
-  global.Timeline.init(null, iframe, toolbox);
+  this.Timeline = new global.Timeline(null, iframe, toolbox);
 
   EventEmitter.decorate(this);
 }
@@ -58,25 +57,21 @@ TimelinePanel.prototype = {
   },
 
   destroy: function() {
-    global.Timeline.destroy();
+    this.Timeline.destroy();
     global.DataSink.removeRemoteListener(this.window);
     this.window = null;
     this.Timeline = null;
     try {
-      global.DataSink = null;
       Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
       Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-      delete global.DataSink;
-      delete global.NetworkProducer;
-      delete global.PageEventsProducer;
-      delete global.MemoryProducer;
+      global.DataSink = null;
+      global.NetworkProducer = null;
+      global.PageEventsProducer = null;
+      global.MemoryProducer = null;
       global.Timeline = null;
-      global.Timeline = null;
-      global.Timeline = null;
-      delete global.Timeline;
       global = null;
       global = {};
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);

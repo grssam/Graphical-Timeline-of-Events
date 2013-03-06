@@ -5,6 +5,7 @@
 let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
 try {
   Cu.import("resource://gre/modules/NetworkPanel.jsm");
 } catch(ex) {
@@ -60,15 +61,14 @@ const HTML = "http://www.w3.org/1999/xhtml";
 /**
  * The controller of the Timeline UI.
  *
- * @param chromeWindow aChromeWindow
- *        The window in which the UI should be setup and monitored.
- * @param iframe aIframe
- *        If you want the xul to reside inside an iframe, pass the iframe.
+ * @param Timeline aTimeline
+ *        The timeline instance.
  */
-function TimelineView(aChromeWindow, aIframe) {
-  this._window = aChromeWindow;
+function TimelineView(aTimeline) {
+  this.Timeline = aTimeline;
+  this._window = this.Timeline._window;
   let gBrowser = this._window.gBrowser;
-  this._iframe = aIframe || null;
+  this._iframe = this.Timeline._iframe || null;
   let ownerDocument = gBrowser.parentNode.ownerDocument;
 
   if (!this._iframe) {
@@ -180,7 +180,7 @@ TimelineView.prototype = {
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
     this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
     if (!this._iframe) {
-      this.closeButton.addEventListener("command", Timeline.destroy, true);
+      this.closeButton.addEventListener("command", this.Timeline.destroy, true);
     }
     else {
       this.closeButton.style.opacity = 0;
@@ -626,8 +626,8 @@ TimelineView.prototype = {
 
       this.producersPane.appendChild(producerBox);
     }
-    if (Timeline._toolbox) {
-      Timeline.emit("AfterUIBuilt");
+    if (this.Timeline._toolbox) {
+      this.Timeline.emit("AfterUIBuilt");
     }
   },
 
@@ -818,7 +818,7 @@ TimelineView.prototype = {
       }
       let message = {
         enabledProducers: {},
-        timelineUIId: Timeline.id,
+        timelineUIId: this.Timeline.id,
       };
       let producerBoxes = this._frameDoc.getElementsByClassName("producer-box");
       for (let i = 0; i < producerBoxes.length; i++) {
@@ -836,7 +836,7 @@ TimelineView.prototype = {
         }
       }
       this.cleanUI();
-      Timeline.startListening(message);
+      this.Timeline.startListening(message);
       this.recordButton.setAttribute("checked", true);
       // Starting the canvas.
       if (!this.canvasStarted) {
@@ -874,7 +874,7 @@ TimelineView.prototype = {
     else {
       this._canvas.stopRendering();
       this.recordButton.removeAttribute("checked");
-      Timeline.stopListening({timelineUIId: Timeline.id});
+      this.Timeline.stopListening({timelineUIId: this.Timeline.id});
     }
     this.recording = !this.recording;
   },
@@ -952,7 +952,7 @@ TimelineView.prototype = {
     let feature = target.getAttribute("label");
     if (target.hasAttribute("checked")) {
       if (this.recording) {
-        Timeline.enableFeatures(linkedProducerId, [feature]);
+        this.Timeline.enableFeatures(linkedProducerId, [feature]);
       }
       if (TimelinePreferences.activeFeatures
                              .indexOf(linkedProducerId + ":" + feature) == -1) {
@@ -964,7 +964,7 @@ TimelineView.prototype = {
     }
     else {
       if (this.recording) {
-        Timeline.disableFeatures(linkedProducerId, [feature]);
+        this.Timeline.disableFeatures(linkedProducerId, [feature]);
       }
       if (TimelinePreferences.activeFeatures
                              .indexOf(linkedProducerId + ":" + feature) != -1) {
@@ -1018,10 +1018,10 @@ TimelineView.prototype = {
         }
         feature = feature.nextSibling;
       }
-      Timeline.startProducer(producerId, features);
+      this.Timeline.startProducer(producerId, features);
     }
     else {
-      Timeline.stopProducer(producerId);
+      this.Timeline.stopProducer(producerId);
     }
   },
 
@@ -1249,7 +1249,7 @@ TimelineView.prototype = {
       return;
     }
     popup.openPopup(aEvent.target , "after_start");
-    let producer = Timeline.producerInfoList[aProducerId];
+    let producer = this.Timeline.producerInfoList[aProducerId];
     let featureCheckbox = popup.firstChild;
     while (featureCheckbox) {
       if (TimelinePreferences.activeFeatures.indexOf(
@@ -1332,10 +1332,11 @@ TimelineView.prototype = {
       }
     } catch (ex) {}
     /* Hard coded starts */
-    if (Timeline.data[id].producer == "NetworkProducer") {
+    let timelineData = this.Timeline.data;
+    if (timelineData[id].producer == "NetworkProducer") {
       let more = this.$("detailbox-closebutton").previousSibling;
       more.collapsed = false;
-      more.onclick = this._showNetworkPanel.bind(this, more, Timeline.data[id]);
+      more.onclick = this._showNetworkPanel.bind(this, more, timelineData[id]);
     }
     else {
       this.$("detailbox-closebutton").previousSibling.collapsed = true;
@@ -1346,23 +1347,23 @@ TimelineView.prototype = {
     let topCell = this._frameDoc.createElementNS(HTML, "th");
     topCell.setAttribute("class", "property-heading");
     topCell.setAttribute("colspan", 2);
-    topCell.textContent = this.producerInfoList[Timeline.data[id].producer].name;
+    topCell.textContent = this.producerInfoList[timelineData[id].producer].name;
     let row = this._frameDoc.createElementNS(HTML, "tr");
     row.appendChild(topCell)
     table.appendChild(row);
     this.detailBox.appendChild(table);
-    if (Timeline.data[id].details) {
-      for (let property in this.producerInfoList[Timeline.data[id].producer]
+    if (timelineData[id].details) {
+      for (let property in this.producerInfoList[timelineData[id].producer]
                                .details) {
-        if (Timeline.data[id].details[property] == null){
+        if (timelineData[id].details[property] == null){
           continue;
         }
-        if (this.producerInfoList[Timeline.data[id].producer]
+        if (this.producerInfoList[timelineData[id].producer]
                 .details[property].type != "nested") {
           let {name:name, valueLabel:valueLabel} =
-            this.getPropertyInfo(Timeline.data[id].producer,
+            this.getPropertyInfo(timelineData[id].producer,
                                  property,
-                                 Timeline.data[id].details[property]);
+                                 timelineData[id].details[property]);
           let propRow = this._frameDoc.createElementNS(HTML, "tr");
           let nameLabel = this._frameDoc.createElement("label");
           nameLabel.setAttribute("value", name + " :");
@@ -1383,7 +1384,7 @@ TimelineView.prototype = {
           let headingCell = this._frameDoc.createElementNS(HTML, "td");
           let headingLabel = this._frameDoc.createElement("label");
           headingLabel.setAttribute("value", this.producerInfoList[
-                                               Timeline.data[id].producer
+                                               timelineData[id].producer
                                              ].details[property].name);
           headingCell.appendChild(headingLabel);
           headingCell.setAttribute("colspan", 2);
@@ -1392,16 +1393,16 @@ TimelineView.prototype = {
           table.appendChild(headingRow);
           let anythingPresent = false;
           for (let subProp in this.producerInfoList[
-                                Timeline.data[id].producer
+                                timelineData[id].producer
                               ].details[property].items) {
-            if (Timeline.data[id].details[property][subProp] == null){
+            if (timelineData[id].details[property][subProp] == null){
               continue;
             }
             anythingPresent = true;
             let {name:name, valueLabel:valueLabel} =
-              this.getPropertyInfo(Timeline.data[id].producer,
+              this.getPropertyInfo(timelineData[id].producer,
                                    property,
-                                   Timeline.data[id].details[property][subProp],
+                                   timelineData[id].details[property][subProp],
                                    subProp);
             let propRow = this._frameDoc.createElementNS(HTML, "tr");
             let nameLabel = this._frameDoc.createElement("label");
@@ -1570,8 +1571,8 @@ TimelineView.prototype = {
    */
   getPropertyInfo: function TV_getPropertyInfo(aProducerId, aName, aValue, aSubName)
   {
-    if (Timeline.producerInfoList[aProducerId].details[aName]) {
-      let details = Timeline.producerInfoList[aProducerId].details;
+    if (this.Timeline.producerInfoList[aProducerId].details[aName]) {
+      let details = this.Timeline.producerInfoList[aProducerId].details;
       let type = details[aName].type;
       let name,value;
       if (type == "nested") {
@@ -1632,12 +1633,12 @@ TimelineView.prototype = {
                     .openInspectorUI(this._window.gBrowser.contentDocument
                                          .getElementById(value));
               } catch (ex) {
-                if (Timeline._toolbox && Timeline._toolbox._target.tab) {
-                  Timeline._toolbox.selectTool("inspector").then(function(panel) {
-                    panel.selection.setNode(Timeline._toolbox._target.tab
-                                                    .linkedBrowser
-                                                    .contentDocument
-                                                    .getElementById(value), "timeline");
+                if (this.Timeline._toolbox && this.Timeline._toolbox._target.tab) {
+                  this.Timeline._toolbox.selectTool("inspector").then(function(panel) {
+                    panel.selection.setNode(this.Timeline._toolbox._target.tab
+                                                .linkedBrowser
+                                                .contentDocument
+                                                .getElementById(value), "timeline");
                   });
                 }
               }
@@ -1666,7 +1667,7 @@ TimelineView.prototype = {
               switch (extension) {
                 case "css":
                   valueLabel.addEventListener("click", function() {
-                    
+
                     try {
                       let styleSheets = this._window.content.window.document.styleSheets;
                       for each (let style in styleSheets) {
@@ -1674,8 +1675,8 @@ TimelineView.prototype = {
                           try {
                           this._window.StyleEditor.openChrome(style, 1);
                           } catch (ex) {
-                            if (Timeline._toolbox) {
-                              Timeline._toolbox.selectTool("styleeditor").then(function(panel) {
+                            if (this.Timeline._toolbox) {
+                              this.Timeline._toolbox.selectTool("styleeditor").then(function(panel) {
                                 panel.selectStyleSheet(style, 1);
                               });
                               return;
@@ -1698,7 +1699,7 @@ TimelineView.prototype = {
                     let stats = TimelinePreferences.userStats;
                     stats.linkClicked++;
                     TimelinePreferences.userStats = stats;
-                    if (!Timeline._toolbox) {
+                    if (!this.Timeline._toolbox) {
                       function openScript(scriptsView) {
                         let targetScript = aValue;
                         let scriptLocations = scriptsView.scriptLocations;
@@ -1732,7 +1733,7 @@ TimelineView.prototype = {
                         openScript(scripts);
                       }
                     } else {
-                      Timeline._toolbox.selectTool("jsdebugger").then(function(dbg) {
+                      this.Timeline._toolbox.selectTool("jsdebugger").then(function(dbg) {
                         dbg.panelWin.DebuggerView.Sources.preferredSource = aValue;
                       });
                     }
@@ -2158,7 +2159,50 @@ TimelineView.prototype = {
 /**
  * The Timeline User Interface
  */
-let Timeline = {
+function Timeline(aCallback, aIframe, aToolbox) {
+  this.callback = aCallback;
+  if (aIframe) {
+    this._iframe = aIframe;
+  }
+  this._toolbox = aToolbox;
+  if (this._toolbox) {
+    try {
+      this._window = this._toolbox._target.tab.ownerDocument.defaultView;
+    } catch (ex) {
+      this._window = this._toolbox._target.window;
+    }
+    EventEmitter.decorate(this);
+  }
+  else {
+    this._window = Services.wm.getMostRecentWindow("navigator:browser");
+  }
+  this.addRemoteListener(this._window);
+  // destroying on unload.
+  this._window.addEventListener("unload", this.destroy, false);
+  if (!this.id) {
+    this.id = "timeline-ui-" + Date.now();
+  }
+  this.pingSent = true;
+  this.sendMessage(UIEventMessageType.PING_HELLO, {timelineUIId: this.id});
+  // Binds!
+  this.buildUI = this.buildUI.bind(this);
+  this.startListening = this.startListening.bind(this);
+  this.stopListening = this.stopListening.bind(this);
+  this.handlePingReply = this.handlePingReply.bind(this);
+  this.enableFeatures = this.enableFeatures.bind(this);
+  this.disableFeatures = this.disableFeatures.bind(this);
+  this.startProducer = this.startProducer.bind(this);
+  this.stopProducer = this.stopProducer.bind(this);
+  this.readData = this.readData.bind(this);
+  this.processData = this.processData.bind(this);
+  this._remoteListener = this._remoteListener.bind(this);
+  this.addRemoteListener = this.addRemoteListener.bind(this);
+  this.removeRemoteListener = this.removeRemoteListener.bind(this);
+  this.sendMessage = this.sendMessage.bind(this);
+  this.destroy = this.destroy.bind(this);
+}
+
+Timeline.prototype = {
 
   _view: null,
   _currentId: 1,
@@ -2181,75 +2225,43 @@ let Timeline = {
   data: {},
 
   /**
-   * Prepares the UI and sends ping to the Data Sink.
-   */
-  init: function GUI_init(aCallback, aIframe, aToolbox) {
-    Cu.import("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
-    Timeline.callback = aCallback;
-    if (aIframe) {
-      Timeline._iframe = aIframe;
-    }
-    Timeline._toolbox = aToolbox;
-    if (Timeline._toolbox) {
-      try {
-        Timeline._window = Timeline._toolbox._target.tab.ownerDocument.defaultView;
-      } catch (ex) {
-        Timeline._window = Timeline._toolbox._target.window;
-      }
-      EventEmitter.decorate(Timeline);
-    }
-    else {
-      Timeline._window = Services.wm.getMostRecentWindow("navigator:browser");
-    }
-    Timeline.addRemoteListener(Timeline._window);
-    // destroying on unload.
-    Timeline._window.addEventListener("unload", Timeline.destroy, false);
-    if (!Timeline.id) {
-      Timeline.id = "timeline-ui-" + Date.now();
-    }
-    Timeline.pingSent = true;
-    Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                         {timelineUIId: Timeline.id});
-  },
-
-  /**
    * Builds the UI in the Tab.
    */
   buildUI: function GUI_buildUI() {
-    if (!Timeline._view) {
-      Timeline._view = new TimelineView(Timeline._window, Timeline._iframe);
+    if (!this._view) {
+      this._view = new TimelineView(this);
     }
-    Timeline._view.createProducersPane(Timeline.producerInfoList);
-    Timeline.UIOpened = true;
+    this._view.createProducersPane(this.producerInfoList);
+    this.UIOpened = true;
   },
 
   /**
    * Starts the Data Sink and all the producers.
    */
   startListening: function GUI_startListening(aMessage) {
-    //Timeline.timer = Timeline._window.setInterval(Timeline.readData, 25);
+    //this.timer = this._window.setInterval(this.readData, 25);
     // Adding the correct tab id, if toolbox is available.
-    if (Timeline._toolbox) {
+    if (this._toolbox) {
       try {
-        aMessage.tabID = Timeline._toolbox._target.tab.linkedPanel;
+        aMessage.tabID = this._toolbox._target.tab.linkedPanel;
       } catch (ex) {}
     }
-    Timeline.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
-    Timeline.listening = true;
-    Timeline.shouldDeleteDatabaseItself = false;
+    this.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
+    this.listening = true;
+    this.shouldDeleteDatabaseItself = false;
   },
 
   /**
    * Stops the Data Sink and all the producers.
    */
   stopListening: function GUI_stopListening(aMessage) {
-    if (!Timeline.listening) {
+    if (!this.listening) {
       return;
     }
-    //Timeline._window.clearInterval(Timeline.timer);
-    //Timeline.timer = null;
-    Timeline.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
-    Timeline.listening = false;
+    //this._window.clearInterval(this.timer);
+    //this.timer = null;
+    this.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
+    this.listening = false;
   },
 
   /**
@@ -2260,7 +2272,7 @@ let Timeline = {
    *        or the error on failure.
    */
   handlePingReply: function GUI_handlePingReply(aMessage) {
-    if (!aMessage || aMessage.timelineUIId != Timeline.id || !Timeline.pingSent) {
+    if (!aMessage || aMessage.timelineUIId != this.id || !this.pingSent) {
       return;
     }
     if (aMessage.error) {
@@ -2268,21 +2280,21 @@ let Timeline = {
 
         case ERRORS.ID_TAKEN:
           // The id was already taken, generate a new id and send the ping again.
-          Timeline.id = "timeline-ui-" + Date.now();
-          Timeline.sendMessage(UIEventMessageType.PING_HELLO,
-                               {timelineUIId: Timeline.id});
+          this.id = "timeline-ui-" + Date.now();
+          this.sendMessage(UIEventMessageType.PING_HELLO,
+                           {timelineUIId: this.id});
           break;
       }
     }
     else {
-      Timeline.databaseName = aMessage.databaseName;
-      Timeline.producerInfoList = aMessage.producerInfoList;
+      this.databaseName = aMessage.databaseName;
+      this.producerInfoList = aMessage.producerInfoList;
       // Importing the Data Store and making a database
       //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-      //Timeline.dataStore = new DataStore(Timeline.databaseName);
-      Timeline.buildUI();
-      if (Timeline._toolbox) {
-        Timeline.emit("AfterSinkConnected");
+      //Timeline.dataStore = new DataStore(this.databaseName);
+      this.buildUI();
+      if (this._toolbox) {
+        this.emit("AfterSinkConnected");
       }
     }
   },
@@ -2298,11 +2310,11 @@ let Timeline = {
   enableFeatures: function GUI_enableFeatures(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: Timeline.id,
+      timelineUIId: this.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.ENABLE_FEATURES, message);
+    this.sendMessage(UIEventMessageType.ENABLE_FEATURES, message);
   },
 
   /**
@@ -2316,11 +2328,11 @@ let Timeline = {
   disableFeatures: function GUI_disableFeatures(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: Timeline.id,
+      timelineUIId: this.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.DISABLE_FEATURES, message);
+    this.sendMessage(UIEventMessageType.DISABLE_FEATURES, message);
   },
 
   /**
@@ -2334,11 +2346,11 @@ let Timeline = {
   startProducer: function GUI_startProducer(aProducerId, aFeatures)
   {
     let message = {
-      timelineUIId: Timeline.id,
+      timelineUIId: this.id,
       producerId: aProducerId,
       features: aFeatures,
     };
-    Timeline.sendMessage(UIEventMessageType.START_PRODUCER, message);
+    this.sendMessage(UIEventMessageType.START_PRODUCER, message);
   },
 
   /**
@@ -2350,19 +2362,19 @@ let Timeline = {
   stopProducer: function GUI_stopProducer(aProducerId)
   {
     let message = {
-      timelineUIId: Timeline.id,
+      timelineUIId: this.id,
       producerId: aProducerId,
     };
-    Timeline.sendMessage(UIEventMessageType.STOP_PRODUCER, message);
+    this.sendMessage(UIEventMessageType.STOP_PRODUCER, message);
   },
 
   /**
    * Check for any pending data to read and sends a request to Data Store.
    */
   readData: function GUI_readData() {
-    if (Timeline.newDataAvailable && !Timeline.readingData) {
-      Timeline.readingData = true;
-      //Timeline.dataStore.getRangeById(Timeline.processData, Timeline._currentId);
+    if (this.newDataAvailable && !this.readingData) {
+      this.readingData = true;
+      //this.dataStore.getRangeById(this.processData, this._currentId);
     }
   },
 
@@ -2373,11 +2385,11 @@ let Timeline = {
    *        Array of normalized data received from Data Store.
    */
   processData: function GUI_processData(aData) {
-    Timeline.readingData = Timeline.newDataAvailable = false;
-    Timeline._currentId += aData.length;
+    this.readingData = this.newDataAvailable = false;
+    this._currentId += aData.length;
     for (let i = 0; i < aData.length; i++) {
-      Timeline._view.displayData(aData[i]);
-      Timeline.data[aData[i].id] = aData[i];
+      this._view.displayData(aData[i]);
+      this.data[aData[i].id] = aData[i];
     }
   },
 
@@ -2393,23 +2405,23 @@ let Timeline = {
     switch(type) {
 
       case DataSinkEventMessageType.PING_BACK:
-        Timeline.handlePingReply(message);
+        this.handlePingReply(message);
         break;
 
       case DataSinkEventMessageType.NEW_DATA:
-        Timeline.newDataAvailable = true;
-        Timeline.processData([message]);
+        this.newDataAvailable = true;
+        this.processData([message]);
         break;
 
       case DataSinkEventMessageType.UPDATE_UI:
-        if (message.timelineUIId != Timeline.id) {
-          Timeline._view.updateUI(message);
+        if (message.timelineUIId != this.id) {
+          this._view.updateUI(message);
         }
         break;
 
       case DataSinkEventMessageType.PAGE_RELOAD:
         if (TimelinePreferences.doRestartOnReload) {
-          Timeline._view.forceRestart();
+          this._view.forceRestart();
         }
         break;
     }
@@ -2424,7 +2436,7 @@ let Timeline = {
    */
   addRemoteListener: function GUI_addRemoteListener(aChromeWindow) {
     aChromeWindow.addEventListener("GraphicalTimeline:DataSinkEvent",
-                                   Timeline._remoteListener, true);
+                                   this._remoteListener, true);
   },
 
   /**
@@ -2435,7 +2447,7 @@ let Timeline = {
    */
   removeRemoteListener: function GUI_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListener("GraphicalTimeline:DataSinkEvent",
-                                      Timeline._remoteListener, true);
+                                      this._remoteListener, true);
   },
 
   /**
@@ -2455,44 +2467,42 @@ let Timeline = {
                      },
                  };
     let customEvent =
-      new Timeline._window.CustomEvent("GraphicalTimeline:UIEvent", detail)
-    Timeline._window.dispatchEvent(customEvent);
+      new this._window.CustomEvent("GraphicalTimeline:UIEvent", detail)
+    this._window.dispatchEvent(customEvent);
   },
 
   /**
    * Stops the UI, Data Sink and Data Store.
    */
   destroy: function GUI_destroy() {
-    if (Timeline._window) {
+    if (this._window) {
       try {
-        Timeline._window.removeEventListener("unload", Timeline.destroy, false);
+        this._window.removeEventListener("unload", this.destroy, false);
       } catch(ex) {}
     }
-    if (Timeline.UIOpened == true) {
-      if (Timeline.listening) {
-        //Timeline._window.clearInterval(Timeline.timer);
-        //Timeline.timer = null;
+    if (this.UIOpened == true) {
+      if (this.listening) {
+        //this._window.clearInterval(this.timer);
+        //this.timer = null;
       }
-      //Timeline.dataStore.destroy(Timeline.shouldDeleteDatabaseItself);
+      //this.dataStore.destroy(this.shouldDeleteDatabaseItself);
       try {
         Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
       } catch (ex) {}
-      //DataStore = Timeline.dataStore = null;
-      Timeline.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
+      //DataStore = this.dataStore = null;
+      this.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
                            {deleteDatabase: true, // true to delete the database
-                            timelineUIId: Timeline.id, // to tell which UI is closing.
+                            timelineUIId: this.id, // to tell which UI is closing.
                            });
-      Timeline.shouldDeleteDatabaseItself = true;
-      Timeline.pingSent = Timeline.listening = false;
-      Timeline.removeRemoteListener(Timeline._window);
-      Timeline._view.closeUI();
-      Cu.unload("chrome://graphical-timeline/content/frontend/timeline-canvas.jsm");
-      CanvasManager = null;
-      Timeline._view = Timeline.newDataAvailable = Timeline.UIOpened =
-        Timeline._currentId = Timeline._window = null;
-      Timeline.producerInfoList = null;
-      if (Timeline.callback)
-        Timeline.callback();
+      this.shouldDeleteDatabaseItself = true;
+      this.pingSent = this.listening = false;
+      this.removeRemoteListener(this._window);
+      this._view.closeUI();
+      this._view = this.newDataAvailable = this.UIOpened =
+        this._currentId = this._window = null;
+      this.producerInfoList = null;
+      if (this.callback)
+        this.callback();
     }
   }
 };
