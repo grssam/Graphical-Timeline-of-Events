@@ -93,11 +93,11 @@ let MemoryProducer =
    */
   enableFeatures: function MP_enableFeatures(aFeatures)
   {
-    for each (let eventType in aFeatures) {
+    for (let eventType of aFeatures) {
       if (this.enabledEvents.indexOf(eventType) == -1) {
         if (this.observedEvents[eventType]) {
           this.enabledEvents.push(eventType);
-          for each (let eventName in this.observedEvents[eventType]) {
+          for (let eventName of this.observedEvents[eventType]) {
             Services.obs.addObserver(this.observeEvents, eventName, false);
           }
         }
@@ -116,18 +116,18 @@ let MemoryProducer =
   disableFeatures: function MP_disableFeatures(aFeatures)
   {
     let stopped = {};
-    for each (let eventType in aFeatures) {
+    for (let eventType of aFeatures) {
       if (this.enabledEvents.indexOf(eventType) != -1) {
         stopped[eventType] = false;
         if (this.observedEvents[eventType]) {
           stopped[eventType] = true;
-          for each (let eventName in this.observedEvents[eventType]) {
+          for (let eventName of this.observedEvents[eventType]) {
             Services.obs.removeObserver(this.observeEvents, eventName, false);
           }
         }
       }
     }
-    for each (let eventType in aFeatures) {
+    for (let eventType of aFeatures) {
       if (this.enabledEvents.indexOf(eventType) != -1 && stopped[eventType]) {
         this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
       }
@@ -144,7 +144,7 @@ let MemoryProducer =
     observe: function MP_OE_observe(aSubject, aTopic, aData)
     {
       let data = JSON.parse(aData);
- 
+
       // Use milliseconds instead of microseconds for the timestamp
       if ('timestamp' in data) {
         data['timestamp'] = Math.round(data['timestamp'] / 1000);

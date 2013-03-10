@@ -63,30 +63,75 @@ const ERRORS = {
   ID_TAKEN: 0, // Id is already used by another timeline UI.
 };
 
-/**
- * The Data Sink
- */
-let DataSink = {
-  // List of content windows that this Data Sink is active on.
-  listeningWindows: [],
-  // Object list holding reference to the producer object.
-  _registeredProducers: {},
-  // Object list holding reference to the enabled producr instance.
-  _enabledProducers: null,
-  // Object list containing all the available information on registered producers.
-  _producerInfoList: {},
-  _sequenceId: 0,
+function DataSinkActor(aMessage) {
+  this.enabledProducers = {};
+  this.listeningWindows = [];
+  // Assuming that the user does not switch tab between event dispatch and
+  // event capturing.
+  // If tab id is provided, serach for the correct tab to get the cotent window.
+  // Otherwise assume that Timeline is in Chrome mode.
+  if (aMessage.tabID && aMessage.tabID.length) {
+    let windows = Services.wm.getEnumerator("navigator:browser");
+    while (windows.hasMoreElements() && aMessage.tabID.length) {
+      // Only run the watcher immediately if the window is completely loaded
+      let win = windows.getNext();
+      if (win.gBrowser.tabs == null)
+        continue;
+      for (let tab of win.gBrowser.tabs) {
+        if (aMessage.tabID.indexOf(tab.linkedPanel) >= 0) {
+          let window = tab.linkedBrowser.contentWindow;
+          this.listeningWindows.push(window);
+          aMessage.tabID.splice(aMessage.tabID.indexOf(tab.linkedPanel), 1);
+          if (aMessage.tabID.length == 0) {
+            break;
+          }
+        }
+      }
+    }
+  }
+  else {
+    this.chromeMode = true;
+    let window = Services.wm.getMostRecentWindow("navigator:browser");
+    this.listeningWindows.push(window);
+  }
 
-  // Local reference to teh const.
-  NormalizedEventType: NORMALIZED_EVENT_TYPE,
+  this.id = aMessage.timelineUIId;
+  // enable the required producers if aMessage not null.
+  if (aMessage.enabledProducers) {
+    for (let producer in DataSink.registeredProducers) {
+      if (aMessage.enabledProducers[producer]) {
+        this.startProducer(producer, aMessage.enabledProducers[producer].features);
+      }
+    }
+  }
+  // enable all known producers with all features if aMessage null.
+  else {
+    for (let producer in DataSink.registeredProducers) {
+      this.startProducer(producer, aMessage.enabledProducers[producer].features);
+    }
+  }
 
-  get sequenceId() (++this._sequenceId),
+  this.listening = true;
 
-  // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
-  registeredUI: [],
+  // if (!this.chromeMode) {
+  //   this._chromeWindowForGraph =
+  //     window.QueryInterface(Ci.nsIInterfaceRequestor)
+  //           .getInterface(Ci.nsIWebNavigation)
+  //           .QueryInterface(Ci.nsIDocShell)
+  //           .chromeEventHandler
+  //           .ownerDocument.defaultView;
+  //   this._browsers = [this._chromeWindowForGraph.gBrowser
+  //                         .getBrowserForDocument(window.document)];
+  // }
+  // else {
+  //   this._chromeWindowForGraph = window;
+  //   this._browsers = [window.gBrowser];
+  // }
+  // this._browsers[0].addEventListener("beforeunload", this.onWindowUnload, true);
+  this.initiated = true;
+}
 
-  // The database name for the current session of data sink.
-  databaseName: "",
+DataSinkActor.prototype = {
 
   // Represents whether data sink has been started or not.
   initiated: false,
@@ -95,6 +140,141 @@ let DataSink = {
   listening: false,
 
   chromeMode: false,
+
+  id: "",
+
+  startListening: function DSA_startListening(aMessage) {
+    this.enabledProducers = {};
+    // enable the required producers if aMessage not null.
+    if (aMessage.enabledProducers) {
+      for (let producer in DataSink.registeredProducers) {
+        if (aMessage.enabledProducers[producer]) {
+          this.startProducer(producer, aMessage.enabledProducers[producer].features);
+        }
+      }
+    }
+    // enable all known producers with all features if aMessage null.
+    else {
+      for (let producer in DataSink.registeredProducers) {
+        this.startProducer(producer);
+      }
+    }
+
+    this.listening = true;
+    DataSink.sendUpdateNotification(aMessage.timelineUIId);
+  },
+
+  stopListening: function DSA_stopListening(aMessage) {
+    for (let producer in this.enabledProducers) {
+      this.stopProducer(producer);
+    }
+    this.enabledProducers = null;
+    this.listening = false;
+  },
+
+  /**
+   * Function to start features of a producer.
+   *
+   */
+  enableFeatures: function DSA_enableFeatures(aProducerId, aFeatures) {
+    if (this.enabledProducers[aProducerId] != null) {
+      if (this.enabledProducers[aProducerId].enableFeatures) {
+        this.enabledProducers[aProducerId]
+            .enableFeatures(aFeatures);
+      }
+    }
+  },
+
+  /**
+   * Function to stop features of a producer.
+   *
+   */
+  disableFeatures: function DSA_disableFeatures(aProducerId, aFeatures) {
+    if (this.enabledProducers[aProducerId] != null) {
+      if (this.enabledProducers[aProducerId].disableFeatures) {
+        this.enabledProducers[aProducerId]
+            .disableFeatures(aFeatures);
+      }
+    }
+  },
+
+  /**
+   * Function to explicitly start a producer.
+   *
+   */
+  startProducer:
+  function DSA_startProducer(aProducerId, aFeatures) {
+    if (DataSink.registeredProducers[aProducerId] != null) {
+      if (typeof DataSink.registeredProducers[aProducerId] == 'function') {
+        this.enabledProducers[aProducerId] =
+          new DataSink.registeredProducers[aProducerId]
+            (this.listeningWindows, aFeatures, this.id, this.chromeMode);
+      }
+      else {
+        this.enabledProducers[aProducerId] =
+          DataSink.registeredProducers[aProducerId];
+        this.enabledProducers[aProducerId]
+            .init(this.listeningWindows, aFeatures, this.id, this.chromeMode);
+      }
+    }
+  },
+
+  /**
+   * Function to explicitly stop a producer.
+   *
+   */
+  stopProducer: function DSA_stopProducer(aProducerId) {
+    this.enabledProducers[aProducerId].destroy();
+  },
+
+  /**
+   * Stop the running producers and destroy the Sink.
+   *
+   * @param object aMessage
+   *        message from the UI containing a property
+   *        - timelineUIId (string)
+   *          string containing the id of the UI that is being closed.
+   *          It might not be the last listening UI, so we will destroy
+   *          everything only if its the last.
+   */
+  destroy: function DSA_destroy(aMessage) {
+    if (!this.initiated) {
+      return;
+    }
+
+    if (this.listening) {
+      for (let producer in this.enabledProducers) {
+        this.stopProducer(producer);
+      }
+    }
+
+    this.enabledProducers = null;
+    this.listeningWindows = null;
+    this.initiated = false;
+  },
+};
+
+/**
+ * The Data Sink
+ */
+let DataSink = {
+
+  actors: {},
+
+  // Object list holding reference to the producer object.
+  registeredProducers: {},
+
+  // Object list containing all the available information on registered producers.
+  _producerInfoList: {},
+  _sequenceId: 0,
+
+  // Local reference to the const.
+  NormalizedEventType: NORMALIZED_EVENT_TYPE,
+
+  get sequenceId() (++this._sequenceId),
+
+  // List of all the Timeline UI that have sent a PING_HELLO to Data Sink.
+  registeredUI: {},
 
   /**
    * The Data Sink initialization code.
@@ -126,86 +306,17 @@ let DataSink = {
    *        }
    */
   init: function DS_init(aMessage) {
-    // Do not start the producers again.
-    if (this.initiated) {
-      // Send the update message without any id so that all UI update.
-      this.sendUpdateNotification("");
-      return;
-    }
-
-    // Stop if aMessage is null (as we need the timelineUIId).
-    if (!aMessage || !aMessage.timelineUIId) {
-      return;
-    }
-
     // If this timeline UI is not registered, quit.
-    if (!this.registeredUI || this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
+    if (!this.registeredUI[aMessage.timelineUIId]) {
       return;
     }
 
-    this._enabledProducers = {};
-    // Assuming that the user does not switch tab between event dispatch and
-    // event capturing.
-    // If tab id is provided, serach for the correct tab to get the cotent window.
-    // Otherwise assume that Timeline is in Chrome mode.
-    let window = null;
-    if (aMessage.tabID) {
-      let windows = Services.wm.getEnumerator("navigator:browser");
-      while (windows.hasMoreElements()) {
-        // Only run the watcher immediately if the window is completely loaded
-        let win = windows.getNext();
-        if (win.gBrowser.tabs == null)
-          continue;
-        for (let tab of win.gBrowser.tabs) {
-          if (aMessage.tabID === tab.linkedPanel) {
-            window = tab.linkedBrowser.contentWindow;
-            break;
-          }
-        }
-      }
-    }
-    if (window == null) {
-      this.chromeMode = true;
-      window = Services.wm.getMostRecentWindow("navigator:browser");
-    }
-    this.listeningWindows = [window];
-    // enable the required producers if aMessage not null.
-    if (aMessage.enabledProducers) {
-      for (let producer in this._registeredProducers) {
-        if (aMessage.enabledProducers[producer]) {
-          this.startProducer(producer, aMessage.enabledProducers[producer].features);
-        }
-      }
-    }
-    // enable all known producers with all features if aMessage null.
-    else {
-      for (let producer in this._registeredProducers) {
-        this.startProducer(producer);
-      }
+    if (this.actors[aMessage.timelineUIId]) {
+      return;
     }
 
-    this.listening = true;
-
-    if (!this.chromeMode) {
-      this._chromeWindowForGraph =
-        window.QueryInterface(Ci.nsIInterfaceRequestor)
-              .getInterface(Ci.nsIWebNavigation)
-              .QueryInterface(Ci.nsIDocShell)
-              .chromeEventHandler
-              .ownerDocument.defaultView;
-      this._browsers = [this._chromeWindowForGraph.gBrowser
-                            .getBrowserForDocument(window.document)];
-    }
-    else {
-      this._chromeWindowForGraph = window;
-      this._browsers = [window.gBrowser];
-    }
-    this._browsers[0].addEventListener("beforeunload", this.onWindowUnload, true);
-    // Initiating the Data Store
-    //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-    //this.dataStore = new DataStore(this.databaseName);
-    this.initiated = true;
-    this.sendUpdateNotification("");
+    this.actors[aMessage.timelineUIId] = new DataSinkActor(aMessage);
+    DataSink.sendUpdateNotification(aMessage.timelineUIId);
   },
 
   /**
@@ -216,45 +327,21 @@ let DataSink = {
    *        @see DataSink.init()
    */
   startListening: function DS_startListening(aMessage) {
-    // Do not start the producers if everything is not initiated or we are
-    // already listening.
-    if (!this.initiated) {
+    // If this timeline UI is not registered, quit.
+    if (!this.registeredUI[aMessage.timelineUIId]) {
+      return;
+    }
+
+    if (!this.actors[aMessage.timelineUIId]) {
       this.init(aMessage);
       return;
     }
 
-    if (this.listening) {
+    if (this.actors[aMessage.timelineUIId].listening) {
       return;
     }
 
-    // Stop if aMessage is null (as we need the timelineUIId).
-    if (!aMessage || !aMessage.timelineUIId) {
-      return;
-    }
-
-    // If this timeline UI is not registered, quit.
-    if (!this.registeredUI || this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
-      return;
-    }
-
-    this._enabledProducers = {};
-    // enable the required producers if aMessage not null.
-    if (aMessage.enabledProducers) {
-      for (let producer in this._registeredProducers) {
-        if (aMessage.enabledProducers[producer]) {
-          this.startProducer(producer, aMessage.enabledProducers[producer].features);
-        }
-      }
-    }
-    // enable all known producers with all features if aMessage null.
-    else {
-      for (let producer in this._registeredProducers) {
-        this.startProducer(producer);
-      }
-    }
-
-    this.listening = true;
-    this.sendUpdateNotification(aMessage.timelineUIId);
+    this.actors[aMessage.timelineUIId].startListening(aMessage);
   },
 
   /**
@@ -266,22 +353,21 @@ let DataSink = {
    *          string containing the id of the UI that ordeered this stop.
    */
   stopListening: function DS_stopListening(aMessage) {
-    if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
+    // If this timeline UI is not registered, quit.
+    if (!this.registeredUI[aMessage.timelineUIId]) {
       return;
     }
 
-    if (this.listening) {
-      for (let producer in this._enabledProducers) {
-        this.stopProducer(producer);
-      }
-      this._enabledProducers = null;
-      this.listening = false;
+    if (!this.actors[aMessage.timelineUIId].listening) {
+      return;
     }
+
+    this.actors[aMessage.timelineUIId].stopListening(aMessage);
   },
 
   /**
    * Registers a remote Timeline UI and sends back a ping reply containing the
-   * name of the IndexedDB database.
+   * list of producers available.
    *
    * @param object aMessage
    *        This contains the property timelineUIId representing the id to be
@@ -293,20 +379,9 @@ let DataSink = {
    *        }
    */
   replyToPing: function DS_replyToPing(aMessage) {
-    if (!aMessage || !aMessage.timelineUIId) {
-      return;
-    }
-    if (!this.registeredUI) {
-      this.registeredUI = [];
-    }
-
     let id = aMessage.timelineUIId;
-    if (this.registeredUI.indexOf(id) == -1) {
-      this.registeredUI.push(id);
-      if (this.databaseName == "") {
-        this.databaseName = "timeline-database-" + Date.now();
-      }
-      aMessage.databaseName = this.databaseName;
+    if (!this.registeredUI[id]) {
+      this.registeredUI[id] = 1;
       aMessage.producerInfoList = this._producerInfoList;
     }
     else {
@@ -321,7 +396,7 @@ let DataSink = {
    * instances so that they can update the UI accordingly. Also sends the Id of
    * the remote UI responsible for the update.
    *
-   * @param string Id
+   * @param string aId
    *        Id of the remote UI responsible for the update. (Optional)
    *
    * @return aMessage
@@ -329,19 +404,17 @@ let DataSink = {
    *         Data Sink.
    *         @see DataSink.init()
    */
-  sendUpdateNotification: function DS_sendUpdateNotification(Id) {
-    let message =
-    {
+  sendUpdateNotification: function DS_sendUpdateNotification(aId) {
+    let message = {
       enabledProducers: {},
-      timelineUIId: Id,
+      timelineUIId: aId,
     };
-    for (let producer in this._enabledProducers) {
+    for (let producer in this.actors[aId].enabledProducers) {
       let featureList = [];
-      if (this._enabledProducers[producer].enabledFeatures) {
-        featureList = this._enabledProducers[producer].enabledFeatures;
+      if (this.actors[aId].enabledProducers[producer].enabledFeatures) {
+        featureList = this.actors[aId].enabledProducers[producer].enabledFeatures;
       }
-      message.enabledProducers[producer] =
-      {
+      message.enabledProducers[producer] = {
         features: featureList,
       };
     }
@@ -356,6 +429,9 @@ let DataSink = {
    */
   _remoteListener: function DS_remoteListener(aEvent) {
     let message = aEvent.detail.messageData;
+    if (!message.timelineUIId) {
+      return;
+    }
     let type = aEvent.detail.messageType;
     switch(type) {
 
@@ -372,38 +448,34 @@ let DataSink = {
         break;
 
       case UIEventMessageType.ENABLE_FEATURES:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+        if (!DataSink.registeredUI[message.timelineUIId]) {
           return;
         }
-        DataSink.enableFeatures(message.producerId, message.features);
+        DataSink.enableFeatures(message);
         DataSink.sendUpdateNotification(message.timelineUIId);
         break;
 
       case UIEventMessageType.DISABLE_FEATURES:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+        if (!DataSink.registeredUI[message.timelineUIId]) {
           return;
         }
-        DataSink.disableFeatures(message.producerId, message.features);
+        DataSink.disableFeatures(message);
         DataSink.sendUpdateNotification(message.timelineUIId);
         break;
 
       case UIEventMessageType.START_PRODUCER:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+        if (!DataSink.registeredUI[message.timelineUIId]) {
           return;
         }
-        DataSink.startProducer(message.producerId, message.features);
+        DataSink.startProducer(message);
         DataSink.sendUpdateNotification(message.timelineUIId);
         break;
 
       case UIEventMessageType.STOP_PRODUCER:
-        if (!message.timelineUIId ||
-            DataSink.registeredUI.indexOf(message.timelineUIId) == -1) {
+        if (!DataSink.registeredUI[message.timelineUIId]) {
           return;
         }
-        DataSink.stopProducer(message.producerId);
+        DataSink.stopProducer(message);
         DataSink.sendUpdateNotification(message.timelineUIId);
         break;
 
@@ -483,12 +555,11 @@ let DataSink = {
    */
   sendMessage: function DS_sendMessage(aMessageType, aMessageData) {
     let detail = {
-                   "detail":
-                     {
-                       "messageData": aMessageData,
-                       "messageType": aMessageType,
-                     },
-                 };
+      detail: {
+        messageData: aMessageData,
+        messageType: aMessageType
+      }
+    };
     if (!this._chromeWindowForGraph) {
       this._chromeWindowForGraph = Services.wm.getMostRecentWindow("navigator:browser");
     }
@@ -516,19 +587,11 @@ let DataSink = {
    *        - details (optional) - other details about the event.
    */
   addEvent: function DS_addEvent(aProducerId, aEventData) {
-    if (!DataSink._enabledProducers[aProducerId]) {
-      return;
-    }
-
     let normalizedData = aEventData;
     normalizedData.id = DataSink.sequenceId;
     normalizedData.producer = aProducerId;
 
-    // Adding the normalized data to the data store object.
-    //if (this.dataStore.add(normalizedData)) {
-      // Informing the Graph UI about the new data.
-      DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA, normalizedData);
-    //}
+    DataSink.sendMessage(DataSinkEventMessageType.NEW_DATA, normalizedData);
   },
 
   /**
@@ -540,79 +603,45 @@ let DataSink = {
    * @param object aProducerInfo
    */
   registerProducer: function DS_registerProducer(aProducer, aProducerInfo) {
-    this._registeredProducers[aProducerInfo.id] = aProducer;
+    this.registeredProducers[aProducerInfo.id] = aProducer;
     this._producerInfoList[aProducerInfo.id] = aProducerInfo;
   },
 
   /**
    * Function to start features of a producer.
    *
-   * @param string aProducerId
-   *        Id of the producer whose features will be enabled.
-   * @param array aFeatures
-   *        List of features to enable.
    */
-  enableFeatures: function DS_enableFeatures(aProducerId, aFeatures) {
-    if (typeof aProducerId != "string") {
-      // aProducerId is not a string.
+  enableFeatures: function DS_enableFeatures(aMessage) {
+    if (!this.actors[aMessage.timelineUIId]) {
       return;
     }
 
-    if (this._enabledProducers[aProducerId] != null) {
-      if (this._enabledProducers[aProducerId].enableFeatures) {
-        this._enabledProducers[aProducerId].enableFeatures(aFeatures);
-      }
-    }
+    this.actors[aMessage.timelineUIId].enableFeatures(aMessage.producerId, aMessage.features);
   },
 
   /**
    * Function to stop features of a producer.
    *
-   * @param string aProducerId
-   *        Id of the producer whose features will be disabled.
-   * @param array aFeatures
-   *        List of features to disable.
    */
-  disableFeatures: function DS_disableFeatures(aProducerId, aFeatures) {
-    if (typeof aProducerId != "string") {
-      // aProducerId is not a string.
+  disableFeatures: function DS_disableFeatures(aMessage) {
+    if (!this.actors[aMessage.timelineUIId]) {
       return;
     }
 
-    if (this._enabledProducers[aProducerId] != null) {
-      if (this._enabledProducers[aProducerId].disableFeatures) {
-        this._enabledProducers[aProducerId].disableFeatures(aFeatures);
-      }
-    }
+    this.actors[aMessage.timelineUIId].disableFeatures(aMessage.producerId, aMessage.features);
   },
 
   /**
    * Function to explicitly start a producer.
    *
-   * @param string aProducerId
-   *        Id of the producer to start.
-   * @param array aFeatures (optional)
-   *        List of enabled features. All features will be enabled if null.
    */
   startProducer:
-  function DS_startProducer(aProducerId, aFeatures) {
-    if (typeof aProducerId != "string") {
-      // aProducerId is not a string.
+  function DS_startProducer(aMessage) {
+    if (!this.actors[aMessage.timelineUIId]) {
       return;
     }
 
-    if (this._registeredProducers[aProducerId] != null) {
-      if (typeof this._registeredProducers[aProducerId] == 'function') {
-        this._enabledProducers[aProducerId] =
-          new this._registeredProducers[aProducerId](this.listeningWindows,
-                                                     aFeatures, this.chromeMode);
-      }
-      else {
-        this._enabledProducers[aProducerId] = this._registeredProducers[aProducerId];
-        this._enabledProducers[aProducerId].init(this.listeningWindows,
-                                                 aFeatures, this.chromeMode);
-      }
-    }
+    this.actors[aMessage.timelineUIId].startProducer(aMessage.producerId, aMessage.features);
   },
 
   /**
@@ -621,13 +650,12 @@ let DataSink = {
    * @param string aProducerId
    *        Name of the producer to stop.
    */
-  stopProducer: function DS_stopProducer(aProducerId) {
-    if (typeof aProducerId != "string") {
-      // aProducerId is not a string.
+  stopProducer: function DS_stopProducer(aMessage) {
+    if (!this.actors[aMessage.timelineUIId]) {
       return;
     }
 
-    this._enabledProducers[aProducerId].destroy();
+    this.actors[aMessage.timelineUIId].stopProducer(aMessage.producerId);
   },
 
   /**
@@ -635,48 +663,25 @@ let DataSink = {
    *
    * @param object aMessage
    *        message from the UI containing a property
-   *        - deleteDatabase (boolean)
-   *          true if you want to delete the database when closing.
    *        - timelineUIId (string)
    *          string containing the id of the UI that is being closed.
    *          It might not be the last listening UI, so we will destroy
    *          everything only if its the last.
    */
   destroy: function DS_destroy(aMessage) {
-    if (!this.initiated) {
+    if (!this.registeredUI[aMessage.timelineUIId]) {
       return;
     }
-    if (this.registeredUI.indexOf(aMessage.timelineUIId) == -1) {
+    delete this.registeredUI[aMessage.timelineUIId];
+    if (this.actors[aMessage.timelineUIId]) {
+      this.actors[aMessage.timelineUIId].destroy(aMessage);
+      delete this.actors[aMessage.timelineUIId];
+    }
+
+    if (JSON.stringify(this.registeredUI).length > 2) {
       return;
     }
-    this.registeredUI.splice(this.registeredUI.indexOf(aMessage.timelineUIId), 1);
 
-    if (this.registeredUI.length > 0) {
-      return;
-    }
-
-    if (this.listening) {
-      for (let producer in this._enabledProducers) {
-        this.stopProducer(producer);
-      }
-    }
-
-    for each (let browser in this._browsers) {
-      browser.removeEventListener("beforeunload", this.onWindowUnload, true);
-    }
-
-    //this.dataStore.destroy(aMessage.deleteDatabase);
-    try {
-      //Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-    } catch (ex) {}
-    //DataStore = this.dataStore = null;
-    this._browsers = null;
-    this.registeredUI = null;
-    this._enabledProducers = null;
-    this._registeredProducers = null;
-    this.listeningWindows = null;
-    this._chromeWindowForGraph = null;
-    this.initiated = false;
-    this.databaseName = "";
+    this.registeredUI = {};
   },
 };

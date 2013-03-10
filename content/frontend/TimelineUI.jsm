@@ -7,7 +7,7 @@ let {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 
 const broadcasterID = "devtoolsMenuBroadcaster_TimelineUI";
-let gDevToolsAvailable, _TimelineUIOpenedFor() = false;
+let gDevToolsAvailable;
 var EXPORTED_SYMBOLS = ["TimelineUI"];
 
 try {
@@ -231,7 +231,8 @@ let TimelineUI = {
         Services.wm.getMostRecentWindow("navigator:browser")
                 .gBrowser.selectedTab);
     }
-    return !!gDevTools.getToolbox(aTarget).getPanel("timeline");
+    return gDevTools.getToolbox(aTarget) &&
+           !!gDevTools.getToolbox(aTarget).getPanel("timeline");
   },
 
   _startup: function TUI__startup()
@@ -262,6 +263,10 @@ let TimelineUI = {
     }
     else {
       Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
+      Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
     }
     addCommands();
   },
@@ -278,7 +283,7 @@ let TimelineUI = {
         if (win.gBrowser.tabs == null)
           continue;
         for (let tab of win.gBrowser.tabs) {
-          if (tab.TImeline) {
+          if (tab.Timeline) {
             tab.Timeline.destroy();
             tab.Timeline = null;
             delete tab.Timeline;
@@ -341,28 +346,12 @@ let TimelineUI = {
         return gDevTools.showToolbox(aTarget, "timeline", aHostType);
       }
       else {
-        Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
-        Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
-        Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
-        Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
         global.DataSink.addRemoteListener(window);
         window.gBrowser.selectedTab.Timeline = new global.Timeline(function () {
           global.DataSink.removeRemoteListener(window);
           try {
-            Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
-            Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-            Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-            Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-            Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-            delete global.DataSink;
-            delete global.NetworkProducer;
-            delete global.PageEventsProducer;
-            delete global.MemoryProducer;
-            global.Timeline = null;
-            delete global.Timeline;
             window.gBrowser.selectedTab.Timeline = null;
             delete window.gBrowser.selectedTab.Timeline;
-            Components.utils.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
           } catch (e) {}
           try {
             $(broadcasterID).setAttribute("checked", "false");

@@ -16,6 +16,10 @@ try {
 }
 let global = {};
 Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
+Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
+Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
+Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
+Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
 
 function TimelinePanel(iframeWindow, toolbox, callback) {
   this._toolbox = toolbox;
@@ -29,10 +33,6 @@ function TimelinePanel(iframeWindow, toolbox, callback) {
   else if (toolbox._target.window) {
     this.window = toolbox._target.window;
   }
-  Cu.import("chrome://graphical-timeline/content/producers/NetworkProducer.jsm", global);
-  Cu.import("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm", global);
-  Cu.import("chrome://graphical-timeline/content/producers/MemoryProducer.jsm", global);
-  Cu.import("chrome://graphical-timeline/content/data-sink/DataSink.jsm", global);
   global.DataSink.addRemoteListener(this.window);
 
   let parentDoc = iframeWindow.document.defaultView.parent.document;
@@ -61,21 +61,6 @@ TimelinePanel.prototype = {
     global.DataSink.removeRemoteListener(this.window);
     this.window = null;
     this.Timeline = null;
-    try {
-      Components.utils.unload("chrome://graphical-timeline/content/frontend/timeline.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/producers/NetworkProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/producers/PageEventsProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/producers/MemoryProducer.jsm");
-      Components.utils.unload("chrome://graphical-timeline/content/data-sink/DataSink.jsm");
-      global.DataSink = null;
-      global.NetworkProducer = null;
-      global.PageEventsProducer = null;
-      global.MemoryProducer = null;
-      global.Timeline = null;
-      global = null;
-      global = {};
-      Cu.import("chrome://graphical-timeline/content/frontend/timeline.jsm", global);
-    } catch (e) {}
     if (this.callback) {
       this.callback();
       this.callback = null;

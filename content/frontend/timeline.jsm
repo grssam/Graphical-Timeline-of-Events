@@ -503,7 +503,7 @@ TimelineView.prototype = {
     let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
     // Iterating over each producer and adding a vbox containing producer name
     // and its features.
-    for each (let producer in this.producerInfoList) {
+    for (let producer of this.producerInfoList) {
       // The outer box for each producer.
       let producerBox = this._frameDoc.createElement("vbox");
       producerBox.setAttribute("id", producer.id + "-box");
@@ -572,7 +572,7 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       featureBox.setAttribute("seltype", "single");
       featureBox.addEventListener("select", this.handleGroupClick, true);
-      for each (let feature in producer.features) {
+      for (let feature of producer.features) {
         let featureLabel = this._frameDoc.createElement("label");
         featureLabel.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
         featureLabel.setAttribute("flex", "1");
@@ -694,7 +694,7 @@ TimelineView.prototype = {
         this.compactMode == false) {
       this.compactMode = true;
       this.beforeCompactVisibleProducers = [];
-      for each (let producer in this.producerInfoList) {
+      for (let producer of this.producerInfoList) {
         let producerBox = this.$(producer.id + "-box");
         if (producerBox.getAttribute("visible") == "true") {
           this.beforeCompactVisibleProducers.push(producer.id);
@@ -725,7 +725,7 @@ TimelineView.prototype = {
     else if (this.producersPane.boxObject.height > this.compactHeight &&
              this.compactMode == true) {
       this.compactMode = false;
-      for each (let producer in this.producerInfoList) {
+      for (let producer of this.producerInfoList) {
         let producerBox = this.$(producer.id + "-box");
         if (this.beforeCompactVisibleProducers.indexOf(producer.id) != -1) {
           producerBox.setAttribute("visible", true);
@@ -1469,7 +1469,7 @@ TimelineView.prototype = {
     propertyDetailBox.appendChild(hbox);
     propertyDetailBox.appendChild(table);
     //Filling up the level labels
-    for each (let level in aLevels) {
+    for (let level of aLevels) {
       let levelLabel = this._frameDoc.createElement("label");
       levelLabel.setAttribute("class", "level-label");
       levelLabel.setAttribute("value", level + " > ");
@@ -1478,7 +1478,7 @@ TimelineView.prototype = {
     // Building up the table.
     // Converting the object string to an object
     let anythingPresent = false;
-    for each (let object in aProperty.value) {
+    for (let object of aProperty.value) {
       let headingRow = this._frameDoc.createElementNS(HTML, "tr");
       let headingCell = this._frameDoc.createElementNS(HTML, "td");
       let bracketStart = this._frameDoc.createElement("label");
@@ -1670,7 +1670,7 @@ TimelineView.prototype = {
 
                     try {
                       let styleSheets = this._window.content.window.document.styleSheets;
-                      for each (let style in styleSheets) {
+                      for (let style of styleSheets) {
                         if (style.href == aValue) {
                           try {
                           this._window.StyleEditor.openChrome(style, 1);
@@ -2160,7 +2160,24 @@ TimelineView.prototype = {
  * The Timeline User Interface
  */
 function Timeline(aCallback, aIframe, aToolbox) {
+  // Binds!
+  this.buildUI = this.buildUI.bind(this);
+  this.startListening = this.startListening.bind(this);
+  this.stopListening = this.stopListening.bind(this);
+  this.handlePingReply = this.handlePingReply.bind(this);
+  this.enableFeatures = this.enableFeatures.bind(this);
+  this.disableFeatures = this.disableFeatures.bind(this);
+  this.startProducer = this.startProducer.bind(this);
+  this.stopProducer = this.stopProducer.bind(this);
+  this.processData = this.processData.bind(this);
+  this._remoteListener = this._remoteListener.bind(this);
+  this.addRemoteListener = this.addRemoteListener.bind(this);
+  this.removeRemoteListener = this.removeRemoteListener.bind(this);
+  this.sendMessage = this.sendMessage.bind(this);
+  this.destroy = this.destroy.bind(this);
+
   this.callback = aCallback;
+  this.data = {};
   if (aIframe) {
     this._iframe = aIframe;
   }
@@ -2184,22 +2201,6 @@ function Timeline(aCallback, aIframe, aToolbox) {
   }
   this.pingSent = true;
   this.sendMessage(UIEventMessageType.PING_HELLO, {timelineUIId: this.id});
-  // Binds!
-  this.buildUI = this.buildUI.bind(this);
-  this.startListening = this.startListening.bind(this);
-  this.stopListening = this.stopListening.bind(this);
-  this.handlePingReply = this.handlePingReply.bind(this);
-  this.enableFeatures = this.enableFeatures.bind(this);
-  this.disableFeatures = this.disableFeatures.bind(this);
-  this.startProducer = this.startProducer.bind(this);
-  this.stopProducer = this.stopProducer.bind(this);
-  this.readData = this.readData.bind(this);
-  this.processData = this.processData.bind(this);
-  this._remoteListener = this._remoteListener.bind(this);
-  this.addRemoteListener = this.addRemoteListener.bind(this);
-  this.removeRemoteListener = this.removeRemoteListener.bind(this);
-  this.sendMessage = this.sendMessage.bind(this);
-  this.destroy = this.destroy.bind(this);
 }
 
 Timeline.prototype = {
@@ -2209,20 +2210,14 @@ Timeline.prototype = {
   _window: null,
   _iframe: null,
   _toolbox: null,
-  //_console: null,
 
   UIOpened: false,
   listening: false,
   pingSent: false,
-  newDataAvailable: false,
-  readingData: false,
-  databaseName: "",
-  shouldDeleteDatabaseItself: true,
   producerInfoList: null,
   id: null,
   timer: null,
   callback: null,
-  data: {},
 
   /**
    * Builds the UI in the Tab.
@@ -2239,16 +2234,14 @@ Timeline.prototype = {
    * Starts the Data Sink and all the producers.
    */
   startListening: function GUI_startListening(aMessage) {
-    //this.timer = this._window.setInterval(this.readData, 25);
     // Adding the correct tab id, if toolbox is available.
     if (this._toolbox) {
       try {
-        aMessage.tabID = this._toolbox._target.tab.linkedPanel;
+        aMessage.tabID = [this._toolbox._target.tab.linkedPanel];
       } catch (ex) {}
     }
     this.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     this.listening = true;
-    this.shouldDeleteDatabaseItself = false;
   },
 
   /**
@@ -2268,8 +2261,8 @@ Timeline.prototype = {
    * Handles the ping response from the Data Sink.
    *
    * @param object aMessage
-   *        Ping response message containing either the databse name on success
-   *        or the error on failure.
+   *        Ping response message containing either the producer's information
+   *        on success or the error on failure.
    */
   handlePingReply: function GUI_handlePingReply(aMessage) {
     if (!aMessage || aMessage.timelineUIId != this.id || !this.pingSent) {
@@ -2287,11 +2280,7 @@ Timeline.prototype = {
       }
     }
     else {
-      this.databaseName = aMessage.databaseName;
       this.producerInfoList = aMessage.producerInfoList;
-      // Importing the Data Store and making a database
-      //Cu.import("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-      //Timeline.dataStore = new DataStore(this.databaseName);
       this.buildUI();
       if (this._toolbox) {
         this.emit("AfterSinkConnected");
@@ -2369,23 +2358,12 @@ Timeline.prototype = {
   },
 
   /**
-   * Check for any pending data to read and sends a request to Data Store.
-   */
-  readData: function GUI_readData() {
-    if (this.newDataAvailable && !this.readingData) {
-      this.readingData = true;
-      //this.dataStore.getRangeById(this.processData, this._currentId);
-    }
-  },
-
-  /**
    * Processes the data received from Data Store
    *
    * @param array aData
    *        Array of normalized data received from Data Store.
    */
   processData: function GUI_processData(aData) {
-    this.readingData = this.newDataAvailable = false;
     this._currentId += aData.length;
     for (let i = 0; i < aData.length; i++) {
       this._view.displayData(aData[i]);
@@ -2403,14 +2381,16 @@ Timeline.prototype = {
     let message = aEvent.detail.messageData;
     let type = aEvent.detail.messageType;
     switch(type) {
-
       case DataSinkEventMessageType.PING_BACK:
-        this.handlePingReply(message);
+        if (message.timelineUIId == this.id) {
+          this.handlePingReply(message);
+        }
         break;
 
       case DataSinkEventMessageType.NEW_DATA:
-        this.newDataAvailable = true;
-        this.processData([message]);
+        if (!message.timelineUIId || message.timelineUIId == this.id) {
+          this.processData([message]);
+        }
         break;
 
       case DataSinkEventMessageType.UPDATE_UI:
@@ -2481,25 +2461,12 @@ Timeline.prototype = {
       } catch(ex) {}
     }
     if (this.UIOpened == true) {
-      if (this.listening) {
-        //this._window.clearInterval(this.timer);
-        //this.timer = null;
-      }
-      //this.dataStore.destroy(this.shouldDeleteDatabaseItself);
-      try {
-        Cu.unload("chrome://graphical-timeline/content/data-sink/DataStore.jsm");
-      } catch (ex) {}
-      //DataStore = this.dataStore = null;
       this.sendMessage(UIEventMessageType.DESTROY_DATA_SINK,
-                           {deleteDatabase: true, // true to delete the database
-                            timelineUIId: this.id, // to tell which UI is closing.
-                           });
-      this.shouldDeleteDatabaseItself = true;
+                       {timelineUIId: this.id});
       this.pingSent = this.listening = false;
       this.removeRemoteListener(this._window);
       this._view.closeUI();
-      this._view = this.newDataAvailable = this.UIOpened =
-        this._currentId = this._window = null;
+      this._view = this.UIOpened = this._currentId = this._window = null;
       this.producerInfoList = null;
       if (this.callback)
         this.callback();

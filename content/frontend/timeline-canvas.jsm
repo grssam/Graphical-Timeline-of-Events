@@ -402,7 +402,7 @@ CanvasManager.prototype = {
       if (group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_MID ||
           group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_START ||
           group.type == NORMALIZED_EVENT_TYPE.REPEATING_EVENT_STOP) {
-        for each (let id in aIds) {
+        for (let id of aIds) {
           if (group.dataIds.indexOf(id) == -1) {
             continue;
           }
@@ -428,7 +428,7 @@ CanvasManager.prototype = {
       }
       else {
         if (aGroupIds.length > 1) {
-          for each (let id in aIds) {
+          for (let id of aIds) {
             if (group.dataIds.indexOf(id) == -1) {
               continue;
             }
@@ -1069,7 +1069,7 @@ CanvasManager.prototype = {
     for (let color in this.coloredDots) {
       this.ctxD.beginPath();
       this.ctxD.fillStyle = color;
-      for each (let [x,y] in this.coloredDots[color]) {
+      for (let [x,y] of this.coloredDots[color]) {
         this.ctxD.moveTo(x - 3,y);
         this.ctxD.arc(x,y, 3, 0, 6.2842,true);
         this.dotsDrawn++;
@@ -1283,7 +1283,7 @@ CanvasManager.prototype = {
       //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
 
       let endx,x;
-      for each (group in this.groupedData) {
+      for (group of this.groupedData) {
         if (group.y < this.offsetTop || group.y - this.offsetTop > this.height) {
           continue;
         }

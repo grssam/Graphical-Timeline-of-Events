@@ -42,8 +42,9 @@ const PR_UINT32_MAX = 4294967295;
  *        HttpActivity object associated with this request. As the response is
  *        done, the response header and status is stored on aHttpActivity.
  */
-function NetworkResponseListener(aHttpActivity) {
+function NetworkResponseListener(aHttpActivity, aNetworkProducer) {
   this.httpActivity = aHttpActivity;
+  this.networkProducer = aNetworkProducer;
   this.bodySize = 0;
 }
 
@@ -160,13 +161,13 @@ NetworkResponseListener.prototype = {
    */
   _findOpenResponse: function NRL__findOpenResponse()
   {
-    if (!NetworkProducer || !Ci || this._foundOpenResponse) {
+    if (!this.networkProducer || !Ci || this._foundOpenResponse) {
       return;
     }
 
     let openResponse = null;
 
-    for each (let item in NetworkProducer.openResponses) {
+    for (let item of this.networkProducer.openResponses) {
       if (item.channel === this.httpActivity.channel) {
         openResponse = item;
         break;
@@ -187,10 +188,10 @@ NetworkResponseListener.prototype = {
       response.contentType = openResponse.contentType;
     }
 
-    delete NetworkProducer.openResponses[openResponse.id];
+    delete this.networkProducer.openResponses[openResponse.id];
 
     this.httpActivity.stages.push("http-on-examine-response");
-    NetworkProducer.sendActivity(this.httpActivity);
+    this.networkProducer.sendActivity(this.httpActivity);
   },
 
   /**
@@ -250,8 +251,8 @@ NetworkResponseListener.prototype = {
       response.content.text = aData;
     }
 
-    if (NetworkProducer) {
-      NetworkProducer.sendActivity(this.httpActivity);
+    if (this.networkProducer) {
+      this.networkProducer.sendActivity(this.httpActivity);
     }
 
     this.httpActivity.channel = null;
@@ -307,12 +308,38 @@ NetworkResponseListener.prototype = {
  * http-on-examine-response notifications. All network request information is
  * routed to the remote Timeline UI.
  */
-let NetworkProducer =
+function NetworkProducer(aWindowList, aOptions, aTimelineUIId, aChromeMode)
 {
-  /**
-   * List of content windows that this producer is listening to.
-   */
-  listeningWindows: [],
+  this.openRequests = {};
+  this.openResponses = {};
+  this.listeningWindows = aWindowList;
+  this.chromeMode = !!aChromeMode;
+  this.timelineUIId = aTimelineUIId;
+  this.responsePipeSegmentSize = Services.prefs.getIntPref("network.buffer.cache.size");
+
+  // Bind!
+  this.addWindows = this.addWindows.bind(this);
+  this.removeWindows = this.removeWindows.bind(this);
+  this.readPostTextFromRequest = this.readPostTextFromRequest.bind(this);
+  this.httpResponseExaminer = this.httpResponseExaminer.bind(this);
+  this.observeActivity = this.observeActivity.bind(this);
+  this._onRequestHeader = this._onRequestHeader.bind(this);
+  this.createActivityObject = this.createActivityObject.bind(this);
+  this._setupResponseListener = this._setupResponseListener.bind(this);
+  this.sendActivity = this.sendActivity.bind(this);
+  this._onRequestBodySent = this._onRequestBodySent.bind(this);
+  this._onResponseHeader = this._onResponseHeader.bind(this);
+  this._onTransactionClose = this._onTransactionClose.bind(this);
+  this._setupHarTimings = this._setupHarTimings.bind(this);
+  this.destroy = this.destroy.bind(this);
+
+  activityDistributor.addObserver(this);
+
+  Services.obs.addObserver(this.httpResponseExaminer,
+                           "http-on-examine-response", false);
+}
+
+NetworkProducer.prototype = {
 
   httpTransactionCodes: {
     0x5001: "REQUEST_HEADER",
@@ -333,39 +360,10 @@ let NetworkProducer =
 
   _sequence: 0,
 
-  // Network response bodies are piped through a buffer of the given size (in
-  // bytes).
-  responsePipeSegmentSize: null,
-
-  openRequests: null,
-  openResponses: null,
-
   /**
    * Getter for a unique ID for the Network Producer.
    */
   get sequenceId() "NetworkProducer-" + (++this._sequence),
-
-  /**
-   * The network producer initializer.
-   *
-   * @param [object] aWindowList
-   *        List of content windows for which NetworkProducer will listen for
-   *        network activity.
-   */
-  init: function NP_init(aWindowList, aOptions, aChromeMode)
-  {
-    this.openRequests = {};
-    this.openResponses = {};
-    this.listeningWindows = aWindowList;
-    this.chromeMode = !!aChromeMode;
-    this.responsePipeSegmentSize = Services.prefs
-                                   .getIntPref("network.buffer.cache.size");
-
-    activityDistributor.addObserver(this);
-
-    Services.obs.addObserver(this.httpResponseExaminer,
-                             "http-on-examine-response", false);
-  },
 
   /**
    * Starts listening to network activity for the given content windows.
@@ -376,7 +374,7 @@ let NetworkProducer =
    */
   addWindows: function NP_addWindows(aWindowList)
   {
-    for each (let window in aWindowList) {
+    for (let window of aWindowList) {
       this.listeningWindows.push(window);
     }
   },
@@ -390,7 +388,7 @@ let NetworkProducer =
    */
   removeWindows: function NP_removeWindows(aWindowList)
   {
-    for each (let window in aWindowList) {
+    for (let window of aWindowList) {
       this.listeningWindows.splice(this.listeningWindows.indexOf(window), 1);
     }
   },
@@ -457,15 +455,15 @@ let NetworkProducer =
 
     let channel = aSubject.QueryInterface(Ci.nsIHttpChannel);
     // Try to get the source window of the request.
-    if (!NetworkProducer.chromeMode) {
+    if (!this.chromeMode) {
       let win = NetworkHelper.getWindowForRequest(channel);
-      if (!win || NetworkProducer.listeningWindows.indexOf(win.top) == -1) {
+      if (!win || this.listeningWindows.indexOf(win.top) == -1) {
         return;
       }
     }
 
     let response = {
-      id: NetworkProducer.sequenceId,
+      id: this.sequenceId,
       channel: channel,
       headers: [],
     };
@@ -501,7 +499,7 @@ let NetworkProducer =
     response.httpVersion = "HTTP/" + httpVersionMaj.value + "." +
                                      httpVersionMin.value;
 
-    NetworkProducer.openResponses[response.id] = response;
+    this.openResponses[response.id] = response;
   },
 
   /**
@@ -540,7 +538,7 @@ let NetworkProducer =
     // Iterate over all currently ongoing requests. If aChannel can't
     // be found within them, then exit this function.
     let httpActivity = null;
-    for each (let item in this.openRequests) {
+    for (let item of this.openRequests) {
       if (item.channel === aChannel) {
         httpActivity = item;
         break;
@@ -725,7 +723,7 @@ let NetworkProducer =
     sink.init(false, false, this.responsePipeSegmentSize, PR_UINT32_MAX, null);
 
     // Add listener for the response body.
-    let newListener = new NetworkResponseListener(aHttpActivity);
+    let newListener = new NetworkResponseListener(aHttpActivity, this);
 
     // Remember the input stream, so it isn't released by GC.
     newListener.inputStream = sink.inputStream;
@@ -802,7 +800,7 @@ let NetworkProducer =
     }
 
     let totalTime = 0;
-    for each (let time in aHttpActivity.entry.timings) {
+    for (let time of aHttpActivity.entry.timings) {
       totalTime += time;
     }
 
@@ -810,6 +808,7 @@ let NetworkProducer =
       type: eventType,
       name: aHttpActivity.entry.request.method.toUpperCase() + " " +
             trim(aHttpActivity.entry.request.url),
+      timelineUIId: this.timelineUIId,
       nameTooltip: aHttpActivity.entry.request.url,
       groupID: aHttpActivity.id,
       time: time/1000, // Converting micro to milli seconds.
@@ -1006,13 +1005,13 @@ let NetworkProducer =
    */
   destroy: function NP_destroy()
   {
-    Services.obs.removeObserver(NetworkProducer.httpResponseExaminer,
+    Services.obs.removeObserver(this.httpResponseExaminer,
                                 "http-on-examine-response");
 
-    activityDistributor.removeObserver(NetworkProducer);
+    activityDistributor.removeObserver(this);
 
-    NetworkProducer.openRequests = NetworkProducer.openResponses =
-      NetworkProducer.listeningWindows = null;
+    this.openRequests = this.openResponses =
+      this.listeningWindows = null;
   },
 };
 
