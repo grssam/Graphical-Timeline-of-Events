@@ -1283,7 +1283,7 @@ CanvasManager.prototype = {
       //this.ctxL.clearRect(0,0,this.currentWidth + 200,this.height);
 
       let endx,x;
-      for (group of this.groupedData) {
+      for each (group in this.groupedData) {
         if (group.y < this.offsetTop || group.y - this.offsetTop > this.height) {
           continue;
         }

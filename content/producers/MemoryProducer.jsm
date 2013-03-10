@@ -93,11 +93,11 @@ let MemoryProducer =
    */
   enableFeatures: function MP_enableFeatures(aFeatures)
   {
-    for (let eventType of aFeatures) {
+    for each (let eventType in aFeatures) {
       if (this.enabledEvents.indexOf(eventType) == -1) {
         if (this.observedEvents[eventType]) {
           this.enabledEvents.push(eventType);
-          for (let eventName of this.observedEvents[eventType]) {
+          for each (let eventName in this.observedEvents[eventType]) {
             Services.obs.addObserver(this.observeEvents, eventName, false);
           }
         }
@@ -116,7 +116,7 @@ let MemoryProducer =
   disableFeatures: function MP_disableFeatures(aFeatures)
   {
     let stopped = {};
-    for (let eventType of aFeatures) {
+    for each (let eventType in aFeatures) {
       if (this.enabledEvents.indexOf(eventType) != -1) {
         stopped[eventType] = false;
         if (this.observedEvents[eventType]) {
@@ -127,7 +127,7 @@ let MemoryProducer =
         }
       }
     }
-    for (let eventType of aFeatures) {
+    for each (let eventType in aFeatures) {
       if (this.enabledEvents.indexOf(eventType) != -1 && stopped[eventType]) {
         this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
       }

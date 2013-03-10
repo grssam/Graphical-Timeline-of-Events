@@ -137,9 +137,9 @@ PageEventsProducer.prototype = {
    */
   _addListenersToWindow: function PEP__addListenersToWindow(aContentWindow)
   {
-    for (let eventType of this.enabledEvents) {
+    for each (let eventType in this.enabledEvents) {
       if (this.eventTypes[eventType]) {
-        for (let eventName of this.eventTypes[eventType]) {
+        for each (let eventName in this.eventTypes[eventType]) {
           aContentWindow.addEventListener(eventName, this.listenEvents, false);
         }
       }
@@ -154,9 +154,9 @@ PageEventsProducer.prototype = {
    */
   _removeListenersFromWindow: function PEP__removeListenersFromWindow(aContentWindow)
   {
-    for (let eventType of this.enabledEvents) {
+    for each (let eventType in this.enabledEvents) {
       if (this.eventTypes[eventType]) {
-        for (let eventName of this.eventTypes[eventType]) {
+        for each (let eventName in this.eventTypes[eventType]) {
           aContentWindow.removeEventListener(eventName, this.listenEvents, false);
         }
       }
@@ -190,14 +190,14 @@ PageEventsProducer.prototype = {
   addEventTypes: function PEP_addEventTypes(aEventTypes)
   {
     for (let window of this.listeningWindows) {
-      for (let eventType of aEventTypes) {
+      for each (let eventType in aEventTypes) {
         if (this.enabledEvents.indexOf(eventType) == -1) {
           let started = false;
           if (this.eventTypes[eventType]) {
             started = true;
             if (eventType == "PaintEvent") {
               Services.prefs.setBoolPref("dom.send_after_paint_to_content", true);
-              for (let eventName of this.eventTypes[eventType]) {
+              for each (let eventName in this.eventTypes[eventType]) {
                 window.addEventListener(eventName, this.listenEvents, false);
               }
             }
@@ -231,7 +231,7 @@ PageEventsProducer.prototype = {
   {
     let stopped = {};
     for (let window of this.listeningWindows) {
-      for (let eventType of aEventTypes) {
+      for each (let eventType in aEventTypes) {
         if (this.enabledEvents.indexOf(eventType) != -1) {
           stopped[eventType] = false;
           if (this.eventTypes[eventType]) {
@@ -260,7 +260,7 @@ PageEventsProducer.prototype = {
         }
       }
     }
-    for (let eventType of aEventTypes) {
+    for each (let eventType in aEventTypes) {
       if (this.enabledEvents.indexOf(eventType) != -1 && stopped[eventType]) {
         this.enabledEvents.splice(this.enabledEvents.indexOf(eventType), 1)
       }
@@ -298,7 +298,7 @@ PageEventsProducer.prototype = {
     } catch (ex) {} */
 
     let groupId = "";
-    for (let eventTypeName of this.enabledEvents) {
+    for each (let eventTypeName in this.enabledEvents) {
       if (this.observedEvents[eventTypeName] &&
           this.observedEvents[eventTypeName].indexOf(aTopic) >= 0) {
         groupId = eventTypeName;
@@ -366,7 +366,7 @@ PageEventsProducer.prototype = {
 
     let groupId = "";
 
-    for (let eventTypeName of this.enabledEvents) {
+    for each (let eventTypeName in this.enabledEvents) {
       if (this.eventTypes[eventTypeName].indexOf(aEvent.type) >= 0) {
         groupId = eventTypeName;
         switch (eventTypeName) {

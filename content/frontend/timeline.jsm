@@ -46,7 +46,6 @@ const DataSinkEventMessageType = {
   UPDATE_UI: 2, // This event will be sent when there are local changes in
                 // active features or producers and those changes need to be
                 // reflected back to the UI.
-  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
 };
 
 const ERRORS = {
@@ -503,7 +502,7 @@ TimelineView.prototype = {
     let XUL = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
     // Iterating over each producer and adding a vbox containing producer name
     // and its features.
-    for (let producer of this.producerInfoList) {
+    for each (let producer in this.producerInfoList) {
       // The outer box for each producer.
       let producerBox = this._frameDoc.createElement("vbox");
       producerBox.setAttribute("id", producer.id + "-box");
@@ -572,7 +571,7 @@ TimelineView.prototype = {
       featureBox.setAttribute("producerId", producer.id);
       featureBox.setAttribute("seltype", "single");
       featureBox.addEventListener("select", this.handleGroupClick, true);
-      for (let feature of producer.features) {
+      for each (let feature in producer.features) {
         let featureLabel = this._frameDoc.createElement("label");
         featureLabel.setAttribute("id", feature.replace(" ", "_") + "-groupbox");
         featureLabel.setAttribute("flex", "1");
@@ -694,7 +693,7 @@ TimelineView.prototype = {
         this.compactMode == false) {
       this.compactMode = true;
       this.beforeCompactVisibleProducers = [];
-      for (let producer of this.producerInfoList) {
+      for each (let producer in this.producerInfoList) {
         let producerBox = this.$(producer.id + "-box");
         if (producerBox.getAttribute("visible") == "true") {
           this.beforeCompactVisibleProducers.push(producer.id);
@@ -725,7 +724,7 @@ TimelineView.prototype = {
     else if (this.producersPane.boxObject.height > this.compactHeight &&
              this.compactMode == true) {
       this.compactMode = false;
-      for (let producer of this.producerInfoList) {
+      for each (let producer in this.producerInfoList) {
         let producerBox = this.$(producer.id + "-box");
         if (this.beforeCompactVisibleProducers.indexOf(producer.id) != -1) {
           producerBox.setAttribute("visible", true);
@@ -1469,7 +1468,7 @@ TimelineView.prototype = {
     propertyDetailBox.appendChild(hbox);
     propertyDetailBox.appendChild(table);
     //Filling up the level labels
-    for (let level of aLevels) {
+    for each (let level in aLevels) {
       let levelLabel = this._frameDoc.createElement("label");
       levelLabel.setAttribute("class", "level-label");
       levelLabel.setAttribute("value", level + " > ");
@@ -1478,7 +1477,7 @@ TimelineView.prototype = {
     // Building up the table.
     // Converting the object string to an object
     let anythingPresent = false;
-    for (let object of aProperty.value) {
+    for each (let object in aProperty.value) {
       let headingRow = this._frameDoc.createElementNS(HTML, "tr");
       let headingCell = this._frameDoc.createElementNS(HTML, "td");
       let bracketStart = this._frameDoc.createElement("label");
@@ -1670,7 +1669,7 @@ TimelineView.prototype = {
 
                     try {
                       let styleSheets = this._window.content.window.document.styleSheets;
-                      for (let style of styleSheets) {
+                      for each (let style in styleSheets) {
                         if (style.href == aValue) {
                           try {
                           this._window.StyleEditor.openChrome(style, 1);
@@ -2175,6 +2174,7 @@ function Timeline(aCallback, aIframe, aToolbox) {
   this.removeRemoteListener = this.removeRemoteListener.bind(this);
   this.sendMessage = this.sendMessage.bind(this);
   this.destroy = this.destroy.bind(this);
+  this.onNavigateBegin = this.onNavigateBegin.bind(this);
 
   this.callback = aCallback;
   this.data = {};
@@ -2222,7 +2222,7 @@ Timeline.prototype = {
   /**
    * Builds the UI in the Tab.
    */
-  buildUI: function GUI_buildUI() {
+  buildUI: function T_buildUI() {
     if (!this._view) {
       this._view = new TimelineView(this);
     }
@@ -2230,15 +2230,22 @@ Timeline.prototype = {
     this.UIOpened = true;
   },
 
+  onNavigateBegin: function T_onNavigateBegin() {
+    if (TimelinePreferences.doRestartOnReload) {
+      this._view.forceRestart();
+    }
+  },
+
   /**
    * Starts the Data Sink and all the producers.
    */
-  startListening: function GUI_startListening(aMessage) {
+  startListening: function T_startListening(aMessage) {
     // Adding the correct tab id, if toolbox is available.
     if (this._toolbox) {
       try {
         aMessage.tabID = [this._toolbox._target.tab.linkedPanel];
       } catch (ex) {}
+      this._toolbox._target.on("will-navigate", this.onNavigateBegin);
     }
     this.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     this.listening = true;
@@ -2247,12 +2254,13 @@ Timeline.prototype = {
   /**
    * Stops the Data Sink and all the producers.
    */
-  stopListening: function GUI_stopListening(aMessage) {
+  stopListening: function T_stopListening(aMessage) {
     if (!this.listening) {
       return;
     }
     //this._window.clearInterval(this.timer);
     //this.timer = null;
+    this._toolbox._target.off("will-navigate", this.onNavigateBegin);
     this.sendMessage(UIEventMessageType.STOP_RECORDING, aMessage);
     this.listening = false;
   },
@@ -2264,7 +2272,7 @@ Timeline.prototype = {
    *        Ping response message containing either the producer's information
    *        on success or the error on failure.
    */
-  handlePingReply: function GUI_handlePingReply(aMessage) {
+  handlePingReply: function T_handlePingReply(aMessage) {
     if (!aMessage || aMessage.timelineUIId != this.id || !this.pingSent) {
       return;
     }
@@ -2296,7 +2304,7 @@ Timeline.prototype = {
    * @param array aFeatures
    *        List of features that should be enabled.
    */
-  enableFeatures: function GUI_enableFeatures(aProducerId, aFeatures)
+  enableFeatures: function T_enableFeatures(aProducerId, aFeatures)
   {
     let message = {
       timelineUIId: this.id,
@@ -2314,7 +2322,7 @@ Timeline.prototype = {
    * @param array aFeatures
    *        List of features that should be disabled.
    */
-  disableFeatures: function GUI_disableFeatures(aProducerId, aFeatures)
+  disableFeatures: function T_disableFeatures(aProducerId, aFeatures)
   {
     let message = {
       timelineUIId: this.id,
@@ -2332,7 +2340,7 @@ Timeline.prototype = {
    * @param array aFeatures
    *        List of features that should be enabled.
    */
-  startProducer: function GUI_startProducer(aProducerId, aFeatures)
+  startProducer: function T_startProducer(aProducerId, aFeatures)
   {
     let message = {
       timelineUIId: this.id,
@@ -2348,7 +2356,7 @@ Timeline.prototype = {
    * @param string aProducerId
    *        Id of the producer to stop.
    */
-  stopProducer: function GUI_stopProducer(aProducerId)
+  stopProducer: function T_stopProducer(aProducerId)
   {
     let message = {
       timelineUIId: this.id,
@@ -2363,7 +2371,7 @@ Timeline.prototype = {
    * @param array aData
    *        Array of normalized data received from Data Store.
    */
-  processData: function GUI_processData(aData) {
+  processData: function T_processData(aData) {
     this._currentId += aData.length;
     for (let i = 0; i < aData.length; i++) {
       this._view.displayData(aData[i]);
@@ -2377,7 +2385,7 @@ Timeline.prototype = {
    * @param object aEvent
    *        Data object associated with the incoming event.
    */
-  _remoteListener: function GUI_remoteListener(aEvent) {
+  _remoteListener: function T_remoteListener(aEvent) {
     let message = aEvent.detail.messageData;
     let type = aEvent.detail.messageType;
     switch(type) {
@@ -2394,14 +2402,8 @@ Timeline.prototype = {
         break;
 
       case DataSinkEventMessageType.UPDATE_UI:
-        if (message.timelineUIId != this.id) {
+        if (message.timelineUIId == this.id) {
           this._view.updateUI(message);
-        }
-        break;
-
-      case DataSinkEventMessageType.PAGE_RELOAD:
-        if (TimelinePreferences.doRestartOnReload) {
-          this._view.forceRestart();
         }
         break;
     }
@@ -2414,7 +2416,7 @@ Timeline.prototype = {
    * @param object aChromeWindow
    *        Reference to the chrome window to apply the event listener.
    */
-  addRemoteListener: function GUI_addRemoteListener(aChromeWindow) {
+  addRemoteListener: function T_addRemoteListener(aChromeWindow) {
     aChromeWindow.addEventListener("GraphicalTimeline:DataSinkEvent",
                                    this._remoteListener, true);
   },
@@ -2425,7 +2427,7 @@ Timeline.prototype = {
    * @param object aChromeWindow
    *        Reference to the chrome window from which listener is to be removed.
    */
-  removeRemoteListener: function GUI_removeRemoteListener(aChromeWindow) {
+  removeRemoteListener: function T_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListener("GraphicalTimeline:DataSinkEvent",
                                       this._remoteListener, true);
   },
@@ -2438,7 +2440,7 @@ Timeline.prototype = {
    * @param object aMessageData
    *        Data concerned with the event.
    */
-  sendMessage: function GUI_sendMessage(aMessageType, aMessageData) {
+  sendMessage: function T_sendMessage(aMessageType, aMessageData) {
     let detail = {
                    "detail":
                      {
@@ -2454,7 +2456,7 @@ Timeline.prototype = {
   /**
    * Stops the UI, Data Sink and Data Store.
    */
-  destroy: function GUI_destroy() {
+  destroy: function T_destroy() {
     if (this._window) {
       try {
         this._window.removeEventListener("unload", this.destroy, false);

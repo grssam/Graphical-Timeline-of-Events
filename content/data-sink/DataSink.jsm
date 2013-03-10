@@ -38,7 +38,6 @@ const DataSinkEventMessageType = {
   UPDATE_UI: 2, // This event will be sent when there are local changes in
                 // active features or producers and those changes need to be
                 // reflected back to the UI.
-  PAGE_RELOAD: 3, // Sent when the page being listened is refreshed.
 };
 
 /**
@@ -112,22 +111,6 @@ function DataSinkActor(aMessage) {
   }
 
   this.listening = true;
-
-  // if (!this.chromeMode) {
-  //   this._chromeWindowForGraph =
-  //     window.QueryInterface(Ci.nsIInterfaceRequestor)
-  //           .getInterface(Ci.nsIWebNavigation)
-  //           .QueryInterface(Ci.nsIDocShell)
-  //           .chromeEventHandler
-  //           .ownerDocument.defaultView;
-  //   this._browsers = [this._chromeWindowForGraph.gBrowser
-  //                         .getBrowserForDocument(window.document)];
-  // }
-  // else {
-  //   this._chromeWindowForGraph = window;
-  //   this._browsers = [window.gBrowser];
-  // }
-  // this._browsers[0].addEventListener("beforeunload", this.onWindowUnload, true);
   this.initiated = true;
 }
 
@@ -510,39 +493,6 @@ let DataSink = {
   removeRemoteListener: function DS_removeRemoteListener(aChromeWindow) {
     aChromeWindow.removeEventListener("GraphicalTimeline:UIEvent",
                                       DataSink._remoteListener, true);
-  },
-
-  /**
-   * Keeps track of page reloads on the listening content windows.
-  */
-  onWindowUnload: function DS_onWindowUnload(aEvent)
-  {
-    let window = null;
-    if (aEvent.target instanceof Ci.nsIDOMWindow) {
-      window = aEvent.target;
-    }
-    else if (aEvent.target.defaultView &&
-             aEvent.target.defaultView instanceof Ci.nsIDOMWindow) {
-      window = aEvent.target.defaultView;
-    }
-    else if (aEvent.target.ownerDocument &&
-             aEvent.target.ownerDocument.defaultView instanceof Ci.nsIDOMWindow) {
-      window = aEvent.target.ownerDocument.defaultView;
-    }
-    if (!window || DataSink.listeningWindows.indexOf(window) == -1) {
-      return;
-    }
-    /* let chromeWindow = window.QueryInterface(Ci.nsIInterfaceRequestor)
-                         .getInterface(Ci.nsIWebNavigation)
-                         .QueryInterface(Ci.nsIDocShell)
-                         .chromeEventHandler
-                         .ownerDocument.defaultView;
-    // Get the tab indexassociated with the content window
-    let tabIndex = chromeWindow.gBrowser
-      .getBrowserIndexForDocument(window.document);
-    // Get the unique tab id associated with the tab
-    let tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel; */
-    DataSink.sendMessage(DataSinkEventMessageType.PAGE_RELOAD, {/*tabId: tabId*/});
   },
 
   /**

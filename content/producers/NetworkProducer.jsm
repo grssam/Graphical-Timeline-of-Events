@@ -167,7 +167,7 @@ NetworkResponseListener.prototype = {
 
     let openResponse = null;
 
-    for (let item of this.networkProducer.openResponses) {
+    for each (let item in this.networkProducer.openResponses) {
       if (item.channel === this.httpActivity.channel) {
         openResponse = item;
         break;
@@ -538,7 +538,7 @@ NetworkProducer.prototype = {
     // Iterate over all currently ongoing requests. If aChannel can't
     // be found within them, then exit this function.
     let httpActivity = null;
-    for (let item of this.openRequests) {
+    for each (let item in this.openRequests) {
       if (item.channel === aChannel) {
         httpActivity = item;
         break;
@@ -800,7 +800,7 @@ NetworkProducer.prototype = {
     }
 
     let totalTime = 0;
-    for (let time of aHttpActivity.entry.timings) {
+    for each (let time in aHttpActivity.entry.timings) {
       totalTime += time;
     }
 
