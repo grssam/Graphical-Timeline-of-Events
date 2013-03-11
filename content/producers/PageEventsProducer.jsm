@@ -399,7 +399,6 @@ PageEventsProducer.prototype = {
 
           case "PaintEvent":
             eventDetail.rect = aEvent.boundingClientRect;
-            Cu.reportError(JSON.stringify(aEvent.boundingClientRect));
         }
       }
     }
