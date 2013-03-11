@@ -67,14 +67,8 @@ function TimelineView(aTimeline) {
   this.Timeline = aTimeline;
   this._window = this.Timeline._window;
   let gBrowser = this._window.gBrowser;
-  this._iframe = this.Timeline._iframe || null;
+  this._frame = this.Timeline._iframe;
   let ownerDocument = gBrowser.parentNode.ownerDocument;
-
-  if (!this._iframe) {
-    this._splitter = ownerDocument.createElement("hbox");
-    this._splitter.setAttribute("class", "devtools-horizontal-splitter");
-    this._splitter.style.cursor = "n-resize";
-  }
 
   this.loaded = false;
   this.canvasStarted = false;
@@ -84,13 +78,6 @@ function TimelineView(aTimeline) {
   this.compactHeight = 120;
   this.compactMode = TimelinePreferences.compactMode;
 
-  this._frame = this._iframe || ownerDocument.createElement("iframe");
-  if (!this._iframe) {
-    this._frame.height = TimelinePreferences.height;
-    this._nbox = gBrowser.getNotificationBox(gBrowser.selectedTab.linkedBrowser);
-    this._nbox.appendChild(this._splitter);
-    this._nbox.appendChild(this._frame);
-  }
   this._canvas = null;
 
   this.toggleOverview = this.toggleOverview.bind(this);
@@ -140,9 +127,6 @@ function TimelineView(aTimeline) {
   this._onUnload = this._onUnload.bind(this);
 
   this._frame.addEventListener("load", this._onLoad, true);
-  if (!this._iframe) {
-    this._frame.setAttribute("src", "chrome://graphical-timeline/content/frontend/timeline.xul");
-  }
 }
 
 TimelineView.prototype = {
@@ -156,7 +140,6 @@ TimelineView.prototype = {
     this._frame.removeEventListener("load", this._onLoad, true);
     this._frameDoc = this._frame.contentDocument;
     this._frameDoc.defaultView.focus();
-    this.closeButton = this.$("close");
     this.clearButton = this.$("clear");
     this.recordButton = this.$("record");
     this.overviewButton = this.$("overview");
@@ -178,14 +161,6 @@ TimelineView.prototype = {
     this.$("zoom-in").addEventListener("command", this.zoomIn, true);
     this.$("zoom-out").addEventListener("command", this.zoomOut, true);
     this.$("detailbox-closebutton").addEventListener("command", this.closeDetailBox, true);
-    if (!this._iframe) {
-      this.closeButton.addEventListener("command", this.Timeline.destroy, true);
-    }
-    else {
-      this.closeButton.style.opacity = 0;
-      this.closeButton.style.zIndex = -10;
-      this.closeButton.style.pointerEvents = "none";
-    }
     this.overviewButton.addEventListener("command", this.toggleOverview, true);
     this.recordButton.addEventListener("command", this.toggleRecording, true);
     this.clearButton.addEventListener("command", this.forceRestart, true);
@@ -197,9 +172,6 @@ TimelineView.prototype = {
       this.restartOnReload.setAttribute("checked", true);
     }
     this.updateScrollbar();
-    if (!this._iframe) {
-      this.handleFrameResize();
-    }
     // Setting up the first run experience
     if (TimelinePreferences.timesUIOpened == 0 ||
         TimelinePreferences.userStats.recorded == 0) {
@@ -625,9 +597,7 @@ TimelineView.prototype = {
 
       this.producersPane.appendChild(producerBox);
     }
-    if (this.Timeline._toolbox) {
-      this.Timeline.emit("AfterUIBuilt");
-    }
+    this.Timeline.emit("AfterUIBuilt");
   },
 
   /**
@@ -1632,7 +1602,7 @@ TimelineView.prototype = {
                     .openInspectorUI(this._window.gBrowser.contentDocument
                                          .getElementById(value));
               } catch (ex) {
-                if (this.Timeline._toolbox && this.Timeline._toolbox._target.tab) {
+                if (this.Timeline._toolbox._target.tab) {
                   this.Timeline._toolbox.selectTool("inspector").then(function(panel) {
                     panel.selection.setNode(this.Timeline._toolbox._target.tab
                                                 .linkedBrowser
@@ -1671,16 +1641,9 @@ TimelineView.prototype = {
                       let styleSheets = this._window.content.window.document.styleSheets;
                       for each (let style in styleSheets) {
                         if (style.href == aValue) {
-                          try {
-                          this._window.StyleEditor.openChrome(style, 1);
-                          } catch (ex) {
-                            if (this.Timeline._toolbox) {
-                              this.Timeline._toolbox.selectTool("styleeditor").then(function(panel) {
-                                panel.selectStyleSheet(style, 1);
-                              });
-                              return;
-                            }
-                          }
+                          this.Timeline._toolbox.selectTool("styleeditor").then(function(panel) {
+                            panel.selectStyleSheet(style, 1);
+                          });
                           return;
                         }
                       }
@@ -1698,44 +1661,9 @@ TimelineView.prototype = {
                     let stats = TimelinePreferences.userStats;
                     stats.linkClicked++;
                     TimelinePreferences.userStats = stats;
-                    if (!this.Timeline._toolbox) {
-                      function openScript(scriptsView) {
-                        let targetScript = aValue;
-                        let scriptLocations = scriptsView.scriptLocations;
-
-                        if (scriptLocations.indexOf(targetScript) === -1) {
-                          window.DebuggerUI.toggleDebugger();
-                          window.openUILinkIn(aValue, "tab");
-                          window = null;
-                          return;
-                        }
-                        scriptsView.selectScript(targetScript);
-                        window = null;
-                      }
-                      if (window.DebuggerUI.getDebugger() == null) {
-                        window.DebuggerUI.toggleDebugger();
-                        let dbg = window.DebuggerUI.getDebugger().contentWindow;
-
-                        dbg.addEventListener("Debugger:Connecting", function onConnecting() {
-                          dbg.removeEventListener("Debugger:Connecting", onConnecting);
-
-                          let client = dbg.DebuggerController.client;
-                          let scripts = dbg.DebuggerView.Scripts;
-
-                          client.addOneTimeListener("resumed", openScript.bind(this, scripts));
-                        });
-                      }
-                      else {
-                        let dbg = window.DebuggerUI.getDebugger().contentWindow;
-                        let client = dbg.DebuggerController.client;
-                        let scripts = dbg.DebuggerView.Scripts;
-                        openScript(scripts);
-                      }
-                    } else {
-                      this.Timeline._toolbox.selectTool("jsdebugger").then(function(dbg) {
-                        dbg.panelWin.DebuggerView.Sources.preferredSource = aValue;
-                      });
-                    }
+                    this.Timeline._toolbox.selectTool("jsdebugger").then(function(dbg) {
+                      dbg.panelWin.DebuggerView.Sources.preferredSource = aValue;
+                    });
                   }.bind(this))
                   break;
 
@@ -2130,11 +2058,6 @@ TimelineView.prototype = {
       this._canvas.destroy();
       this._canvas = null;
     }
-    if (!this._iframe) {
-      this._splitter.parentNode.removeChild(this._splitter);
-      this._frame.parentNode.removeChild(this._frame);
-      this._frame = null;
-    }
     this._frameDoc = this._window = null;
   },
 
@@ -2178,21 +2101,14 @@ function Timeline(aCallback, aIframe, aToolbox) {
 
   this.callback = aCallback;
   this.data = {};
-  if (aIframe) {
-    this._iframe = aIframe;
-  }
+  this._iframe = aIframe;
   this._toolbox = aToolbox;
-  if (this._toolbox) {
-    try {
-      this._window = this._toolbox._target.tab.ownerDocument.defaultView;
-    } catch (ex) {
-      this._window = this._toolbox._target.window;
-    }
-    EventEmitter.decorate(this);
+  try {
+    this._window = this._toolbox._target.tab.ownerDocument.defaultView;
+  } catch (ex) {
+    this._window = this._toolbox._target.window;
   }
-  else {
-    this._window = Services.wm.getMostRecentWindow("navigator:browser");
-  }
+  EventEmitter.decorate(this);
   this.addRemoteListener(this._window);
   // destroying on unload.
   this._window.addEventListener("unload", this.destroy, false);
@@ -2241,12 +2157,10 @@ Timeline.prototype = {
    */
   startListening: function T_startListening(aMessage) {
     // Adding the correct tab id, if toolbox is available.
-    if (this._toolbox) {
-      try {
-        aMessage.tabID = [this._toolbox._target.tab.linkedPanel];
-      } catch (ex) {}
-      this._toolbox._target.on("will-navigate", this.onNavigateBegin);
-    }
+    try {
+      aMessage.tabID = [this._toolbox._target.tab.linkedPanel];
+    } catch (ex) {}
+    this._toolbox._target.on("will-navigate", this.onNavigateBegin);
     this.sendMessage(UIEventMessageType.START_RECORDING, aMessage);
     this.listening = true;
   },
@@ -2290,9 +2204,7 @@ Timeline.prototype = {
     else {
       this.producerInfoList = aMessage.producerInfoList;
       this.buildUI();
-      if (this._toolbox) {
-        this.emit("AfterSinkConnected");
-      }
+      this.emit("AfterSinkConnected");
     }
   },
 
