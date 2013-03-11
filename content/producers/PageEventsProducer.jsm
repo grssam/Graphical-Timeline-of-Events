@@ -358,6 +358,9 @@ PageEventsProducer.prototype = {
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {} */
 
+    if (aEvent.type == "MozAfterPaint" && !aEvent.boundingClientRect.left) {
+      return;
+    }
     let eventDetail = {
       target: aEvent.originalTarget.id || null,
       eventName: aEvent.type,
@@ -396,6 +399,7 @@ PageEventsProducer.prototype = {
 
           case "PaintEvent":
             eventDetail.rect = aEvent.boundingClientRect;
+            Cu.reportError(JSON.stringify(aEvent.boundingClientRect));
         }
       }
     }
