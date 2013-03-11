@@ -358,7 +358,11 @@ PageEventsProducer.prototype = {
       tabId = chromeWindow.gBrowser.tabs[tabIndex].linkedPanel;
     } catch (ex) {} */
 
-    if (aEvent.type == "MozAfterPaint" && !aEvent.boundingClientRect.left) {
+    if (aEvent.type == "MozAfterPaint" &&
+        !(aEvent.boundingClientRect.left ||
+          aEvent.boundingClientRect.top ||
+          aEvent.boundingClientRect.width ||
+          aEvent.boundingClientRect.height)) {
       return;
     }
     let eventDetail = {
